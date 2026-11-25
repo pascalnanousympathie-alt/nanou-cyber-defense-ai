@@ -141,13 +141,35 @@ class AdminUserUpdateIn(BaseModel):
     is_active: bool
 
 
+class AssistantChatTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=1200)
+
+
+class AssistantChatIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=1000)
+    history: list[AssistantChatTurn] = Field(default_factory=list, max_length=8)
+
+    @field_validator("message")
+    @classmethod
+    def normalize_message(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Chat message cannot be empty.")
+        return normalized
+
+
 class DeveloperApiKeyCreateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=3, max_length=80)
-    scopes: list[Literal["intel:read", "malware:metadata:read"]] = Field(
+    scopes: list[Literal["intel:read", "malware:metadata:read", "ai:chat"]] = Field(
         min_length=1,
-        max_length=2,
+        max_length=3,
     )
     expires_in_days: int = Field(default=30, ge=1, le=90)
 
@@ -163,8 +185,8 @@ class DeveloperApiKeyCreateIn(BaseModel):
     @classmethod
     def unique_scopes(
         cls,
-        value: list[Literal["intel:read", "malware:metadata:read"]],
-    ) -> list[Literal["intel:read", "malware:metadata:read"]]:
+        value: list[Literal["intel:read", "malware:metadata:read", "ai:chat"]],
+    ) -> list[Literal["intel:read", "malware:metadata:read", "ai:chat"]]:
         if len(set(value)) != len(value):
             raise ValueError("Duplicate API key scopes are not allowed.")
         return value
