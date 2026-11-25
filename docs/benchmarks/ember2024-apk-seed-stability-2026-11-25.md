@@ -1,8 +1,8 @@
 # EMBER2024 APK — reservoir-seed stability check
 
-**Date:** 25 November 2026  
-**Repository commit for parameterized workflow:** 9b209100ae75bacf516df78a3231c19c998f642c  
-**CI:** [45612841802 — PASS](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45612841802)  
+**Date:** 25 November 2026
+**Repository commit for parameterized workflow:** 9b209100ae75bacf516df78a3231c19c998f642c
+**CI:** [45612841802 — PASS](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45612841802)
 **Scope:** three deterministic reservoir seeds (42, 17, 2026), 10,000 training rows and 2,000 temporal test rows per run.
 
 ## Purpose and interpretation
