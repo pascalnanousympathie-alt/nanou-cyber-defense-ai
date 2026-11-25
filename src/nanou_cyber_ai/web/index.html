@@ -309,6 +309,56 @@
         </div>
       </section>
 
+      <section class="section-heading" id="developer" data-role-visibility="admin,analyst">
+        <div><p class="eyebrow">DEVELOPER &amp; AI INTEGRATION</p><h2>Developer Center</h2></div>
+        <span class="section-tag">REST API v1 · Read-only</span>
+      </section>
+      <section class="panel developer-panel" data-role-visibility="admin,analyst">
+        <div class="developer-intro">
+          <div><div class="developer-badges"><span>Bearer auth</span><span>Scoped keys</span><span>OpenAPI / AI</span></div>
+          <h3>Fampifandraisana lavitra sy AI</h3>
+          <p>REST API versioned ho an'ny server hafa sy AI tools. Ny key dia mifamatotra amin'ny kaontinao ary voafetra amin'ny scopes.</p></div>
+          <a class="button button-secondary" href="/api/v1/openapi.json" target="_blank" rel="noopener noreferrer">OpenAPI spec ↗</a>
+        </div>
+        <div class="developer-security-note"><strong>Read-only</strong><span>CVE/NVD, CISA KEV ary malware metadata ihany no azo vakiana. Tsy misy admin, write, APK upload, inference na command execution.</span></div>
+        <div class="developer-grid">
+          <div class="developer-card">
+            <h4>Mamorona API key</h4>
+            <form id="developer-key-form">
+              <div class="field"><label for="developer-key-name">Anaran'ny integration</label><input id="developer-key-name" minlength="3" maxlength="80" placeholder="AI Security Assistant" required></div>
+              <div class="field"><label for="developer-key-expiry">Lany daty</label><select id="developer-key-expiry"><option value="7">7 andro</option><option value="30" selected>30 andro</option><option value="90">90 andro</option></select></div>
+              <fieldset class="developer-scopes"><legend>Scopes</legend>
+                <label><input type="checkbox" value="intel:read" name="scope" checked><span><strong>intel:read</strong><small>CVE/NVD sy CISA KEV</small></span></label>
+                <label><input type="checkbox" value="malware:metadata:read" name="scope"><span><strong>malware:metadata:read</strong><small>Metadata voatahiry</small></span></label>
+              </fieldset>
+              <button class="button button-primary" id="developer-key-create" type="submit">Hamorona API key</button>
+              <p id="developer-message" class="form-message" role="status" aria-live="polite">10 keys max · 90 andro max · Aseho indray mandeha ihany ny token.</p>
+            </form>
+            <div id="developer-key-once" class="developer-key-once" hidden>
+              <label for="developer-key-value">Token vaovao — aseho indray mandeha</label>
+              <div class="developer-token-row"><input id="developer-key-value" type="password" readonly autocomplete="off"><button id="developer-key-reveal" class="button button-secondary" type="button">Asehoy</button><button id="developer-key-copy" class="button button-primary" type="button">Copy</button></div>
+              <small class="field-hint">Raha very ilay token dia mamoròna vaovao ary revoke ilay taloha.</small>
+            </div>
+          </div>
+          <div class="developer-card">
+            <div class="workspace-heading"><h4>API keys anao</h4><button id="developer-key-refresh" class="text-button" type="button">Havaozy</button></div>
+            <div id="developer-key-list" class="developer-key-list" aria-live="polite"><div class="loading-line">Miandry…</div></div>
+          </div>
+        </div>
+        <div class="developer-endpoints">
+          <h4>Endpoints v1</h4>
+          <div class="developer-endpoint"><code>GET /api/v1/kev</code><span>intel:read</span></div>
+          <div class="developer-endpoint"><code>GET /api/v1/cve/{cve_id}</code><span>intel:read</span></div>
+          <div class="developer-endpoint"><code>GET /api/v1/malware/metadata</code><span>malware:metadata:read</span></div>
+        </div>
+        <div class="developer-ai-guide">
+          <h4>Fampifandraisana amin'ny AI</h4>
+          <ol><li>Ampidiro ao amin'ny AI tool manohana OpenAPI/Actions ny URL <code>/api/v1/openapi.json</code>.</li><li>Safidio ny HTTP Bearer authentication.</li><li>Ampidiro ao amin'ny secret manager ilay token ary omeo scope ilaina ihany.</li></ol>
+          <p class="data-note">Tsy mbola mifandray ho azy amin'ny ChatGPT na AI hafa ny application. Atao ao amin'ny AI platform-nao ny fametrahana OpenAPI sy token.</p>
+        </div>
+        <p class="data-note">Aza apetraka amin'ny JavaScript public, APK, URL, logs na repository ny token. Ampiasao amin'ny backend/server-side na secret vault an'ny AI ihany.</p>
+      </section>
+
       <section class="section-heading" id="tools">
         <div><p class="eyebrow">CONTROLLED INTEGRATIONS</p><h2>Fitaovana MCP</h2></div>
         <span class="section-tag">Scoped access</span>
