@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080f1b">
+  <meta name="theme-color" content="#050505">
   <meta name="description" content="Nanou Cyber Defense AI — sehatra web ho an'ny fiarovana nomerika sy threat intelligence.">
   <title>Nanou Cyber Defense AI</title>
   <link rel="stylesheet" href="/assets/app.css">
@@ -134,9 +134,29 @@
         </div>
 
         <div id="admin-panel" class="admin-panel" hidden>
-          <div class="workspace-heading"><h4>Fitantanana mpampiasa</h4><button id="refresh-admin" class="text-button" type="button">Havaozy</button></div>
+          <div class="workspace-heading">
+            <div><h4>Fitantanana mpampiasa</h4><p class="admin-subtitle">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
+            <button id="refresh-admin" class="text-button" type="button">Havaozy</button>
+          </div>
+          <div class="admin-summary" aria-label="Famintinana ny kaonty">
+            <article class="admin-summary-card"><span>Kaonty rehetra</span><strong id="admin-total-users">0</strong></article>
+            <article class="admin-summary-card"><span>Mavitrika</span><strong id="admin-active-users">0</strong></article>
+            <article class="admin-summary-card pending"><span>Miandry fankatoavana</span><strong id="admin-pending-users">0</strong></article>
+            <article class="admin-summary-card disabled"><span>Voasakana</span><strong id="admin-disabled-users">0</strong></article>
+          </div>
+          <div class="admin-toolbar">
+            <div class="field"><label for="admin-user-search">Karoka mpampiasa</label><input id="admin-user-search" type="search" placeholder="Anarana, email na rôle…" autocomplete="off"></div>
+            <div class="field"><label for="admin-user-filter">Sivana satan'ny kaonty</label><select id="admin-user-filter"><option value="all">Kaonty rehetra</option><option value="pending">Miandry fankatoavana</option><option value="active">Mavitrika</option><option value="disabled">Voasakana</option></select></div>
+          </div>
+          <p id="admin-user-result-count" class="admin-result-count" aria-live="polite">Miandry ny lisitry ny kaonty…</p>
           <div id="admin-users" class="admin-users" aria-live="polite"></div>
-          <div class="workspace-heading list-heading"><h4>Audit log farany</h4></div>
+          <div class="workspace-heading list-heading">
+            <div><h4>Audit log</h4><p class="admin-subtitle">Hetsika voarakitra sy valin'ny asa farany.</p></div>
+          </div>
+          <div class="audit-toolbar">
+            <div class="field"><label for="audit-search">Karoka hetsika</label><input id="audit-search" type="search" placeholder="Action, target na request ID…" autocomplete="off"></div>
+            <div class="field"><label for="audit-outcome-filter">Vokatra</label><select id="audit-outcome-filter"><option value="all">Vokatra rehetra</option><option value="success">Tafita</option><option value="pending">Miandry</option><option value="failed">Tsy tafita</option><option value="blocked">Voasakana</option><option value="invalid_bootstrap_token">Token diso</option><option value="pending_or_disabled">Kaonty tsy mavitrika</option></select></div>
+          </div>
           <div id="audit-list" class="audit-list" aria-live="polite"></div>
         </div>
       </section>
