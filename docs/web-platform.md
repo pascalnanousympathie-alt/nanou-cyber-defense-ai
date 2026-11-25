@@ -34,7 +34,7 @@ Roles:
 - `analyst` — prepare feature data, run inference, add metadata and view intelligence.
 - `viewer` — read permitted intelligence and metadata.
 
-The first account is the one-time Administrator bootstrap. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
+The first account is the one-time Administrator bootstrap. It requires a random NANOU_BOOTSTRAP_TOKEN of at least 32 characters stored in the server/hosting secret manager and entered once in the protected bootstrap form. With no configured token, bootstrap is disabled. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
 
 Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses are not stored; only a digest is retained.
 

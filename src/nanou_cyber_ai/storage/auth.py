@@ -301,7 +301,9 @@ class AuthStore:
             if target_user_id == actor_user_id and (
                 not is_active or role != "admin"
             ):
-                raise ValueError("The current administrator cannot demote or deactivate themselves.")
+                raise ValueError(
+                    "The current administrator cannot demote or deactivate themselves."
+                )
             if target["role"] == "admin" and bool(target["is_active"]) and (
                 role != "admin" or not is_active
             ):
@@ -334,7 +336,11 @@ class AuthStore:
                 request_id=request_id,
                 ip_digest=ip_digest,
             )
-            row = connection.execute(select(users).where(users.c.id == target_user_id)).mappings().one()
+            row = (
+                connection.execute(select(users).where(users.c.id == target_user_id))
+                .mappings()
+                .one()
+            )
         return public_user(row)
 
     def list_audit_events(self, limit: int = 100) -> list[dict[str, Any]]:

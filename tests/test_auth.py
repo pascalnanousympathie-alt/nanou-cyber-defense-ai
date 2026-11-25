@@ -4,6 +4,7 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from nanou_cyber_ai.api import app
 from nanou_cyber_ai.settings import settings
@@ -116,6 +117,11 @@ def test_web_auth_bootstrap_register_approve_and_rbac(monkeypatch, tmp_path) -> 
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
     monkeypatch.setattr(settings, "auth_attempts_per_window", 50)
+    monkeypatch.setattr(
+        settings,
+        "bootstrap_token",
+        SecretStr("test-bootstrap-token-long-enough-1234567890"),
+    )
 
     with TestClient(app) as admin_client:
         csrf = _csrf(admin_client)
@@ -161,6 +167,18 @@ def test_web_auth_bootstrap_register_approve_and_rbac(monkeypatch, tmp_path) -> 
         )
         assert registration.status_code == 202
         pending_user_id = registration.json()["user"]["id"]
+
+        with TestClient(app) as pending_client:
+            pending_csrf = _csrf(pending_client)
+            pending_login = pending_client.post(
+                "/api/auth/login",
+                headers={"X-CSRF-Token": pending_csrf},
+                json={
+                    "email": "analyst@example.test",
+                    "password": "Another-Strong-Password-51!",
+                },
+            )
+            assert pending_login.status_code == 403
 
         approval = admin_client.patch(
             f"/api/admin/users/{pending_user_id}",

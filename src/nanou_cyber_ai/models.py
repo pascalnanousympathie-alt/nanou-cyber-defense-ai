@@ -1,7 +1,7 @@
 import math
 import re
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
@@ -88,13 +88,12 @@ class MalwareInferenceResult(BaseModel):
 
 
 
-class AuthBootstrapIn(BaseModel):
+class AuthAccountIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: str = Field(min_length=6, max_length=320)
     display_name: str = Field(min_length=2, max_length=100)
     password: str = Field(min_length=12, max_length=128)
-    bootstrap_token: str = Field(min_length=32, max_length=256)
 
     @field_validator("email")
     @classmethod
@@ -113,7 +112,11 @@ class AuthBootstrapIn(BaseModel):
         return normalized
 
 
-class AuthRegisterIn(AuthBootstrapIn):
+class AuthBootstrapIn(AuthAccountIn):
+    bootstrap_token: str = Field(min_length=32, max_length=256)
+
+
+class AuthRegisterIn(AuthAccountIn):
     pass
 
 
@@ -139,6 +142,6 @@ class AdminUserUpdateIn(BaseModel):
     is_active: bool
 
 
-class MalwareFeatureDatasetId(str, Enum):
+class MalwareFeatureDatasetId(StrEnum):
     EMBER = "ember2024-apk"
     LAMDA = "lamda-apk-2022-train-2023-test"

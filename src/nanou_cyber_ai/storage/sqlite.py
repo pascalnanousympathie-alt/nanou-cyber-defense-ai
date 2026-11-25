@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from nanou_cyber_ai.models import MalwareMetadata, MalwareMetadataIn
 from nanou_cyber_ai.storage.database import SecurityDatabase, malware_metadata
@@ -21,24 +22,22 @@ class MalwareMetadataStore:
         normalized = item.model_copy(update={"sha256": item.sha256.lower()})
         record = MalwareMetadata(**normalized.model_dump())
         with self.database.engine.begin() as connection:
-            existing = connection.execute(
-                select(malware_metadata.c.sha256).where(
-                    malware_metadata.c.sha256 == record.sha256
-                )
-            ).first()
-            if existing:
-                connection.execute(
-                    update(malware_metadata)
-                    .where(malware_metadata.c.sha256 == record.sha256)
-                    .values(payload_json=record.model_dump_json(), created_at=func.now())
-                )
+            values = {
+                "sha256": record.sha256,
+                "payload_json": record.model_dump_json(),
+            }
+            if self.database.mode == "sqlite":
+                statement = sqlite_insert(malware_metadata).values(**values)
             else:
-                connection.execute(
-                    insert(malware_metadata).values(
-                        sha256=record.sha256,
-                        payload_json=record.model_dump_json(),
-                    )
-                )
+                statement = postgres_insert(malware_metadata).values(**values)
+            statement = statement.on_conflict_do_update(
+                index_elements=[malware_metadata.c.sha256],
+                set_={
+                    "payload_json": statement.excluded.payload_json,
+                    "created_at": func.now(),
+                },
+            )
+            connection.execute(statement)
         return record
 
     def list(self, limit: int = 100) -> list[MalwareMetadata]:

@@ -323,6 +323,7 @@ async function submitBootstrap(event) {
         display_name: byId("bootstrap-name").value.trim(),
         email: byId("bootstrap-email").value.trim(),
         password: byId("bootstrap-password").value,
+        bootstrap_token: byId("bootstrap-token").value,
       },
     });
     byId("bootstrap-form").reset();

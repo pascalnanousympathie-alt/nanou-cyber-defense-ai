@@ -27,9 +27,10 @@ The connection string is stored in Vercel's encrypted environment-variable store
 1. Push the reviewed `feat/web-platform` commit.
 2. Create a Preview deployment from that exact branch/commit.
 3. Verify build status and inspect `/health`, `/ready`, `/`, `/api/auth/csrf` and `/api/auth/me` through the protected deployment.
-4. While Vercel Authentication still protects the deployment, open the protected URL and create the first Administrator using a unique password of at least 12 characters.
-5. Verify login, logout, registration, approval, role restrictions, audit events and persistence across a fresh session.
-6. Keep deployment protection enabled until the intended audience and hosting terms are confirmed. Do not disable protection simply to expose the initial bootstrap endpoint.
+4. Set a unique 32+ character NANOU_BOOTSTRAP_TOKEN as an encrypted Vercel environment variable for Preview. Keep the value in the Vercel secret store; do not paste it into Git, logs or chat.
+5. While Vercel Authentication still protects the deployment, open the protected URL, reveal/copy the bootstrap token from Vercel environment-variable settings, and create the first Administrator using a unique password of at least 12 characters.
+6. Verify login, logout, registration, approval, role restrictions, audit events and persistence across a fresh session.
+7. Keep deployment protection enabled until the intended audience and hosting terms are confirmed. Do not disable protection simply to expose the initial bootstrap endpoint.
 
 ## Database safety
 

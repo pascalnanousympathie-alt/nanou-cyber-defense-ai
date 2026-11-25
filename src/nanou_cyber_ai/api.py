@@ -86,10 +86,12 @@ def _ip_digest(request: Request) -> str | None:
 
 
 def _rate_fingerprints(request: Request, email: str, action: str) -> tuple[str, str | None]:
-    email_digest = hashlib.sha256(f"{action}:{email}".encode("utf-8")).hexdigest()
+    email_payload = f"{action}:{email}".encode("utf-8")
+    email_digest = hashlib.sha256(email_payload).hexdigest()
     ip_digest = _ip_digest(request)
     if ip_digest:
-        ip_digest = hashlib.sha256(f"{action}:{ip_digest}".encode("utf-8")).hexdigest()
+        ip_payload = f"{action}:{ip_digest}".encode("utf-8")
+        ip_digest = hashlib.sha256(ip_payload).hexdigest()
     return email_digest, ip_digest
 
 
@@ -114,7 +116,10 @@ def _check_rate_limit(store: AuthStore, request: Request, email: str, action: st
             request_id=_request_id(request),
             ip_digest=_ip_digest(request),
         )
-        raise HTTPException(status_code=429, detail="Too many authentication attempts. Try again later.")
+        raise HTTPException(
+            status_code=429,
+            detail="Too many authentication attempts. Try again later.",
+        )
 
 
 def _session_token(request: Request, response: Response, store: AuthStore, user_id: str) -> None:
@@ -238,8 +243,11 @@ async def readiness() -> dict:
         with database.engine.connect() as connection:
             connection.exec_driver_sql("SELECT 1")
         return {"status": "ready", "database": database.mode}
-    except (RuntimeError, ValueError, OSError):
-        raise HTTPException(status_code=503, detail="Durable database is not configured or unavailable.")
+    except (RuntimeError, ValueError, OSError, SQLAlchemyError):
+        raise HTTPException(
+            status_code=503,
+            detail="Durable database is not configured or unavailable.",
+        ) from None
 
 
 @app.get("/api/auth/csrf")
@@ -292,9 +300,15 @@ async def bootstrap_admin(
             request_id=_request_id(request),
             ip_digest=_ip_digest(request),
         )
-        raise HTTPException(status_code=403, detail="Administrator bootstrap is unavailable or unauthorized.")
+        raise HTTPException(
+            status_code=403,
+            detail="Administrator bootstrap is unavailable or unauthorized.",
+        )
     if not store.bootstrap_available():
-        raise HTTPException(status_code=409, detail="Initial administrator setup is already complete.")
+        raise HTTPException(
+            status_code=409,
+            detail="Initial administrator setup is already complete.",
+        )
     password_hash = hash_password(item.password)
     user = store.create_bootstrap_admin(
         email=item.email,
@@ -304,7 +318,10 @@ async def bootstrap_admin(
         ip_digest=_ip_digest(request),
     )
     if user is None:
-        raise HTTPException(status_code=409, detail="Initial administrator setup is already complete.")
+        raise HTTPException(
+            status_code=409,
+            detail="Initial administrator setup is already complete.",
+        )
     _session_token(request, response, store, user["id"])
     return {"user": user, "message": "Administrator account created."}
 
@@ -313,7 +330,10 @@ async def bootstrap_admin(
 async def register_account(item: AuthRegisterIn, request: Request) -> dict:
     store = get_auth_store()
     if store.bootstrap_available():
-        raise HTTPException(status_code=409, detail="The initial administrator must be created first.")
+        raise HTTPException(
+            status_code=409,
+            detail="The initial administrator must be created first.",
+        )
     _check_rate_limit(store, request, item.email, "auth.register")
     password_hash = hash_password(item.password)
     try:
@@ -515,9 +535,13 @@ async def prepare_features(
     content_type = request.headers.get("content-type", "").split(";", maxsplit=1)[0].strip().lower()
     if content_type not in {"text/csv", "text/plain"}:
         raise HTTPException(status_code=415, detail="Submit pre-extracted CSV text only.")
-    raw_content = await request.body()
+    raw_content = bytearray()
+    async for chunk in request.stream():
+        if len(raw_content) + len(chunk) > 1_048_576:
+            raise HTTPException(status_code=413, detail="Feature CSV exceeds the 1 MiB upload limit.")
+        raw_content.extend(chunk)
     try:
-        content = raw_content.decode("utf-8")
+        content = bytes(raw_content).decode("utf-8")
         prepared = prepare_feature_csv(content, dataset_id)
     except (UnicodeDecodeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

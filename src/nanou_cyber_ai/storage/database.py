@@ -124,7 +124,9 @@ class SecurityDatabase:
             import os
 
             if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
-                raise RuntimeError("A durable NANOU_DATABASE_URL is required on serverless hosting.")
+                raise RuntimeError(
+                    "A durable NANOU_DATABASE_URL is required on serverless hosting."
+                )
             data_dir = data_dir.expanduser()
             data_dir.mkdir(parents=True, exist_ok=True)
             database_path = data_dir / "malware_metadata.sqlite3"
