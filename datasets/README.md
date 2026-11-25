@@ -9,10 +9,11 @@ EMBER2024 is a multi-format benchmark with extracted features, hashes, metadata 
 - Upstream: https://github.com/FutureComputing4AI/EMBER2024
 - Paper: https://arxiv.org/abs/2506.05074
 - Feature data and benchmark models are hosted by the upstream project on Hugging Face.
-- Approximate dataset sizes are large (for example, Win32 train 23.7 GB); choose a single format/split and keep it outside this repo.
+- Approximate dataset sizes are large (for example, Win32 train 23.7 GB); choose one format/split and keep it outside this repo.
+- Upstream layout: raw pre-extracted feature/label JSONL; `thrember.create_vectorized_features()` produces float32 X and int32 y `.dat` files.
 - The upstream README does not clearly state a dataset license in the checked material. Verify the current license/terms before reuse or redistribution.
 
-Use feature vectors, hashes and labels only. Do not retrieve the original binaries or samples.
+The importer downloads only the official feature archives and extracts flat JSONL files. It rejects traversal paths, symlinks, non-JSONL members, oversized members, suspicious compression ratios and overwrites. The vector exporter then joins sorted JSONL metadata to the corresponding .dat rows; it does not fetch, open or execute original sample files.
 
 ## EMBER 2018 static PE features (reproducible legacy baseline)
 

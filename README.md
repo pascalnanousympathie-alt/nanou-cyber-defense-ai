@@ -46,23 +46,42 @@ python -m nanou_cyber_ai.mcp.server
 
 The MCP server uses local stdio and exposes only fixed-origin NVD/CISA read-only lookups. See [docs/mcp.md](docs/mcp.md).
 
-## Static malware-feature model
+## EMBER2024 import and model
 
-Prepare two CSV files from a licensed, pre-extracted feature dataset. Each needs a `label` column containing `malicious`/`benign` (or 1/0) plus numeric feature columns. Optional `sha256`, `family`, and provenance columns are ignored as metadata. Raw binaries, payloads, executable paths and non-finite feature values are rejected.
+The official EMBER2024 project publishes pre-extracted JSONL features and a `thrember` vectorizer. The safe importer below downloads the official feature archives and extracts **flat JSONL files only**. It rejects traversal paths, symlinks, unexpected file types, oversized archives and overwrite attempts. It never extracts executable samples.
+
+On a capable Linux workstation (the upstream feature toolkit has substantial dependencies; do not install its full stack on a low-memory Android phone):
 
 ```bash
-python -m pip install -e ".[ml]"
-python scripts/train_static_malware_detector.py \
-  --train-csv /path/to/temporal-train-features.csv \
-  --test-csv /path/to/temporal-test-features.csv \
-  --dataset-id ember2024-static-features
+python -m pip install -e ".[ember-download]"
+mkdir -p /data/ember2024
+python scripts/import_ember2024_archives.py --data-dir /data/ember2024 --subset train --file-type APK
+python scripts/import_ember2024_archives.py --data-dir /data/ember2024 --subset test --file-type APK
+python scripts/import_ember2024_archives.py --data-dir /data/ember2024 --subset challenge
 ```
 
-The baseline uses a HistGradientBoosting classifier, writes the model and metrics under the ignored `models/` directory, and enforces conservative row/feature caps to limit memory. Keep the upstream temporal train/test split; do not randomly mix future samples into training. This is a research baseline, not a production verdict or a substitute for analyst review.
+Then install the upstream vectorizer and produce the numeric matrices:
 
-## Malware research data
+```bash
+python -m pip install "git+https://github.com/FutureComputing4AI/EMBER2024.git@0ef753e81d98bf209f71b03cd331dfc190b5b54d"
+python -c "import thrember; thrember.create_vectorized_features('/data/ember2024')"
+```
 
-See [datasets/README.md](datasets/README.md). EMBER feature datasets contain extracted features and labels rather than executable sample files. Large datasets are not checked into Git or automatically downloaded by CI.
+The upstream vectorizer currently expects the challenge JSONL subset as well as train/test. The challenge files are feature metadata, not executable samples. After vectorization:
+
+```bash
+python scripts/export_ember_features.py --data-dir /data/ember2024 --subset train --output datasets/cache/ember2024-apk-train.csv
+python scripts/export_ember_features.py --data-dir /data/ember2024 --subset test --output datasets/cache/ember2024-apk-test.csv
+python -m pip install -e ".[ml]"
+python scripts/train_static_malware_detector.py \
+  --train-csv datasets/cache/ember2024-apk-train.csv \
+  --test-csv datasets/cache/ember2024-apk-test.csv \
+  --dataset-id ember2024-apk
+```
+
+The exporter defaults to 2,000 source rows for train and 500 for test to bound disk/memory. Adjust `--max-source-rows` only when storage and memory are sufficient. The trainer uses compact float32/int8 buffers, defaults to 2,000 train rows, 500 test rows and up to 4,096 features, and keeps the upstream temporal split. See [docs/malware-model.md](docs/malware-model.md) for the full workflow and limitations.
+
+The model and metrics are written under the ignored `models/` directory; dataset files and generated CSVs remain under ignored `datasets/cache/`. Neither is committed to Git. Verify the upstream dataset license and terms before reuse or redistribution.
 
 ## CI
 
@@ -70,4 +89,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-MVP scaffold with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, feature CSV validation and an optional static-feature training baseline. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
+MVP scaffold with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, safe EMBER2024 archive import, feature-vector conversion and an optional static-feature training baseline. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
