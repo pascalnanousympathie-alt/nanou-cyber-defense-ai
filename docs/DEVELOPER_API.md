@@ -49,7 +49,7 @@ To enable natural-language tool selection through the OpenAI Responses API, conf
 - `NANOU_AI_API_KEY` — a private provider key, stored only in the hosting secret manager;
 - `NANOU_AI_MODEL` — optional model override (default: `gpt-6.2-astra`).
 
-Never put the provider key in the browser, APK, prompts, Git or chat. The assistant sends chat input to the configured provider only when the key is configured. The Responses API request uses `store=false`. If the provider is unavailable, the assistant falls back to the local command router and reports that fallback. The default per-user assistant rate limit is 30 requests per minute (`NANOU_ASSISTANT_REQUESTS_PER_MINUTE`).
+Never put the provider key in the browser, APK, prompts, Git or chat. The assistant sends chat input to the configured provider only when the key is configured. The Responses API request uses `store=false`. If the provider is unavailable, the assistant falls back to the local command router and reports that fallback. The default per-user assistant rate limit is 30 requests per minute (`NANOU_ASSISTANT_REQUESTS_PER_MINUTE`). Local command mode makes no LLM API call. When `NANOU_AI_API_KEY` is configured, provider usage may incur charges under the selected model's current pricing; set provider-side budgets and monitor usage before enabling it.
 
 ### cURL chat example
 
