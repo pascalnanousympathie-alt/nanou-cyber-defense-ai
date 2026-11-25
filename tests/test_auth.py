@@ -411,7 +411,7 @@ def test_user_role_change_revokes_owned_developer_api_keys(tmp_path) -> None:
         ip_digest=None,
     )
     token_hash = hashlib.sha256(b"ncd_live_analyst-token").hexdigest()
-    key = store.create_api_key(
+    store.create_api_key(
         owner_user_id=approved["id"],
         name="Temporary analyst key",
         token_prefix="ncd_live_analyst",
