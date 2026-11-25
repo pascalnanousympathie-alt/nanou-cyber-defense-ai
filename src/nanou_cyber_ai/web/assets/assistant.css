@@ -14,6 +14,8 @@
 .assistant-shortcuts{display:flex;flex-wrap:wrap;gap:6px}
 .assistant-shortcuts button{background:#111;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#c9c9c9;cursor:pointer;font:inherit;font-size:8px;padding:7px 9px}
 .assistant-shortcuts button:hover{background:#1c1c1c;border-color:rgba(255,255,255,.28)}
+.assistant-simulation-link{align-items:center;background:#151515;border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#dedede;display:inline-flex;font-size:8px;padding:7px 9px;text-decoration:none}
+.assistant-simulation-link:hover{background:#202020;border-color:rgba(255,255,255,.32)}
 .assistant-chat-log{background:#050505;border:1px solid rgba(255,255,255,.1);border-radius:8px;display:flex;flex-direction:column;gap:10px;max-height:430px;min-height:220px;overflow-y:auto;padding:11px}
 .assistant-message{border:1px solid rgba(255,255,255,.09);border-radius:9px;display:grid;gap:6px;max-width:min(92%,680px);padding:10px 12px}
 .assistant-message.assistant{align-self:flex-start;background:#111}
