@@ -211,7 +211,7 @@ async def secure_request_middleware(request: Request, call_next):
         except ValueError:
             rejection = Response("Invalid content length.", status_code=400)
 
-    bearer_api_request = request.url.path.startswith("/api/v1/") and request.headers.get(
+    bearer_api_request = request.url.path == "/api/v1/assistant/chat" and request.headers.get(
         "authorization", ""
     ).lower().startswith("bearer ")
     if (
