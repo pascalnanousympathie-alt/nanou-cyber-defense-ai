@@ -63,7 +63,12 @@ def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None
         response = client.get("/assets/app.css")
 
     assert response.status_code == 200
-    assert "--bg: #070d18" in response.text
+    assert "--bg: #050505" in response.text
+    assert "--sidebar: #080808" in response.text
+    assert "--panel: #101010" in response.text
+    assert "Pure-black executive SOC theme" in response.text
+    assert "background: #050505" in response.text
+    assert "background: #080808" in response.text
     assert ".nav-group-label" in response.text
     assert ".theme-pill" in response.text
     assert "@media (max-width: 760px)" in response.text
