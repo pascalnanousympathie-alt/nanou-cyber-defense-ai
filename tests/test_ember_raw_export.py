@@ -47,7 +47,9 @@ def test_raw_jsonl_export_uses_extractor_and_deduplicates_hashes(tmp_path):
 
     with output.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
+    assert report["source_metadata_file_count"] == 1
     assert report["source_rows_scanned"] == 4
+    assert report["source_scan_cap_reached"] is False
     assert report["labeled_rows_exported"] == 2
     assert report["unlabeled_rows_skipped"] == 1
     assert report["duplicate_source_rows_skipped"] == 1
@@ -78,6 +80,7 @@ def test_raw_jsonl_export_enforces_unique_export_cap(tmp_path):
         extractor=FakeExtractor(),
     )
     assert report["source_rows_scanned"] == 4
+    assert report["source_scan_cap_reached"] is False
     assert report["unique_labeled_rows_seen"] == 3
     assert report["labeled_rows_exported"] == 2
     assert report["duplicate_source_rows_skipped"] == 1
@@ -121,6 +124,30 @@ def test_raw_jsonl_reservoir_samples_across_the_complete_split_reproducibly(tmp_
     assert max(selected) > 90
     assert reports[0]["source_rows_scanned"] == 100
     assert reports[0]["unique_labeled_rows_seen"] == 100
+
+
+def test_raw_jsonl_export_reports_when_source_scan_was_truncated(tmp_path):
+    source = tmp_path / "source"
+    _write_jsonl(
+        source / "APK_train.jsonl",
+        [
+            {"sha256": f"{index:064x}", "label": index % 2, "features": [index, index + 1]}
+            for index in range(4)
+        ],
+    )
+
+    report = export_ember_jsonl_subset(
+        source,
+        tmp_path / "truncated.csv",
+        subset="train",
+        max_source_rows=2,
+        max_exported_rows=1,
+        extractor=FakeExtractor(),
+    )
+
+    assert report["source_rows_scanned"] == 2
+    assert report["source_scan_cap_reached"] is True
+    assert report["labeled_rows_exported"] == 1
 
 
 def test_raw_jsonl_export_rejects_conflicting_duplicate_hashes(tmp_path):

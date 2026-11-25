@@ -60,9 +60,6 @@ jobs:
               raise SystemExit("max_train_rows must be between 1000 and 20000.")
           if not 500 <= test_rows <= 5000:
               raise SystemExit("max_test_rows must be between 500 and 5000.")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"train_scan_rows=300000\n")
-              output.write(f"test_scan_rows=60000\n")
           PY
           export DATA_DIR="$RUNNER_TEMP/ember2024-apk-data"
           export RESULTS_DIR="$RUNNER_TEMP/ember2024-apk-results"
@@ -106,11 +103,78 @@ jobs:
           PY
           df -h "$RUNNER_TEMP"
 
+      - name: Count every imported APK JSONL source row
+        id: source_rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data_dir = Path(os.environ["DATA_DIR"])
+          train_files = sorted(
+              path for path in data_dir.iterdir()
+              if path.is_file()
+              and not path.is_symlink()
+              and path.name.endswith(".jsonl")
+              and "train" in path.name
+          )
+          test_files = sorted(
+              path for path in data_dir.iterdir()
+              if path.is_file()
+              and not path.is_symlink()
+              and path.name.endswith(".jsonl")
+              and "test" in path.name
+          )
+          if not train_files or not test_files:
+              raise SystemExit("APK train/test JSONL source files are missing.")
+
+          def count_lines(paths):
+              totals = {}
+              for path in paths:
+                  with path.open("r", encoding="utf-8") as handle:
+                      totals[path.name] = sum(1 for _ in handle)
+              return totals
+
+          train_counts = count_lines(train_files)
+          test_counts = count_lines(test_files)
+          results_dir = Path(os.environ["RESULTS_DIR"])
+          train_import = json.loads(
+              (results_dir / "import-train.json").read_text(encoding="utf-8")
+          )
+          test_import = json.loads(
+              (results_dir / "import-test.json").read_text(encoding="utf-8")
+          )
+          if len(train_files) != train_import["files_extracted"]:
+              raise SystemExit("Not every imported train JSONL file was counted.")
+          if len(test_files) != test_import["files_extracted"]:
+              raise SystemExit("Not every imported test JSONL file was counted.")
+          train_total = sum(train_counts.values())
+          test_total = sum(test_counts.values())
+          if train_total < 1000 or test_total < 500:
+              raise SystemExit("Counted source row totals are unexpectedly small.")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"train_source_rows={train_total}\n")
+              output.write(f"test_source_rows={test_total}\n")
+              output.write(f"train_source_files={len(train_files)}\n")
+              output.write(f"test_source_files={len(test_files)}\n")
+
+          print({
+              "train_source_files": len(train_files),
+              "train_source_rows": train_total,
+              "test_source_files": len(test_files),
+              "test_source_rows": test_total,
+          })
+          PY
+
       - name: Export bounded APK rows with the official thrember extractor
         shell: bash
         env:
-          TRAIN_SCAN_ROWS: ${{ steps.caps.outputs.train_scan_rows }}
-          TEST_SCAN_ROWS: ${{ steps.caps.outputs.test_scan_rows }}
+          TRAIN_SCAN_ROWS: ${{ steps.source_rows.outputs.train_source_rows }}
+          TEST_SCAN_ROWS: ${{ steps.source_rows.outputs.test_source_rows }}
         run: |
           set -euo pipefail
           mkdir -p "$DATA_DIR/export"
@@ -131,6 +195,11 @@ jobs:
           df -h "$RUNNER_TEMP"
 
       - name: Audit label balance and train/test SHA-256 separation
+        env:
+          EXPECTED_TRAIN_SOURCE_ROWS: ${{ steps.source_rows.outputs.train_source_rows }}
+          EXPECTED_TEST_SOURCE_ROWS: ${{ steps.source_rows.outputs.test_source_rows }}
+          EXPECTED_TRAIN_SOURCE_FILES: ${{ steps.source_rows.outputs.train_source_files }}
+          EXPECTED_TEST_SOURCE_FILES: ${{ steps.source_rows.outputs.test_source_files }}
         shell: bash
         run: |
           set -euo pipefail
@@ -149,6 +218,28 @@ jobs:
 
           train_rows = read_rows(data_dir / "export/train.csv")
           test_rows = read_rows(data_dir / "export/test.csv")
+          train_export = json.loads((results_dir / "export-train.json").read_text(encoding="utf-8"))
+          test_export = json.loads((results_dir / "export-test.json").read_text(encoding="utf-8"))
+          expected_train_rows = int(os.environ["EXPECTED_TRAIN_SOURCE_ROWS"])
+          expected_test_rows = int(os.environ["EXPECTED_TEST_SOURCE_ROWS"])
+          expected_train_files = int(os.environ["EXPECTED_TRAIN_SOURCE_FILES"])
+          expected_test_files = int(os.environ["EXPECTED_TEST_SOURCE_FILES"])
+          for name, report, expected, expected_files in (
+              ("train", train_export, expected_train_rows, expected_train_files),
+              ("test", test_export, expected_test_rows, expected_test_files),
+          ):
+              if report.get("source_scan_cap_reached"):
+                  raise SystemExit(f"{name} JSONL source scan hit its cap; split is truncated.")
+              if report.get("source_rows_scanned") != expected:
+                  raise SystemExit(
+                      f"{name} scan mismatch: scanned {report.get('source_rows_scanned')} "
+                      f"of {expected} counted JSONL rows."
+                  )
+              if report.get("source_metadata_file_count") != expected_files:
+                  raise SystemExit(
+                      f"{name} metadata file mismatch: processed "
+                      f"{report.get('source_metadata_file_count')} of {expected_files} JSONL files."
+                  )
           train_hashes = [row["sha256"] for row in train_rows]
           test_hashes = [row["sha256"] for row in test_rows]
           train_labels = {int(row["label"]) for row in train_rows}
@@ -165,6 +256,18 @@ jobs:
               )
 
           audit = {
+              "source_jsonl_rows": {
+                  "train": expected_train_rows,
+                  "test": expected_test_rows,
+              },
+              "source_jsonl_files": {
+                  "train": expected_train_files,
+                  "test": expected_test_files,
+              },
+              "source_scan_cap_reached": {
+                  "train": train_export["source_scan_cap_reached"],
+                  "test": test_export["source_scan_cap_reached"],
+              },
               "train_unique_rows": len(train_rows),
               "test_unique_rows": len(test_rows),
               "train_label_counts": {
@@ -327,7 +430,15 @@ jobs:
                   "seed": 42,
                   "max_unique_train_rows": int(os.environ["TRAIN_ROWS"]),
                   "max_unique_test_rows": int(os.environ["TEST_ROWS"]),
-                  "source_rows_scan_limit": {"train": 300000, "test": 60000},
+                  "source_rows_counted_from_extracted_jsonl": True,
+                  "source_rows_scanned": {
+                      "train": load("export-train.json")["source_rows_scanned"],
+                      "test": load("export-test.json")["source_rows_scanned"],
+                  },
+                  "source_scan_cap_reached": {
+                      "train": load("export-train.json")["source_scan_cap_reached"],
+                      "test": load("export-test.json")["source_scan_cap_reached"],
+                  },
                   "duplicate_sha256_rows_are_skipped": True,
               },
               "feature_exports": {
