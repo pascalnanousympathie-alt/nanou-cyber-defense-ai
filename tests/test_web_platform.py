@@ -73,3 +73,40 @@ def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None
     assert ".theme-pill" in response.text
     assert "@media (max-width: 760px)" in response.text
     assert "@media (prefers-reduced-motion: reduce)" in response.text
+
+
+def test_role_based_workspace_and_navigation_are_scoped_by_role() -> None:
+    with TestClient(app) as client:
+        home = client.get("/")
+        script = client.get("/assets/app.js")
+
+    assert home.status_code == 200
+    assert 'id="role-workspace" data-role-visibility="authenticated"' in home.text
+    assert 'data-role-visibility="admin,analyst"' in home.text
+    assert 'data-role-visibility="admin"' in home.text
+    assert 'data-role-visibility="authenticated"' in home.text
+    assert 'id="metadata-write-access"' in home.text
+    assert 'id="malware-analysis-panel"' in home.text
+
+    assert script.status_code == 200
+    assert "const ROLE_WORKSPACES = {" in script.text
+    assert "admin: {" in script.text
+    assert "analyst: {" in script.text
+    assert "viewer: {" in script.text
+    assert "function updateRoleVisibility()" in script.text
+    assert "function renderRoleWorkspace()" in script.text
+    assert 'byId("metadata-create-form").hidden = !canWriteMetadata;' in script.text
+
+
+def test_role_workspace_styles_remain_responsive_in_black_theme() -> None:
+    with TestClient(app) as client:
+        response = client.get("/assets/app.css")
+
+    assert response.status_code == 200
+    assert ".role-workspace" in response.text
+    assert ".role-permissions" in response.text
+    assert ".role-permission" in response.text
+    assert ".access-note" in response.text
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in response.text
+    assert "@media (max-width: 760px)" in response.text
+    assert ".nav-group[hidden]" in response.text
