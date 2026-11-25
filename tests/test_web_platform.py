@@ -176,7 +176,41 @@ def test_developer_center_assets_and_read_only_integration_contract() -> None:
         "/api/v1/kev",
         "/api/v1/cve/{cve_id}",
         "/api/v1/malware/metadata",
+        "/api/v1/assistant/chat",
     }
+    assert "ai:chat" in document["paths"]["/api/v1/assistant/chat"]["post"]["security"][0]["NanouBearer"] or (
+        "AssistantChatRequest" in document["components"]["schemas"]
+    )
     for path_item in document["paths"].values():
         for operation in path_item.values():
             assert "security" in operation
+
+
+def test_assistant_chat_assets_and_command_policy_are_present() -> None:
+    with TestClient(app) as client:
+        home = client.get("/")
+        script = client.get("/assets/assistant.js")
+        stylesheet = client.get("/assets/assistant.css")
+        schema = client.get("/api/v1/openapi.json")
+
+    assert home.status_code == 200
+    assert 'id="assistant-chat"' in home.text
+    assert 'id="assistant-chat-form"' in home.text
+    assert 'data-assistant-command="Jereo CISA KEV"' in home.text
+    assert 'href="/assets/assistant.css"' in home.text
+    assert 'src="/assets/assistant.js"' in home.text
+
+    assert script.status_code == 200
+    assert 'apiRequest("/api/chat/command"' in script.text
+    assert "localStorage" not in script.text
+    assert "textContent = content" in script.text
+
+    assert stylesheet.status_code == 200
+    assert ".assistant-chat-log" in stylesheet.text
+    assert ".assistant-message" in stylesheet.text
+    assert "@media(max-width:760px)" in stylesheet.text
+
+    assert schema.status_code == 200
+    operation = schema.json()["paths"]["/api/v1/assistant/chat"]["post"]
+    assert operation["requestBody"]["required"] is True
+    assert "AssistantChatRequest" in operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
