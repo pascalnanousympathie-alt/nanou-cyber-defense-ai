@@ -87,7 +87,10 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     "Correlate WAF rule identifiers, request anomaly score, "
                     "and application error spikes."
                 ),
-                "recommendation": "Review the affected route, patch status, WAF coverage, and application logs.",
+                "recommendation": (
+                    "Review the affected route, patch status, WAF coverage, "
+                    "and application logs."
+                ),
             },
             {
                 "technique_id": "T1595.002",
