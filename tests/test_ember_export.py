@@ -81,7 +81,9 @@ def test_export_rejects_conflicting_duplicate_hashes(tmp_path):
     )
 
     with pytest.raises(ValueError, match="Duplicate SHA-256 has conflicting"):
-        export_ember_vectorized_subset(source, tmp_path / "out.csv", subset="train", max_source_rows=2)
+        export_ember_vectorized_subset(
+            source, tmp_path / "out.csv", subset="train", max_source_rows=2
+        )
 
 
 def test_export_stops_at_max_unique_exported_rows(tmp_path):
