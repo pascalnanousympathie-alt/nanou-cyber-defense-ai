@@ -836,3 +836,130 @@ fieldset:disabled { opacity: .5; }
   .role-workspace { padding: 16px; }
   .role-permissions { grid-template-columns: 1fr; }
 }
+
+
+/* Admin governance workspace: searchable lists, status summary and audit filters. */
+.admin-subtitle {
+  color: #8f8f8f;
+  font-size: 9px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+.admin-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 13px 0 12px;
+}
+.admin-summary-card {
+  background: #101010;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 11px;
+}
+.admin-summary-card span {
+  color: #929292;
+  font-size: 8px;
+  line-height: 1.4;
+}
+.admin-summary-card strong {
+  color: #f2f2f2;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.admin-summary-card.pending strong { color: #edc58f; }
+.admin-summary-card.disabled strong { color: #c3c3c3; }
+.admin-toolbar, .audit-toolbar {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, .42fr);
+  margin: 10px 0;
+}
+.admin-toolbar .field label, .audit-toolbar .field label { color: #999; }
+.admin-toolbar input, .admin-toolbar select, .audit-toolbar input, .audit-toolbar select {
+  background: #080808;
+  min-height: 36px;
+  padding: 8px 10px;
+}
+.admin-result-count {
+  color: #858585;
+  font-size: 8px;
+  margin: 6px 0 9px;
+}
+.admin-user-status {
+  border-radius: 20px;
+  display: inline-flex;
+  font-size: 8px;
+  font-weight: 750;
+  margin-top: 3px;
+  padding: 3px 7px;
+  width: fit-content;
+}
+.admin-user-status.status-active {
+  background: rgba(117,214,168,.09);
+  color: #a9dfc2;
+}
+.admin-user-status.status-pending {
+  background: rgba(233,179,108,.1);
+  color: #edc58f;
+}
+.admin-user-status.status-disabled {
+  background: rgba(255,255,255,.07);
+  color: #bdbdbd;
+}
+.audit-list { max-height: 320px; }
+.audit-row {
+  align-items: start;
+  display: grid;
+  gap: 5px 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 9px 10px;
+}
+.audit-row-main {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+}
+.audit-row-main strong { overflow-wrap: anywhere; }
+.audit-outcome {
+  border-radius: 20px;
+  font-size: 7px;
+  font-weight: 800;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+.audit-outcome.outcome-success {
+  background: rgba(117,214,168,.09);
+  color: #a9dfc2;
+}
+.audit-outcome.outcome-pending {
+  background: rgba(233,179,108,.1);
+  color: #edc58f;
+}
+.audit-outcome.outcome-failed, .audit-outcome.outcome-blocked,
+.audit-outcome.outcome-invalid_bootstrap_token, .audit-outcome.outcome-pending_or_disabled {
+  background: rgba(233,179,108,.1);
+  color: #edc58f;
+}
+.audit-row-detail {
+  color: #858585;
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+.audit-row time {
+  color: #a0a0a0;
+  font-size: 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .admin-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-toolbar, .audit-toolbar { grid-template-columns: 1fr; }
+  .audit-row { grid-template-columns: minmax(0, 1fr); }
+  .audit-row time { text-align: left; }
+}
