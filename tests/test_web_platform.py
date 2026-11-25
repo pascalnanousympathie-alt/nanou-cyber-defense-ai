@@ -29,3 +29,12 @@ def test_web_platform_uses_restrictive_security_headers() -> None:
     assert "style-src 'self'" in response.headers["content-security-policy"]
     assert "object-src 'none'" in response.headers["content-security-policy"]
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_admin_bootstrap_form_has_private_token_field() -> None:
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'id="bootstrap-token"' in response.text
+    assert 'id="bootstrap-password"' in response.text
