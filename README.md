@@ -37,6 +37,9 @@ Health: `GET /health`
 - `GET /api/malware/metadata` — list stored metadata records (requires bearer token).
 - `POST /api/malware/metadata` — add a hash/label/feature-summary record (requires bearer token; never a binary).
 
+- GET /api/malware/inference/status — report whether an operator-configured model passed integrity/schema checks.
+- POST /api/malware/inference — classify a strict pre-extracted numeric feature vector (requires bearer token; no APK or binary uploads).
+
 The service stores metadata under `~/.local/share/nanou-cyber-defense-ai` by default. Set `NANOU_DATA_DIR` to use another directory. Set `NANOU_METADATA_API_TOKEN` locally before using metadata endpoints. Never put actual tokens, private reports, customer data, or malware samples in this public repository.
 
 ## Web platform

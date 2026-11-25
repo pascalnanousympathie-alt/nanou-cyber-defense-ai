@@ -1,7 +1,9 @@
+import math
+import math
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 class MalwareMetadataIn(BaseModel):
@@ -37,3 +39,50 @@ class TriageResult(BaseModel):
     in_kev: bool
     cvss_score: float | None = None
     rationale: list[str]
+
+
+class MalwareInferenceIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_id: Literal["ember2024-apk", "lamda-apk-2022-train-2023-test"]
+    schema_version: Literal[1] = 1
+    features: list[float] = Field(min_length=1, max_length=4561)
+
+    @field_validator("features", mode="before")
+    @classmethod
+    def finite_numeric_features(cls, value: object) -> list[float]:
+        if not isinstance(value, list):
+            raise ValueError("features must be a JSON array of numbers")
+        normalized: list[float] = []
+        for number in value:
+            if isinstance(number, bool) or not isinstance(number, (int, float)):
+                raise ValueError("features must contain only numeric values")
+            parsed = float(number)
+            if not math.isfinite(parsed) or abs(parsed) > 1_000_000_000:
+                raise ValueError("feature values must be finite and within the supported range")
+            normalized.append(parsed)
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_dataset_schema(self) -> "MalwareInferenceIn":
+        expected_count = 2568 if self.dataset_id == "ember2024-apk" else 4561
+        if len(self.features) != expected_count:
+            raise ValueError(
+                f"{self.dataset_id} requires exactly {expected_count} numeric features"
+            )
+        if self.dataset_id == "lamda-apk-2022-train-2023-test" and any(
+            not value.is_integer() or not -128 <= value <= 127 for value in self.features
+        ):
+            raise ValueError("LAMDA features must preserve the original signed int8 values")
+        return self
+
+
+class MalwareInferenceResult(BaseModel):
+    dataset_id: Literal["ember2024-apk", "lamda-apk-2022-train-2023-test"]
+    schema_version: Literal[1]
+    feature_count: int
+    classification: Literal["benign", "malicious"]
+    malicious_probability: float = Field(ge=0, le=1)
+    decision_threshold: float = Field(ge=0, le=1)
+    model_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    limitation: str

@@ -25,6 +25,7 @@
         <a class="nav-link active" href="#overview"><span aria-hidden="true">◈</span> Topimaso</a>
         <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE sy faharefoana</a>
         <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
+        <a class="nav-link" href="#malware-model"><span aria-hidden="true">✳</span> AI malware model</a>
         <a class="nav-link" href="#metadata"><span aria-hidden="true">⬡</span> Malware metadata</a>
         <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
       </nav>
@@ -123,6 +124,41 @@
           </div>
           <p class="data-note">Loharano: CISA. Ny vaovao dia mila fanamarinana sy fandinihana araka ny tontolo iasanao.</p>
         </article>
+      </section>
+
+
+      <section class="section-heading" id="malware-model">
+        <div><p class="eyebrow">STATIC FEATURE CLASSIFIER</p><h2>AI malware feature analysis</h2></div>
+        <span class="section-tag">Model integrity check</span>
+      </section>
+      <section class="panel inference-panel">
+        <div class="metadata-intro">
+          <div class="metadata-mark model-mark">✳</div>
+          <div><h3>Famakafakana amin'ny modely ML</h3><p>Vector numérique efa nalaina mialoha ihany no raisina; tsy mandray APK na binary.</p></div>
+        </div>
+        <div id="model-status" class="model-status" role="status" aria-live="polite">Manamarina raha misy modely azo antoka…</div>
+        <form id="malware-inference-form">
+          <fieldset id="inference-fields" disabled>
+            <div class="metadata-form">
+              <div class="field field-wide">
+                <label for="inference-dataset">Dataset / feature schema</label>
+                <select id="inference-dataset" name="dataset_id">
+                  <option value="ember2024-apk">EMBER2024 · 2,568 features</option>
+                  <option value="lamda-apk-2022-train-2023-test">LAMDA · 4,561 int8 features</option>
+                </select>
+              </div>
+              <div class="field field-wide">
+                <label for="inference-features">JSON numeric feature array</label>
+                <textarea id="inference-features" rows="5" spellcheck="false" placeholder="[0.12, 0.04, 1.5, ...]" required></textarea>
+              </div>
+              <div class="field field-wide"><button class="button button-primary" id="inference-submit" type="submit">Diniho ny feature vector</button></div>
+            </div>
+          </fieldset>
+        </form>
+        <div id="inference-result" class="result-area" aria-live="polite">
+          <div class="empty-state"><span>✳</span><p>Tsy misy fanadihadiana natao.</p></div>
+        </div>
+        <p class="data-note">Ny valiny dia tombana avy amin'ny static features, fa tsy porofo fa voa-infecté ny fitaovana. Tsy tokony hampiasaina ho fanapahan-kevitra mandeha ho azy ny threshold 0.5 raha tsy voamarina amin'ny validation set misaraka.</p>
       </section>
 
       <section class="section-heading" id="metadata">

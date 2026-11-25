@@ -2,6 +2,7 @@
 
 const byId = (id) => document.getElementById(id);
 let activeMetadataToken = "";
+let configuredMalwareModel = null;
 
 function setMessage(element, message, kind = "") {
   element.textContent = message;
@@ -260,10 +261,12 @@ async function loadMetadata() {
     renderMetadata(Array.isArray(items) ? items : []);
     byId("metadata-workspace").hidden = false;
     setMessage(byId("metadata-auth-status"), "Voamarina ny token. Azo ampiasaina ny metadata.", "success");
+    updateInferenceAccess();
   } catch (error) {
     activeMetadataToken = "";
     byId("api-token").value = "";
     byId("metadata-workspace").hidden = true;
+    updateInferenceAccess();
     setMessage(byId("metadata-auth-status"), error.message || "Tsy nahomby ny fanamarinana.", "error");
   }
 }
@@ -310,7 +313,93 @@ function logoutMetadata() {
   byId("metadata-workspace").hidden = true;
   byId("metadata-list").replaceChildren();
   byId("metadata-total").textContent = "0";
+  updateInferenceAccess();
+  byId("inference-result").replaceChildren();
   setMessage(byId("metadata-auth-status"), "Nakatona ny fidirana. Tsy nisy token notehirizina.");
+}
+
+
+
+function updateInferenceAccess() {
+  const ready = Boolean(configuredMalwareModel?.available);
+  const authenticated = Boolean(activeMetadataToken);
+  byId("inference-fields").disabled = !(ready && authenticated);
+  const status = byId("model-status");
+  if (!ready) {
+    status.dataset.state = "error";
+    status.textContent = configuredMalwareModel?.reason || "Tsy mbola misy modely voamarina napetraka ao amin'ny server.";
+    return;
+  }
+  status.dataset.state = "ready";
+  const selected = configuredMalwareModel.dataset_id;
+  byId("inference-dataset").value = selected;
+  const datasetName = selected === "ember2024-apk" ? "EMBER2024" : "LAMDA";
+  status.textContent = authenticated
+    ? `Modely ${datasetName} voamarina · ${configuredMalwareModel.feature_count} features · afaka manao inference.`
+    : `Modely ${datasetName} voamarina. Ampidiro ny bearer token ao amin'ny fizarana Metadata mba hampiasana azy.`;
+}
+
+async function loadMalwareModelStatus() {
+  try {
+    configuredMalwareModel = await apiRequest("/api/malware/inference/status");
+  } catch {
+    configuredMalwareModel = { available: false, reason: "Tsy azo nohamarinina ny toetry ny modely." };
+  }
+  updateInferenceAccess();
+}
+
+async function runMalwareInference(event) {
+  event.preventDefault();
+  if (!activeMetadataToken || !configuredMalwareModel?.available) {
+    setError(byId("inference-result"), "Mila modely voamarina sy bearer token aloha.");
+    return;
+  }
+  let features;
+  try {
+    features = JSON.parse(byId("inference-features").value);
+  } catch {
+    setError(byId("inference-result"), "Tsy JSON array marina ilay feature vector.");
+    return;
+  }
+  if (!Array.isArray(features) || features.some((value) => typeof value !== "number" || !Number.isFinite(value))) {
+    setError(byId("inference-result"), "Ny feature vector dia tsy maintsy array misy isa finite ihany.");
+    return;
+  }
+  const datasetId = byId("inference-dataset").value;
+  const expected = datasetId === "ember2024-apk" ? 2568 : 4561;
+  if (features.length !== expected) {
+    setError(byId("inference-result"), `Ity schema ity dia mitaky ${expected} features marina.`);
+    return;
+  }
+  if (datasetId === "lamda-apk-2022-train-2023-test" &&
+      features.some((value) => !Number.isInteger(value) || value < -128 || value > 127)) {
+    setError(byId("inference-result"), "Ny LAMDA dia mitaky sanda integer signed int8 (-128 hatramin'ny 127).");
+    return;
+  }
+
+  setLoading(byId("inference-result"), "Manao inference amin'ny modely voamarina…");
+  try {
+    const result = await apiRequest("/api/malware/inference", {
+      method: "POST",
+      token: activeMetadataToken,
+      body: { dataset_id: datasetId, schema_version: 1, features },
+    });
+    const area = byId("inference-result");
+    area.replaceChildren();
+    const wrapper = document.createElement("div");
+    wrapper.className = "inference-result";
+    const label = document.createElement("strong");
+    label.textContent = result.classification === "malicious" ? "MALICIOUS — mila fanadihadiana" : "BENIGN — tsy nahitana famantarana araka ny modely";
+    const probability = document.createElement("span");
+    probability.className = "probability";
+    probability.textContent = `${(result.malicious_probability * 100).toFixed(2)}% probability`;
+    const note = document.createElement("p");
+    note.textContent = `Dataset: ${result.dataset_id} · Features: ${result.feature_count} · Threshold: ${result.decision_threshold} · SHA-256 model: ${result.model_sha256.slice(0, 12)}…`;
+    wrapper.append(label, probability, note);
+    area.append(wrapper);
+  } catch (error) {
+    setError(byId("inference-result"), error.message || "Tsy nahomby ny inference.");
+  }
 }
 
 byId("cve-form").addEventListener("submit", searchCve);
@@ -318,7 +407,9 @@ byId("refresh-kev").addEventListener("click", loadKev);
 byId("metadata-auth-form").addEventListener("submit", authenticateMetadata);
 byId("metadata-create-form").addEventListener("submit", createMetadata);
 byId("metadata-logout").addEventListener("click", logoutMetadata);
+byId("malware-inference-form").addEventListener("submit", runMalwareInference);
 
 loadHealth();
 loadKev();
 loadTools();
+loadMalwareModelStatus();

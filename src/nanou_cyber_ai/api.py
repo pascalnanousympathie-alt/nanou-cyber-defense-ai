@@ -10,8 +10,14 @@ from fastapi.staticfiles import StaticFiles
 
 from nanou_cyber_ai.connectors.kev import fetch_kev_catalog
 from nanou_cyber_ai.connectors.nvd import fetch_cve
+from nanou_cyber_ai.malware.inference import classify_features, load_verified_model
 from nanou_cyber_ai.mcp.registry import list_tools
-from nanou_cyber_ai.models import MalwareMetadata, MalwareMetadataIn
+from nanou_cyber_ai.models import (
+    MalwareInferenceIn,
+    MalwareInferenceResult,
+    MalwareMetadata,
+    MalwareMetadataIn,
+)
 from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
 
@@ -105,6 +111,74 @@ async def cve_detail(cve_id: str) -> dict:
         raise HTTPException(status_code=422, detail="Invalid CVE identifier") from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail="NVD API unavailable") from exc
+
+
+
+def load_configured_malware_model():
+    if (
+        settings.malware_model_path is None
+        or settings.malware_model_sha256 is None
+        or settings.malware_model_dataset_id is None
+    ):
+        raise ValueError("No malware model has been configured.")
+    return load_verified_model(
+        str(settings.malware_model_path),
+        settings.malware_model_sha256,
+        settings.malware_model_dataset_id,
+    )
+
+
+@app.get("/api/malware/inference/status")
+async def malware_inference_status() -> dict:
+    if (
+        settings.malware_model_path is None
+        or settings.malware_model_sha256 is None
+        or settings.malware_model_dataset_id is None
+    ):
+        return {"available": False, "reason": "No verified malware model is configured."}
+    try:
+        model = load_configured_malware_model()
+    except (OSError, RuntimeError, ValueError):
+        return {
+            "available": False,
+            "reason": "The configured malware model failed integrity or schema verification.",
+        }
+    return {
+        "available": True,
+        "dataset_id": model.dataset_id,
+        "feature_count": len(model.feature_names),
+        "schema_version": 1,
+        "decision_threshold": settings.malware_model_threshold,
+    }
+
+
+@app.post(
+    "/api/malware/inference",
+    response_model=MalwareInferenceResult,
+    dependencies=[Depends(require_metadata_token)],
+)
+async def malware_inference(item: MalwareInferenceIn) -> MalwareInferenceResult:
+    try:
+        model = load_configured_malware_model()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="No verified malware model is available for inference.",
+        ) from exc
+    if item.dataset_id != model.dataset_id:
+        raise HTTPException(
+            status_code=422,
+            detail="The requested feature dataset does not match the configured model.",
+        )
+    try:
+        result = classify_features(
+            model,
+            item.features,
+            threshold=settings.malware_model_threshold,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Malware model inference failed.") from exc
+    return MalwareInferenceResult.model_validate(result)
 
 
 @app.get(
