@@ -2,6 +2,8 @@
 
 The versioned Developer API is a read-only REST interface for approved Admin and Analyst accounts, remote backend services and AI platforms that support OpenAPI 3.1 and HTTP Bearer authentication.
 
+The Attack Simulation Manager is intentionally separate from the Developer API. It is available only to signed-in Admin/Analyst dashboard sessions, uses CSRF protection, and emits offline synthetic telemetry. It is not exposed to remote API keys or the public OpenAPI document.
+
 ## Endpoints
 
 | Method | Endpoint | Scope |

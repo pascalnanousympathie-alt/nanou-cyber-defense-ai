@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="/assets/developer.css">
   <link rel="stylesheet" href="/assets/assistant.css">
+  <link rel="stylesheet" href="/assets/simulation.css">
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
@@ -36,6 +37,7 @@
         <div class="nav-group">
           <span class="nav-group-label">AI AUTOMATION</span>
           <a class="nav-link" href="#assistant-chat" data-role-visibility="authenticated"><span aria-hidden="true">✧</span> AI Chat / Commands</a>
+          <a class="nav-link" href="#attack-simulation" data-role-visibility="admin,analyst"><span aria-hidden="true">◎</span> Attack Simulation</a>
         </div>
         <div class="nav-group">
           <span class="nav-group-label">Threat intelligence</span>
@@ -226,10 +228,11 @@
         </div>
         <div class="assistant-policy">
           <strong>Fitaovana azo tanterahina</strong>
-          <span>CVE/NVD · CISA KEV · Malware metadata · Model status · MCP tools · Service status</span>
+          <span>CVE/NVD · CISA KEV · Malware metadata · Model status · MCP tools · Service status · Attack Simulation (Admin/Analyst)</span>
           <small>Read-only ny asa mandeha ho azy. Tsy misy shell, malware execution, exploit, account management na fanovana production.</small>
         </div>
         <div class="assistant-shortcuts" aria-label="Baiko haingana">
+          <a class="assistant-simulation-link" href="#attack-simulation">Attack Simulation Manager ↗</a>
           <button type="button" data-assistant-command="Jereo CVE-2024-3094">Jereo CVE</button>
           <button type="button" data-assistant-command="Jereo CISA KEV">CISA KEV</button>
           <button type="button" data-assistant-command="Jereo malware metadata">Metadata</button>
@@ -253,6 +256,65 @@
           <button id="assistant-clear" class="text-button" type="button">Diovy ny resaka</button>
         </div>
         <p class="data-note">Tsy mitahiry ny chat history ao amin'ny navigateur na database ity pejy ity. Tsy misy saram-LLM amin'ny Local command mode. Raha voa-configurer ny AI provider, ny hafatra dia alefa aminy ary mety hisy sara araka ny modely sy ny token ampiasaina; aza mandefa secrets na angona saro-pady.</p>
+      </section>
+
+      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst">
+        <div><p class="eyebrow">RED TEAM · BLUE TEAM CONTROL</p><h2>Attack Simulation Manager</h2></div>
+        <span class="section-tag">Offline · Authorized lab only</span>
+      </section>
+      <section class="panel simulation-panel" data-role-visibility="admin,analyst" aria-labelledby="simulation-manager-title">
+        <div class="simulation-heading">
+          <div class="simulation-mark" aria-hidden="true">◎</div>
+          <div class="simulation-heading-copy">
+            <h3 id="simulation-manager-title">Red Team scenario / Blue Team detection exercise</h3>
+            <p>Famorona telemetry synthetic hotsapaina ny SIEM, alert routing ary ny fomba fandraisan'ny SOC andraikitra.</p>
+          </div>
+          <span id="simulation-mode" class="simulation-mode">Checking configuration…</span>
+        </div>
+
+        <div class="simulation-guard">
+          <strong>AUTHORIZATION GATE · NO LIVE ATTACK</strong>
+          <p>Offline synthetic simulation ihany no mandeha. Tsy misy port scan, HTTP request, DNS lookup, login attempt, exploit, shell, malware na credential access. Tsy mifandray amin'ny target mihitsy ny moteur.</p>
+          <small>Admin/Analyst ihany · Target ID allowlist · Authorization reference · 10 runs/ora default · Audit log</small>
+        </div>
+
+        <form id="simulation-form">
+          <div class="simulation-controls">
+            <div class="field">
+              <label for="simulation-target">Lab scope / Target ID</label>
+              <select id="simulation-target" name="target_id" required>
+                <option value="" selected disabled>Miandry allowlist…</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="simulation-profile">Attack profile</label>
+              <select id="simulation-profile" name="profile" required>
+                <option value="" selected disabled>Safidio ny profil</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="simulation-intensity">Simulation intensity</label>
+              <select id="simulation-intensity" name="intensity" required>
+                <option value="" selected disabled>Safidio ny intensity</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="simulation-authorization-reference">Authorization / Change reference</label>
+              <input id="simulation-authorization-reference" name="authorization_reference" minlength="4" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._:/-]*" placeholder="Ohatra: CHANGE-2026-014" autocomplete="off" required>
+            </div>
+          </div>
+          <label class="simulation-authorization" for="simulation-authorization-ack">
+            <input id="simulation-authorization-ack" name="authorization_acknowledged" type="checkbox" required>
+            <span>Manamarina aho fa nahazo alalana hitantana ity fanazaran-tena voafetra ity ary voafaritra ao amin'ny allowlist ilay lab scope. Fantatro fa synthetic offline telemetry ihany no hovokarina.</span>
+          </label>
+          <div class="simulation-actions">
+            <button class="button button-primary" id="simulation-run" type="submit" disabled>Manomboka simulation <span aria-hidden="true">→</span></button>
+            <button class="button button-secondary" id="simulation-refresh" type="button">Havaozy ny configuration</button>
+          </div>
+        </form>
+        <p id="simulation-status" class="simulation-status" role="status" aria-live="polite">Miandry fidirana Admin/Analyst sy fanamarinana allowlist.</p>
+        <div id="simulation-result" class="simulation-result" hidden aria-live="polite"></div>
+        <p class="data-note">Ny valiny dia fanazaran-tena ihany, tsy tatitra momba ny vulnerability tena misy. Tsy mitahiry simulation history; ny audit log kosa mitahiry ny actor, target ID, request ID ary vokatra, fa tsy mitahiry raw payload na credential.</p>
       </section>
 
       <section class="section-heading" id="vulnerabilities">
@@ -432,5 +494,6 @@
   </div>
   <script src="/assets/developer.js" defer></script>
   <script src="/assets/assistant.js" defer></script>
+  <script src="/assets/simulation.js" defer></script>
 </body>
 </html>

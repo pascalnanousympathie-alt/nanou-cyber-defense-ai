@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     auth_rate_window_seconds: int = Field(default=900, ge=60, le=3600)
     api_key_requests_per_minute: int = Field(default=60, ge=10, le=600)
     assistant_requests_per_minute: int = Field(default=30, ge=5, le=120)
+    simulation_requests_per_hour: int = Field(default=10, ge=1, le=60)
+    simulation_allowed_targets: str = Field(default="local-lab", max_length=1000)
     ai_api_key: SecretStr | None = None
     ai_model: str = Field(default="gpt-6.2-astra", min_length=1, max_length=80)
     malware_model_path: Path | None = None

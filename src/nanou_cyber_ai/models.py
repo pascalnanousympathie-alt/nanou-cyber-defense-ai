@@ -163,6 +163,27 @@ class AssistantChatIn(BaseModel):
         return normalized
 
 
+class AttackSimulationIn(BaseModel):
+    """A guarded request for an offline, synthetic detection exercise."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    target_id: str = Field(min_length=1, max_length=48, pattern=r"^[a-z0-9][a-z0-9-]{0,47}$")
+    profile: Literal["reconnaissance", "web_security", "api_security", "authentication"]
+    intensity: Literal["passive", "low", "medium"]
+    authorization_reference: str = Field(
+        min_length=4,
+        max_length=80,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+    )
+    authorization_acknowledged: bool = False
+
+    @field_validator("target_id")
+    @classmethod
+    def normalize_target_id(cls, value: str) -> str:
+        return value.strip().lower()
+
+
 class DeveloperApiKeyCreateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
