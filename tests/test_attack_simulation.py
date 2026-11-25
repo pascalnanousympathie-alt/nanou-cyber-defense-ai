@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
 from sqlalchemy import update
 
-from nanou_cyber_ai.attack_simulation import build_simulation_report
 from nanou_cyber_ai.api import app
+from nanou_cyber_ai.attack_simulation import build_simulation_report
 from nanou_cyber_ai.models import AttackScopeCreateIn, AttackSimulationCreateIn
 from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.database import attack_scopes, get_database
@@ -45,10 +45,9 @@ def test_attack_scope_requires_authorization_and_single_host_target() -> None:
         AttackScopeCreateIn(**_scope_input(target="192.168.001.010"))
     with pytest.raises(ValidationError):
         AttackScopeCreateIn(**_scope_input(target="fe80::1%eth0"))
+    expired_date = (datetime.now(UTC).date() - timedelta(days=1)).isoformat()
     with pytest.raises(ValidationError):
-        AttackScopeCreateIn(
-            **_scope_input(authorization_expires_on=(datetime.now(UTC).date() - timedelta(days=1)).isoformat())
-        )
+        AttackScopeCreateIn(**_scope_input(authorization_expires_on=expired_date))
 
 
 def test_attack_simulation_config_is_bounded_and_requires_confirmation() -> None:
@@ -122,7 +121,10 @@ def test_simulation_report_is_local_and_never_claims_verified_findings(
     assert report["summary"]["verified_findings"] == 0
     assert len(report["checks"]) == expected_checks
     assert all(item["status"] == "requires_manual_validation" for item in report["checks"])
-    assert all("Threat-reference mapping only" in item["usage"] for item in report["attack_mapping"])
+    assert all(
+        "Threat-reference mapping only" in item["usage"]
+        for item in report["attack_mapping"]
+    )
     assert len(report["detection_recommendations"]) == 3
     assert all(
         "not a deployed" in item["type"]

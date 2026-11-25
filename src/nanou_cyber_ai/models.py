@@ -188,27 +188,30 @@ class AttackScopeCreateIn(BaseModel):
         if not normalized or any(char in normalized for char in "/\\?#@%") or "://" in normalized:
             raise ValueError("Target dia host/domain/IP tokana ihany; tsy URL na CIDR.")
         try:
-            return str(ipaddress.ip_address(normalized))
+            address = ipaddress.ip_address(normalized)
         except ValueError:
-            try:
-                host = normalized.encode("idna").decode("ascii").lower()
-            except UnicodeError as exc:
-                raise ValueError("Domain tsy manaraka IDNA.") from exc
-            if len(host) > 253:
-                raise ValueError("Domain lava loatra.")
-            labels = host.split(".")
-            if all(label.isdigit() for label in labels):
-                raise ValueError("Adiresy IPv4 tsy marina.")
-            if host != "localhost" and len(labels) < 2:
-                raise ValueError("FQDN na localhost ihany no ekena.")
-            if any(
-                not label
-                or len(label) > 63
-                or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
-                for label in labels
-            ):
-                raise ValueError("Host/domain tsy manaraka ny endrika DNS.")
-            return host
+            address = None
+        if address is not None:
+            return str(address)
+        try:
+            host = normalized.encode("idna").decode("ascii").lower()
+        except UnicodeError as exc:
+            raise ValueError("Domain tsy manaraka IDNA.") from exc
+        if len(host) > 253:
+            raise ValueError("Domain lava loatra.")
+        labels = host.split(".")
+        if all(label.isdigit() for label in labels):
+            raise ValueError("Adiresy IPv4 tsy marina.")
+        if host != "localhost" and len(labels) < 2:
+            raise ValueError("FQDN na localhost ihany no ekena.")
+        if any(
+            not label
+            or len(label) > 63
+            or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
+            for label in labels
+        ):
+            raise ValueError("Host/domain tsy manaraka ny endrika DNS.")
+        return host
 
     @model_validator(mode="after")
     def validate_authorization(self) -> "AttackScopeCreateIn":
@@ -234,7 +237,9 @@ class AttackSimulationCreateIn(BaseModel):
     @model_validator(mode="after")
     def require_current_authorization(self) -> "AttackSimulationCreateIn":
         if not self.authorization_confirmed:
-            raise ValueError("Tsy maintsy manamarina indray ny fahazoan-dalana alohan'ny simulation.")
+            raise ValueError(
+                "Tsy maintsy manamarina indray ny fahazoan-dalana alohan'ny simulation."
+            )
         return self
 
 

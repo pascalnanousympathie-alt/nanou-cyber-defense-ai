@@ -68,7 +68,9 @@ async def test_assistant_cannot_execute_unregistered_or_write_tools() -> None:
 
 
 @pytest.mark.asyncio
-async def test_attack_simulation_help_is_deterministic_and_never_calls_provider(monkeypatch) -> None:
+async def test_attack_simulation_help_is_deterministic_and_never_calls_provider(
+    monkeypatch,
+) -> None:
     async def forbidden_model_call(*_args, **_kwargs):
         raise AssertionError("Attack simulation help must stay local and deterministic.")
 
