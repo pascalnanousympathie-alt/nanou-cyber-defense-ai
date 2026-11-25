@@ -8,6 +8,7 @@
 4. **Malware feature pipeline** — accepts SHA-256 identifiers, labels, provenance and numeric pre-extracted features. It does not accept or execute binaries.
 5. **MCP registry** — describes available tools and checks capabilities before a caller may use a tool. No arbitrary shell or remote-control tool is registered.
 6. **Storage** — SQLite metadata store under the user's data directory, outside the Git checkout.
+7. **Web interface** — responsive same-origin dashboard served by FastAPI with local CSS/JavaScript assets; no separate frontend build is required.
 
 ## Trust boundaries
 
@@ -22,4 +23,4 @@
 - M1: dataset import/quality checks for EMBER feature-only data.
 - M2: baseline malware classifier trained only on static feature vectors; model card and temporal holdout evaluation.
 - M3: optional LLM router and specialist agents, with a narrow MCP allowlist.
-- M4: authenticated UI and audit dashboard.
+- M4: responsive web dashboard is now scaffolded; multi-user authentication, RBAC and audit dashboard remain to be completed before public deployment.

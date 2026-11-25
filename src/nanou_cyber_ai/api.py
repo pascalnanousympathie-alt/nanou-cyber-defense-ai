@@ -1,9 +1,12 @@
 import secrets
+from pathlib import Path
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 
 from nanou_cyber_ai.connectors.kev import fetch_kev_catalog
 from nanou_cyber_ai.connectors.nvd import fetch_cve
@@ -18,6 +21,26 @@ app = FastAPI(
     description="Defensive vulnerability intelligence and malware feature analysis.",
 )
 _bearer = HTTPBearer(auto_error=False)
+_WEB_DIR = Path(__file__).resolve().parent / "web"
+
+app.mount("/assets", StaticFiles(directory=_WEB_DIR / "assets"), name="web-assets")
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.path == "/":
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+            "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        )
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def get_store() -> MalwareMetadataStore:
@@ -39,6 +62,11 @@ def require_metadata_token(
         )
     if credentials is None or not secrets.compare_digest(credentials.credentials, expected):
         raise HTTPException(status_code=401, detail="Valid bearer token required.")
+
+
+@app.get("/", include_in_schema=False)
+async def web_platform() -> FileResponse:
+    return FileResponse(_WEB_DIR / "index.html")
 
 
 @app.get("/health")

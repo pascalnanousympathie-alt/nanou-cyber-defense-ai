@@ -1,12 +1,12 @@
 # Nanou Cyber Defense AI
 
-A defensive, multi-agent cybersecurity research platform. The first release focuses on vulnerability intelligence, malware **metadata and static-feature** analysis, and an auditable, permission-scoped MCP gateway.
+A defensive, browser-based cybersecurity platform. The first release focuses on vulnerability intelligence, malware **metadata and static-feature** analysis, and an auditable, permission-scoped MCP gateway. The primary interface is a responsive website; there is no Android APK requirement.
 
 > **Safety boundary:** this repository does not store, build, execute, or distribute malware binaries or offensive payloads. Malware research uses hashes, labels, public intelligence, and pre-extracted feature datasets (for example EMBER 2018/2024). All agents are designed for defensive analysis and remediation.
 
 ## MVP scope
 
-- FastAPI service for health, NVD CVE lookup, CISA KEV intelligence, and malware metadata.
+- Responsive web dashboard served by FastAPI for health, NVD CVE lookup, CISA KEV intelligence, MCP inventory and protected malware metadata.
 - Modular defensive agents for research, triage, code review and remediation recommendations.
 - Optional official MCP Python SDK v2 server (stdio) exposing only NVD and CISA read-only tools.
 - Malware feature-data manifests, validated metadata ingestion and a baseline static-feature classifier.
@@ -27,6 +27,8 @@ python -m pip install -e ".[dev]"
 uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 ```
 
+Open the web dashboard at `http://127.0.0.1:8000/` after starting the service.
+
 Health: `GET /health`
 
 - `GET /api/mcp/tools` — list the registered, scope-limited tools.
@@ -36,6 +38,10 @@ Health: `GET /health`
 - `POST /api/malware/metadata` — add a hash/label/feature-summary record (requires bearer token; never a binary).
 
 The service stores metadata under `~/.local/share/nanou-cyber-defense-ai` by default. Set `NANOU_DATA_DIR` to use another directory. Set `NANOU_METADATA_API_TOKEN` locally before using metadata endpoints. Never put actual tokens, private reports, customer data, or malware samples in this public repository.
+
+## Web platform
+
+The responsive web interface is served directly by FastAPI; it uses local CSS/JavaScript assets and does not need a separate frontend build or external CDN. See [the web platform guide](docs/web-platform.md) for its current capabilities and the controls required before public deployment.
 
 ## Optional MCP server
 
@@ -89,4 +95,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-MVP scaffold with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, safe EMBER2024 archive import, feature-vector conversion and an optional static-feature training baseline. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
+MVP web platform with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, safe EMBER2024 archive import, feature-vector conversion and optional static-feature training baselines. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="mg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b2b">
+  <meta name="description" content="Nanou Cyber Defense AI — sehatra web ho an'ny fiarovana nomerika sy threat intelligence.">
+  <title>Nanou Cyber Defense AI</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Fikarohana">
+      <a class="brand" href="/" aria-label="Nanou Cyber Defense — pejy fandraisana">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span class="brand-copy">
+          <strong>Nanou Cyber</strong>
+          <small>DEFENSE PLATFORM</small>
+        </span>
+      </a>
+
+      <div class="nav-caption">SEHATRA</div>
+      <nav class="side-nav">
+        <a class="nav-link active" href="#overview"><span aria-hidden="true">◈</span> Topimaso</a>
+        <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE sy faharefoana</a>
+        <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
+        <a class="nav-link" href="#metadata"><span aria-hidden="true">⬡</span> Malware metadata</a>
+        <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <span class="status-led"></span>
+        <div><strong>Defensive mode</strong><small>Famakafakana sy fiarovana ihany</small></div>
+      </div>
+    </aside>
+
+    <main class="main-content" id="overview">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SECURITY OPERATIONS CENTER</p>
+          <h1>Foibe fiarovana</h1>
+        </div>
+        <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
+          <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
+        </div>
+      </header>
+
+      <section class="hero-card">
+        <div class="hero-copy">
+          <span class="hero-kicker">NANOÛ CYBER DEFENSE AI</span>
+          <h2>Fantaro aloha ny loza.<br><em>Arovy ny rafitrao.</em></h2>
+          <p>Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
+          <a class="primary-link" href="#vulnerabilities">Hanomboka hijery <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="hero-graphic" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="shield-shape"><span>✓</span></div>
+          <span class="graphic-node node-one"></span>
+          <span class="graphic-node node-two"></span>
+          <span class="graphic-node node-three"></span>
+        </div>
+        <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina</div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Toe-draharaha ankapobeny">
+        <article class="metric-card">
+          <div class="metric-icon icon-blue">⌁</div>
+          <div class="metric-label">API</div>
+          <strong id="metric-api">—</strong>
+          <small id="metric-api-detail">Miandry fanamarinana</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon icon-orange">◉</div>
+          <div class="metric-label">CISA KEV</div>
+          <strong id="metric-kev">—</strong>
+          <small>Faharefoana fantatra fa voararaotina</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon icon-purple">⛨</div>
+          <div class="metric-label">MCP tools</div>
+          <strong id="metric-tools">—</strong>
+          <small>Fitaovana voasivana</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon icon-green">⬡</div>
+          <div class="metric-label">Malware analysis</div>
+          <strong>Feature-only</strong>
+          <small>Tsy misy binary upload na execution</small>
+        </article>
+      </section>
+
+      <section class="section-heading" id="vulnerabilities">
+        <div><p class="eyebrow">VULNERABILITY INTELLIGENCE</p><h2>Fikarohana CVE</h2></div>
+        <span class="section-tag">NVD · Read-only</span>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel cve-panel">
+          <div class="panel-heading">
+            <div><span class="panel-icon">⌕</span><div><h3>Jereo ny CVE</h3><p>Mitadiava vulnerability amin'ny ID CVE.</p></div></div>
+            <span class="live-label">LIVE LOOKUP</span>
+          </div>
+          <form id="cve-form" class="search-form">
+            <label class="sr-only" for="cve-id">CVE identifier</label>
+            <input id="cve-id" name="cve_id" type="text" placeholder="Ohatra: CVE-2024-3094" pattern="CVE-[0-9]{4}-[0-9]{4,}" autocomplete="off" required>
+            <button class="button button-primary" type="submit">Karohy <span aria-hidden="true">→</span></button>
+          </form>
+          <div id="cve-result" class="result-area" aria-live="polite">
+            <div class="empty-state"><span>⌕</span><p>Ampidiro ny ID CVE hahitana ny antsipiriany sy ny isa CVSS.</p></div>
+          </div>
+        </article>
+
+        <article class="panel kev-panel" id="kev">
+          <div class="panel-heading">
+            <div><span class="panel-icon orange-icon">◉</span><div><h3>Known Exploited Vulnerabilities</h3><p>Lisitry ny CISA momba ny CVE efa voararaotina.</p></div></div>
+            <button class="icon-button" id="refresh-kev" type="button" aria-label="Havaozy ny lisitra">↻</button>
+          </div>
+          <div class="kev-summary"><strong id="kev-count">—</strong><span>laharana ao amin'ny CISA KEV</span></div>
+          <div id="kev-list" class="kev-list" aria-live="polite">
+            <div class="loading-line">Haka ny vaovao rehefa misokatra ny pejy…</div>
+          </div>
+          <p class="data-note">Loharano: CISA. Ny vaovao dia mila fanamarinana sy fandinihana araka ny tontolo iasanao.</p>
+        </article>
+      </section>
+
+      <section class="section-heading" id="metadata">
+        <div><p class="eyebrow">MALWARE INTELLIGENCE</p><h2>Metadata voaaro</h2></div>
+        <span class="section-tag">Bearer authentication</span>
+      </section>
+      <section class="panel metadata-panel">
+        <div class="metadata-intro">
+          <div class="metadata-mark">⬡</div>
+          <div><h3>Rakitra famantarana malware</h3><p>SHA-256, label ary loharano ihany. Tsy misy APK, executable na payload alefa eto.</p></div>
+        </div>
+        <div class="security-note"><span aria-hidden="true">🔒</span><span>Ny token ampidirina dia tazonina vetivety ao amin'ity pejy ity ihany; tsy tehirizina ao amin'ny localStorage na cookie.</span></div>
+        <form id="metadata-auth-form" class="token-form">
+          <label for="api-token">API bearer token</label>
+          <div class="token-row">
+            <input id="api-token" type="password" autocomplete="off" placeholder="Ampidiro ny token nomen'ny tompon'andraikitra" required>
+            <button class="button button-secondary" type="submit">Hiditra amin'ny metadata</button>
+          </div>
+          <p id="metadata-auth-status" class="form-message" aria-live="polite">Mila token voa-configure ao amin'ny server ity fizarana ity.</p>
+        </form>
+        <div id="metadata-workspace" class="metadata-workspace" hidden>
+          <div class="workspace-heading"><h4>Hanampy metadata</h4><button class="text-button" id="metadata-logout" type="button">Hivoaka</button></div>
+          <form id="metadata-create-form" class="metadata-form">
+            <div class="field field-wide"><label for="sample-hash">SHA-256</label><input id="sample-hash" name="sha256" minlength="64" maxlength="64" pattern="[a-fA-F0-9]{64}" placeholder="64 hexadecimal characters" required></div>
+            <div class="field"><label for="sample-label">Label</label><select id="sample-label" name="label"><option value="unknown">Unknown</option><option value="benign">Benign</option><option value="malicious">Malicious</option></select></div>
+            <div class="field"><label for="sample-source">Loharano</label><input id="sample-source" name="source" minlength="2" maxlength="200" placeholder="Ohatra: SOC report" required></div>
+            <div class="field field-wide"><label for="sample-family">Family (raha fantatra)</label><input id="sample-family" name="family" maxlength="120" placeholder="Tsy voatery"></div>
+            <div class="field field-wide"><button class="button button-primary" type="submit">Tehirizo ny metadata</button></div>
+          </form>
+          <div class="workspace-heading list-heading"><h4>Metadata voatahiry</h4><span id="metadata-total">0</span></div>
+          <div id="metadata-list" class="metadata-list" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section-heading" id="tools">
+        <div><p class="eyebrow">CONTROLLED INTEGRATIONS</p><h2>Fitaovana MCP</h2></div>
+        <span class="section-tag">Scoped access</span>
+      </section>
+      <section class="panel tools-panel">
+        <div class="panel-heading">
+          <div><span class="panel-icon green-icon">⛨</span><div><h3>Fitaovana azo ampiasaina</h3><p>Fitaovana voasoratra anarana sy voafetra amin'ny alalana.</p></div></div>
+          <span id="tools-count" class="count-pill">—</span>
+        </div>
+        <div id="tools-list" class="tools-list"><div class="loading-line">Manamarina ny lisitra…</div></div>
+        <p class="data-note">Tsy misy shell execution, process control, arbitrary URL fetch na fanovana rafitra mandeha ho azy.</p>
+      </section>
+
+      <footer class="footer">
+        <div><strong>Nanou Cyber Defense AI</strong><span>Web platform · Defensive analysis only</span></div>
+        <a href="/docs">API documentation ↗</a>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
