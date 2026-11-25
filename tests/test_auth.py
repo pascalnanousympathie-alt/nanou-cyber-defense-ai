@@ -249,7 +249,6 @@ def test_csrf_and_unauthenticated_access_are_rejected(monkeypatch, tmp_path) -> 
         assert csrf
 
 
-
 def test_viewer_role_is_read_only_and_admin_audit_is_restricted(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
