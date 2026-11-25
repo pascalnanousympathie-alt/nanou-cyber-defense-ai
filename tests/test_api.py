@@ -40,7 +40,6 @@ def test_metadata_api_requires_signed_in_user(tmp_path, monkeypatch) -> None:
     assert response.status_code == 401
 
 
-
 def test_remote_developer_api_is_bearer_scoped_and_revocable(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
