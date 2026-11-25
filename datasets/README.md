@@ -14,7 +14,7 @@ EMBER2024 is a multi-format benchmark with extracted features, hashes, metadata 
 - Approximate dataset sizes are large (for example, Win32 train 23.7 GB); choose one format/split and keep it outside this repo.
 - Upstream layout: raw pre-extracted feature/label JSONL; the pinned `thrember.create_vectorized_features()` writes float32 X and float32 y `.dat` files.
 
-The importer downloads only the official feature archives and extracts flat JSONL files. It rejects traversal paths, symlinks, non-JSONL members, oversized members, suspicious compression ratios and overwrites. The vector exporter then joins sorted JSONL metadata to corresponding float32 `.dat` rows, skips exact duplicate SHA-256 records, rejects conflicting duplicate hashes and checks train/test hash separation in the APK benchmark workflow. It does not fetch, open or execute original sample files.
+The importer downloads only the official feature archives and extracts flat JSONL files. It rejects traversal paths, symlinks, non-JSONL members, oversized members, suspicious compression ratios and overwrites. The full-split JSONL exporter calls the pinned `PEFeatureExtractor` directly, validates each vector, rejects conflicting duplicate SHA-256 records and uses a fixed-seed reservoir independently inside train and test. The APK workflow checks cross-split SHA-256 separation and deletes raw metadata after feature export. It does not fetch, open or execute original sample files.
 
 ## EMBER 2018 static PE features (reproducible legacy baseline)
 

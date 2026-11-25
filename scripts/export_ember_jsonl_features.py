@@ -16,6 +16,7 @@ def main() -> int:
     parser.add_argument("--max-source-rows", type=int, required=True)
     parser.add_argument("--max-exported-rows", type=int, default=None)
     parser.add_argument("--max-features", type=int, default=4096)
+    parser.add_argument("--sampling-seed", type=int, default=42)
     args = parser.parse_args()
     report = export_ember_jsonl_subset(
         args.data_dir,
@@ -24,6 +25,7 @@ def main() -> int:
         max_source_rows=args.max_source_rows,
         max_exported_rows=args.max_exported_rows,
         max_features=args.max_features,
+        sampling_seed=args.sampling_seed,
     )
     print(json.dumps(report, indent=2))
     return 0

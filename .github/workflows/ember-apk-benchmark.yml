@@ -61,8 +61,8 @@ jobs:
           if not 500 <= test_rows <= 5000:
               raise SystemExit("max_test_rows must be between 500 and 5000.")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"train_scan_rows={train_rows * 4}\n")
-              output.write(f"test_scan_rows={test_rows * 4}\n")
+              output.write(f"train_scan_rows=300000\n")
+              output.write(f"test_scan_rows=60000\n")
           PY
           export DATA_DIR="$RUNNER_TEMP/ember2024-apk-data"
           export RESULTS_DIR="$RUNNER_TEMP/ember2024-apk-results"
@@ -119,12 +119,14 @@ jobs:
             --output "$DATA_DIR/export/train.csv" \
             --max-source-rows "$TRAIN_SCAN_ROWS" \
             --max-exported-rows "$TRAIN_ROWS" \
+            --sampling-seed 42 \
             | tee "$RESULTS_DIR/export-train.json"
           python scripts/export_ember_jsonl_features.py \
             --data-dir "$DATA_DIR" --subset test \
             --output "$DATA_DIR/export/test.csv" \
             --max-source-rows "$TEST_SCAN_ROWS" \
             --max-exported-rows "$TEST_ROWS" \
+            --sampling-seed 42 \
             | tee "$RESULTS_DIR/export-test.json"
           df -h "$RUNNER_TEMP"
 
@@ -212,6 +214,78 @@ jobs:
             --output-dir "$RESULTS_DIR/models" \
             | tee "$RESULTS_DIR/model-report.json"
 
+      - name: Reload model and validate real APK feature inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          import joblib
+          import numpy as np
+
+          results_dir = Path(os.environ["RESULTS_DIR"])
+          data_dir = Path(os.environ["DATA_DIR"])
+          model_path = results_dir / "models/static-malware-detector-v1.joblib"
+          artifact = joblib.load(model_path)
+          if artifact.get("dataset_id") != "ember2024-apk":
+              raise SystemExit("Reloaded model dataset_id does not match.")
+          feature_names = tuple(artifact.get("feature_names", ()))
+          model = artifact.get("model")
+          if model is None or len(feature_names) != int(model.n_features_in_):
+              raise SystemExit("Reloaded model feature schema is inconsistent.")
+
+          with (data_dir / "export/test.csv").open(
+              "r", encoding="utf-8", newline=""
+          ) as handle:
+              reader = csv.DictReader(handle)
+              observed_features = tuple(
+                  name for name in (reader.fieldnames or []) if name not in {"sha256", "label"}
+              )
+              if observed_features != feature_names:
+                  raise SystemExit("Reloaded model schema does not match the APK test CSV.")
+              rows = []
+              for record in reader:
+                  rows.append([float(record[name]) for name in feature_names])
+                  if len(rows) == 16:
+                      break
+          if len(rows) != 16:
+              raise SystemExit("Could not collect 16 APK rows for inference validation.")
+
+          values = np.asarray(rows, dtype=np.float32)
+          predictions = model.predict(values)
+          probabilities = model.predict_proba(values)[:, 1]
+          if predictions.shape != (16,) or not set(predictions.tolist()).issubset({0, 1}):
+              raise SystemExit("Reloaded model returned invalid predictions.")
+          if probabilities.shape != (16,) or not np.isfinite(probabilities).all():
+              raise SystemExit("Reloaded model returned invalid probabilities.")
+          if ((probabilities < 0) | (probabilities > 1)).any():
+              raise SystemExit("Reloaded model probabilities are outside [0, 1].")
+
+          validation = {
+              "dataset_id": artifact["dataset_id"],
+              "feature_count": len(feature_names),
+              "inference_rows": len(rows),
+              "prediction_counts": {
+                  str(label): int((predictions == label).sum()) for label in (0, 1)
+              },
+              "probability_min": float(probabilities.min()),
+              "probability_max": float(probabilities.max()),
+              "model_file": model_path.name,
+              "model_sha256": hashlib.sha256(model_path.read_bytes()).hexdigest(),
+              "model_bytes": model_path.stat().st_size,
+              "reload_and_inference": "pass",
+          }
+          (results_dir / "model-validation.json").write_text(
+              json.dumps(validation, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(validation, indent=2))
+          PY
+
       - name: Write dataset and model provenance manifest
         shell: bash
         run: |
@@ -249,9 +323,11 @@ jobs:
                   "feature_vector_dtype": "float32",
               },
               "sampling": {
+                  "strategy": "deterministic reservoir within each upstream split",
+                  "seed": 42,
                   "max_unique_train_rows": int(os.environ["TRAIN_ROWS"]),
                   "max_unique_test_rows": int(os.environ["TEST_ROWS"]),
-                  "source_rows_scan_limit_multiplier": 4,
+                  "source_rows_scan_limit": {"train": 300000, "test": 60000},
                   "duplicate_sha256_rows_are_skipped": True,
               },
               "feature_exports": {
@@ -260,6 +336,7 @@ jobs:
               },
               "split_audit": load("split-audit.json"),
               "model_report": load("model-report.json"),
+              "model_validation": load("model-validation.json"),
               "limitations": [
                   "This is a bounded baseline, not a full-dataset benchmark.",
                   "Metrics apply only to the sampled, unique, labeled rows.",
@@ -279,6 +356,7 @@ jobs:
           path: |
             ${{ runner.temp }}/ember2024-apk-results/models/
             ${{ runner.temp }}/ember2024-apk-results/model-report.json
+            ${{ runner.temp }}/ember2024-apk-results/model-validation.json
             ${{ runner.temp }}/ember2024-apk-results/split-audit.json
             ${{ runner.temp }}/ember2024-apk-results/manifest.json
             ${{ runner.temp }}/ember2024-apk-results/import-*.json
