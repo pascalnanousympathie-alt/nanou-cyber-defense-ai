@@ -233,7 +233,7 @@ def test_assistant_chat_assets_and_command_policy_are_present() -> None:
     assert 'apiRequest("/api/chat/command"' in script.text
     assert 'result.action === "attack_simulation_help"' in script.text
     assert 'managerLink.href = "#attack-simulation"' in script.text
-    assert "textContent = \"Sokafy ny Attack Simulation Manager" in script.text
+    assert 'textContent = "Sokafy ny Attack Simulation Manager' in script.text
     assert "localStorage" not in script.text
     assert "textContent = content" in script.text
 
