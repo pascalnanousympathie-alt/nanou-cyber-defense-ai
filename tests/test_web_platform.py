@@ -179,6 +179,7 @@ def test_developer_center_assets_and_read_only_integration_contract() -> None:
         "/api/v1/assistant/chat",
     }
     assert "AssistantChatRequest" in document["components"]["schemas"]
+    for path_item in document["paths"].values():
         for operation in path_item.values():
             assert "security" in operation
 
