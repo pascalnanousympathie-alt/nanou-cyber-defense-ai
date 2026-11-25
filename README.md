@@ -97,6 +97,10 @@ The exporter defaults to 2,000 source rows for train and 500 for test to bound d
 
 The model and metrics are written under the ignored `models/` directory; dataset files and generated CSVs remain under ignored `datasets/cache/`. Neither is committed to Git. Verify the upstream dataset license and terms before reuse or redistribution.
 
+## Attack Simulation Manager
+
+The Admin/Analyst-only Attack Simulation Manager provides offline synthetic Red Team / Blue Team exercises, with allowlisted lab identifiers, a per-run authorization acknowledgement, intensity bounds, request throttling and audit events. It generates sample telemetry and MITRE ATT&CK mappings only; it does not contact targets, scan ports, send HTTP requests, attempt logins, execute exploits, run a shell, access credentials, or execute malware. See [the simulation safety and configuration guide](docs/ATTACK_SIMULATION.md).
+
 ## CI
 
 GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage is free for public repositories, subject to GitHub's other concurrency, rate and platform limits. See GitHub's [Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage) and [Actions limits](https://docs.github.com/en/actions/reference/limits).
