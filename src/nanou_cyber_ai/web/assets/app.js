@@ -7,6 +7,84 @@ let configuredMalwareModel = null;
 
 const canAnalyze = () => Boolean(currentUser && ["admin", "analyst"].includes(currentUser.role));
 
+const ROLE_WORKSPACES = {
+  admin: {
+    title: "Administrator control room",
+    summary: "Fitantanana ny kaonty, fanaraha-maso ny asa ary fidirana amin'ny fitaovana fiarovana.",
+    badge: "ADMIN",
+    guidance: "Ny fanovana andraikitra sy ny fankatoavana mpampiasa dia hita ao amin'ny Kaonty sy fidirana. Voarakitra ao amin'ny audit log ny hetsika mifandraika amin'izany.",
+    permissions: [
+      ["Governance", "Manaiky na manafoana kaonty, manendry rôles ary mijery ny audit log."],
+      ["Threat intelligence", "Mikaroka CVE ao amin'ny NVD sy mijery ny CISA KEV."],
+      ["Malware laboratory", "Manampy metadata ary mampiasa feature analysis rehefa misy modely voamarina."]
+    ],
+  },
+  analyst: {
+    title: "Analyst operations",
+    summary: "Fikarohana threat intelligence sy fanomanana angona ho an'ny fanadihadiana.",
+    badge: "ANALYST",
+    guidance: "Afaka manomana CSV feature voafetra sy mampiditra metadata ianao. Tsy afaka mitantana kaonty na mijery ny audit log Admin.",
+    permissions: [
+      ["Threat intelligence", "Mikaroka CVE sy mandinika ny lisitra CISA KEV."],
+      ["Feature analysis", "Manamarina CSV feature iray (1 MiB max) ary manao inference raha misy modely voamarina."],
+      ["Malware metadata", "Manampy SHA-256, label ary loharano; tsy mandray APK na executable."]
+    ],
+  },
+  viewer: {
+    title: "Read-only security workspace",
+    summary: "Fijerena vaovao sy metadata amin'ny fomba read-only.",
+    badge: "VIEWER",
+    guidance: "Read-only ny fidiranao. Tsy misy fanovana metadata, inference, fitantanana kaonty na fidirana amin'ny audit log.",
+    permissions: [
+      ["Threat intelligence", "Mijery CVE/NVD sy ny CISA KEV."],
+      ["Malware metadata", "Mijery ny hashes sy labels efa voatahiry."],
+      ["Restricted actions", "Tsy afaka mampiditra metadata, manomana features na mitantana kaonty."]
+    ],
+  },
+};
+
+function updateRoleVisibility() {
+  const activeRoles = currentUser ? [currentUser.role, "authenticated"] : ["public"];
+  document.querySelectorAll("[data-role-visibility]").forEach((element) => {
+    const allowedRoles = element.dataset.roleVisibility.split(",").map((role) => role.trim());
+    element.hidden = !allowedRoles.some((role) => activeRoles.includes(role));
+  });
+  document.querySelectorAll(".nav-group").forEach((group) => {
+    const links = Array.from(group.querySelectorAll(".nav-link"));
+    if (links.length) group.hidden = !links.some((link) => !link.hidden);
+  });
+}
+
+function renderRoleWorkspace() {
+  const workspace = byId("role-workspace");
+  if (!currentUser) {
+    workspace.hidden = true;
+    return;
+  }
+  const config = ROLE_WORKSPACES[currentUser.role];
+  if (!config) {
+    workspace.hidden = true;
+    return;
+  }
+  workspace.hidden = false;
+  byId("role-workspace-title").textContent = config.title;
+  byId("role-workspace-summary").textContent = config.summary;
+  byId("role-workspace-badge").textContent = config.badge;
+  byId("role-workspace-guidance").textContent = config.guidance;
+  const permissions = byId("role-workspace-permissions");
+  permissions.replaceChildren();
+  for (const [title, description] of config.permissions) {
+    const card = document.createElement("article");
+    card.className = "role-permission";
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    const detail = document.createElement("p");
+    detail.textContent = description;
+    card.append(heading, detail);
+    permissions.append(card);
+  }
+}
+
 function setMessage(element, message, kind = "") {
   element.textContent = message;
   element.className = kind ? `form-message ${kind}` : "form-message";
@@ -276,11 +354,16 @@ function setAuthPanels(mode) {
   badge.textContent = currentUser ? `${currentUser.display_name} · ${currentUser.role}` : "";
   byId("auth-state-pill").textContent = currentUser ? "Voamarina" : mode === "bootstrap" ? "Setup voalohany" : "Tsy tafiditra";
   byId("metadata-workspace").hidden = !currentUser;
+  updateRoleVisibility();
+  renderRoleWorkspace();
   byId("metadata-auth-status").textContent = currentUser
     ? `Miditra amin'ny metadata amin'ny andraikitra ${currentUser.role}.`
     : "Midira amin'ny kaonty voa-approve raha hijery na hitahiry metadata.";
-  const createButton = byId("metadata-create-form").querySelector("button[type=submit]");
-  createButton.disabled = !canAnalyze();
+  const canWriteMetadata = canAnalyze();
+  byId("metadata-create-form").hidden = !canWriteMetadata;
+  byId("metadata-write-access").textContent = canWriteMetadata
+    ? "Fahazoan-dalana: Admin / Analyst — afaka manampy SHA-256 metadata."
+    : "Read-only: afaka mijery metadata ianao fa tsy afaka manampy na manova azy.";
   updateInferenceAccess();
 }
 
