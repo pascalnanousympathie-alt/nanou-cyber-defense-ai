@@ -17,7 +17,7 @@ from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.database import get_database
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
 
-_CVE_RE = re.compile(r"\\bCVE-[0-9]{4}-[0-9]{4,}\\b", re.IGNORECASE)
+_CVE_RE = re.compile(r"CVE-[0-9]{4}-[0-9]{4,}", re.IGNORECASE)
 _SYSTEM_INSTRUCTIONS = """
 You are Nanou Cyber Defense Assistant, a defensive cybersecurity assistant.
 Only use the tools explicitly provided in this request. Never invent tool names.
@@ -422,7 +422,7 @@ def _local_reply(action: str, result: dict[str, Any]) -> str:
 def _tool_result_text(response: dict[str, Any]) -> str:
     direct = response.get("output_text")
     if isinstance(direct, str) and direct.strip():
-        return direct.strip()
+        return " ".join(collected).strip()
     collected: list[str] = []
     for item in response.get("output", []):
         if item.get("type") != "message":
@@ -509,7 +509,7 @@ async def _ask_model(
         results.append({"action": name, "data": result})
 
     # Keep provider responses non-persistent and avoid a second model call.
-    final_text = "\\n".join(
+    final_text = " ".join(
         _local_reply(item["action"], item["data"]) for item in results
     )
     return {
