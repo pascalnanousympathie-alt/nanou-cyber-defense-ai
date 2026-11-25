@@ -130,12 +130,8 @@ def _tools_for_access(scopes: set[str], role: str) -> list[dict[str, Any]]:
             continue
         if name in _METADATA_TOOLS and "malware:metadata:read" not in scopes:
             continue
-        if (
-            name in _ANALYST_TOOLS
-            and (
-                role not in {"admin", "analyst"}
-                or "malware:metadata:read" not in scopes
-            )
+        if name in _ANALYST_TOOLS and (
+            role not in {"admin", "analyst"} or "malware:metadata:read" not in scopes
         ):
             continue
         allowed.append(definition)
