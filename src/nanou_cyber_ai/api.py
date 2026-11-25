@@ -103,11 +103,14 @@ def _check_rate_limit(store: AuthStore, request: Request, email: str, action: st
         window_seconds=settings.auth_rate_window_seconds,
     )
     if ip_fingerprint:
-        allowed = store.allow_attempt(
-            ip_fingerprint,
-            maximum=settings.auth_attempts_per_window * 4,
-            window_seconds=settings.auth_rate_window_seconds,
-        ) and allowed
+        allowed = (
+            store.allow_attempt(
+                ip_fingerprint,
+                maximum=settings.auth_attempts_per_window * 4,
+                window_seconds=settings.auth_rate_window_seconds,
+            )
+            and allowed
+        )
     if not allowed:
         store.record_event(
             actor_user_id=None,
@@ -288,9 +291,7 @@ async def bootstrap_admin(
     store = get_auth_store()
     _check_rate_limit(store, request, item.email, "auth.bootstrap")
     expected_bootstrap_token = (
-        settings.bootstrap_token.get_secret_value()
-        if settings.bootstrap_token is not None
-        else ""
+        settings.bootstrap_token.get_secret_value() if settings.bootstrap_token is not None else ""
     )
     if not expected_bootstrap_token or not secrets.compare_digest(
         item.bootstrap_token, expected_bootstrap_token

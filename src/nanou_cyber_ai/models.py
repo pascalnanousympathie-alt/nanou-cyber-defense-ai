@@ -87,7 +87,6 @@ class MalwareInferenceResult(BaseModel):
     limitation: str
 
 
-
 class AuthAccountIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -234,11 +234,14 @@ def test_csrf_and_unauthenticated_access_are_rejected(monkeypatch, tmp_path) -> 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
 
     with TestClient(app) as client:
-        missing_csrf = client.post("/api/auth/register", json={
-            "email": "user@example.test",
-            "display_name": "Test User",
-            "password": "A-Strong-Password-55!",
-        })
+        missing_csrf = client.post(
+            "/api/auth/register",
+            json={
+                "email": "user@example.test",
+                "display_name": "Test User",
+                "password": "A-Strong-Password-55!",
+            },
+        )
         assert missing_csrf.status_code == 403
 
         csrf = _csrf(client)

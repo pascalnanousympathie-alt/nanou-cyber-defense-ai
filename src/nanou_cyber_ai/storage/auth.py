@@ -264,9 +264,7 @@ class AuthStore:
                 connection.execute(delete(sessions).where(sessions.c.token_hash == token_hash))
                 return None
             connection.execute(
-                update(sessions)
-                .where(sessions.c.token_hash == token_hash)
-                .values(last_seen_at=now)
+                update(sessions).where(sessions.c.token_hash == token_hash).values(last_seen_at=now)
             )
         return public_user(row)
 
@@ -293,19 +291,21 @@ class AuthStore:
     ) -> dict[str, Any] | None:
         now = datetime.now(UTC)
         with self.database.engine.begin() as connection:
-            target = connection.execute(
-                select(users).where(users.c.id == target_user_id)
-            ).mappings().first()
+            target = (
+                connection.execute(select(users).where(users.c.id == target_user_id))
+                .mappings()
+                .first()
+            )
             if target is None:
                 return None
-            if target_user_id == actor_user_id and (
-                not is_active or role != "admin"
-            ):
+            if target_user_id == actor_user_id and (not is_active or role != "admin"):
                 raise ValueError(
                     "The current administrator cannot demote or deactivate themselves."
                 )
-            if target["role"] == "admin" and bool(target["is_active"]) and (
-                role != "admin" or not is_active
+            if (
+                target["role"] == "admin"
+                and bool(target["is_active"])
+                and (role != "admin" or not is_active)
             ):
                 active_admins = connection.execute(
                     select(users.c.id)
