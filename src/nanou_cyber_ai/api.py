@@ -529,7 +529,7 @@ async def _assistant_command_response(
     scopes: set[str],
 ) -> dict:
     store = get_auth_store()
-    fingerprint = hashlib.sha256(f"assistant:{user['id']}".encode("utf-8")).hexdigest()
+    fingerprint = hashlib.sha256(f"assistant:{user['id']}".encode()).hexdigest()
     if not store.allow_attempt(
         fingerprint,
         maximum=settings.assistant_requests_per_minute,
@@ -855,7 +855,9 @@ async def api_v1_openapi(request: Request) -> dict:
             "/api/v1/assistant/chat": {
                 "post": {
                     "operationId": "runDefensiveAssistantCommand",
-                    "summary": "Interpret a defensive command and execute only allowlisted read-only tools",
+                    "summary": (
+                        "Interpret a defensive command and execute only allowlisted read-only tools"
+                    ),
                     "description": (
                         "Requires a Developer API key with ai:chat and the additional read scope "
                         "for each requested data source. Does not expose shell or write actions."
