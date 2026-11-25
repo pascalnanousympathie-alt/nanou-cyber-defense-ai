@@ -17,7 +17,6 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
 from nanou_cyber_ai.assistant.runtime import run_assistant
-from nanou_cyber_ai.simulation import run_offline_simulation, simulation_configuration
 from nanou_cyber_ai.connectors.kev import fetch_kev_catalog
 from nanou_cyber_ai.connectors.nvd import fetch_cve
 from nanou_cyber_ai.malware.feature_csv import prepare_feature_csv
@@ -38,6 +37,7 @@ from nanou_cyber_ai.models import (
 )
 from nanou_cyber_ai.security.passwords import hash_password, verify_password
 from nanou_cyber_ai.settings import settings
+from nanou_cyber_ai.simulation import run_offline_simulation, simulation_configuration
 from nanou_cyber_ai.storage.auth import AuthStore
 from nanou_cyber_ai.storage.database import SecurityDatabase, get_database
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
