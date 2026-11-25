@@ -247,3 +247,95 @@ def test_csrf_and_unauthenticated_access_are_rejected(monkeypatch, tmp_path) -> 
         denied = client.get("/api/malware/metadata")
         assert denied.status_code == 401
         assert csrf
+
+
+
+def test_viewer_role_is_read_only_and_admin_audit_is_restricted(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "auth_attempts_per_window", 50)
+    monkeypatch.setattr(
+        settings,
+        "bootstrap_token",
+        SecretStr("test-bootstrap-token-long-enough-1234567890"),
+    )
+
+    with TestClient(app) as admin_client:
+        admin_csrf = _csrf(admin_client)
+        bootstrap = admin_client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": admin_csrf},
+            json={
+                "email": "owner@example.test",
+                "display_name": "Owner Admin",
+                "password": "Owner-Strong-Password-42!",
+                "bootstrap_token": "test-bootstrap-token-long-enough-1234567890",
+            },
+        )
+        assert bootstrap.status_code == 200
+
+        registration = admin_client.post(
+            "/api/auth/register",
+            headers={"X-CSRF-Token": admin_csrf},
+            json={
+                "email": "viewer@example.test",
+                "display_name": "Read Only Viewer",
+                "password": "Viewer-Strong-Password-55!",
+            },
+        )
+        assert registration.status_code == 202
+        viewer_id = registration.json()["user"]["id"]
+
+        approval = admin_client.patch(
+            f"/api/admin/users/{viewer_id}",
+            headers={"X-CSRF-Token": admin_csrf},
+            json={"role": "viewer", "is_active": True},
+        )
+        assert approval.status_code == 200
+        assert approval.json()["is_approved"] is True
+        assert approval.json()["is_active"] is True
+
+        audit = admin_client.get("/api/admin/audit?limit=30")
+        assert audit.status_code == 200
+        assert {event["action"] for event in audit.json()} >= {
+            "auth.bootstrap",
+            "auth.register",
+            "admin.user.update",
+        }
+
+    with TestClient(app) as viewer_client:
+        viewer_csrf = _csrf(viewer_client)
+        login = viewer_client.post(
+            "/api/auth/login",
+            headers={"X-CSRF-Token": viewer_csrf},
+            json={
+                "email": "viewer@example.test",
+                "password": "Viewer-Strong-Password-55!",
+            },
+        )
+        assert login.status_code == 200
+        assert login.json()["user"]["role"] == "viewer"
+
+        allowed_metadata = viewer_client.get("/api/malware/metadata")
+        denied_users = viewer_client.get("/api/admin/users")
+        denied_audit = viewer_client.get("/api/admin/audit")
+        denied_metadata_write = viewer_client.post(
+            "/api/malware/metadata",
+            headers={"X-CSRF-Token": viewer_csrf},
+            json={
+                "sha256": "a" * 64,
+                "label": "malicious",
+                "source": "viewer regression test",
+            },
+        )
+        denied_feature_prepare = viewer_client.post(
+            "/api/malware/features/prepare/ember2024-apk",
+            headers={"X-CSRF-Token": viewer_csrf},
+            content="",
+        )
+
+        assert allowed_metadata.status_code == 200
+        assert denied_users.status_code == 403
+        assert denied_audit.status_code == 403
+        assert denied_metadata_write.status_code == 403
+        assert denied_feature_prepare.status_code == 403
