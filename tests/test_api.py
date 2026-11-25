@@ -221,6 +221,24 @@ def test_internal_chat_executes_read_only_command_and_records_audit(monkeypatch,
         assert result["action"] == "get_kev_summary"
         assert result["executed"] is True
         assert result["data"]["total_vulnerabilities"] == 1
+
+        attack_help = client.post(
+            "/api/chat/command",
+            headers={"X-CSRF-Token": csrf},
+            json={"message": "Attack simulation help"},
+        )
+        assert attack_help.status_code == 200
+        attack_result = attack_help.json()
+        assert attack_result["action"] == "attack_simulation_help"
+        assert attack_result["executed"] is False
+        assert attack_result["data"]["network_requests"] == 0
+        assert attack_result["data"]["profiles"] == [
+            "reconnaissance",
+            "web_security",
+            "api_security",
+            "authentication",
+        ]
+
         audit = client.get("/api/admin/audit?limit=20")
         assert audit.status_code == 200
         assert any(event["action"] == "assistant.command" for event in audit.json())

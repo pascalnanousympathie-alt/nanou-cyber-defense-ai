@@ -115,6 +115,36 @@ malware_metadata = Table(
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
+attack_scopes = Table(
+    "attack_scopes",
+    metadata,
+    Column("id", String(32), primary_key=True),
+    Column("created_by_user_id", String(32), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
+    Column("name", String(80), nullable=False),
+    Column("target", String(253), nullable=False),
+    Column("target_type", String(12), nullable=False),
+    Column("authorization_basis", String(32), nullable=False),
+    Column("authorization_expires_at", DateTime(timezone=True), nullable=False),
+    Column("is_active", Boolean, nullable=False, server_default="true"),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+)
+Index("ix_attack_scopes_active_expiry", attack_scopes.c.is_active, attack_scopes.c.authorization_expires_at)
+
+attack_simulations = Table(
+    "attack_simulations",
+    metadata,
+    Column("id", String(32), primary_key=True),
+    Column("actor_user_id", String(32), ForeignKey("users.id", ondelete="SET NULL")),
+    Column("scope_id", String(32), ForeignKey("attack_scopes.id", ondelete="RESTRICT"), nullable=False),
+    Column("profile", String(32), nullable=False),
+    Column("intensity", String(12), nullable=False),
+    Column("duration_minutes", Integer, nullable=False),
+    Column("result_json", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+)
+Index("ix_attack_simulations_created", attack_simulations.c.created_at)
+Index("ix_attack_simulations_scope", attack_simulations.c.scope_id)
+
 
 class SecurityDatabase:
     """A small connection-per-operation database facade."""

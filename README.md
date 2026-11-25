@@ -11,10 +11,11 @@ A defensive, browser-based cybersecurity platform. The first release focuses on 
 - Optional official MCP Python SDK v2 server (stdio) exposing only NVD and CISA read-only tools.
 - Malware feature-data manifests, validated metadata ingestion and a baseline static-feature classifier.
 - CI with lint, format and tests using standard GitHub-hosted runners.
+- Authorized Red Team tabletop simulations with an Admin-managed target allowlist, operator-declared authorization basis and expiry, Analyst-run local scenario checklists, MITRE ATT&CK references, draft SOC detection recommendations, audit history, and JSON reports. No live probing or exploit execution.
 
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md), [docs/mcp.md](docs/mcp.md), and [docs/safety-design.md](docs/safety-design.md).
+See [docs/architecture.md](docs/architecture.md), [docs/mcp.md](docs/mcp.md), [docs/safety-design.md](docs/safety-design.md), and the [Attack Simulation Manager guide](docs/attack-simulation.md).
 
 ## Quick start
 
@@ -49,7 +50,7 @@ Local development uses SQLite under `~/.local/share/nanou-cyber-defense-ai` by d
 
 ## Web platform
 
-The responsive web interface is served directly by FastAPI; it uses local CSS/JavaScript assets and does not need a separate frontend build or external CDN. See [the web platform guide](docs/web-platform.md) and [deployment runbook](docs/deployment.md) for authentication, feature CSV preparation and hosting configuration.
+The responsive web interface is served directly by FastAPI; it uses local CSS/JavaScript assets and does not need a separate frontend build or external CDN. See [the web platform guide](docs/web-platform.md), [Attack Simulation Manager guide](docs/attack-simulation.md), and [deployment runbook](docs/deployment.md) for authentication, tabletop scenarios, feature CSV preparation and hosting configuration.
 
 ## Optional MCP server
 
@@ -103,4 +104,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-Web platform with defensive CVE/KEV intelligence, Argon2id multi-user authentication, Admin/Analyst/Viewer RBAC, CSRF protection, audit logs, PostgreSQL persistence and pre-extracted feature CSV validation. The dashboard also includes a guarded AI Chat Command Center: local read-only commands work without an LLM key; optional server-side Responses API tool selection requires `NANOU_AI_API_KEY` and is restricted to a defensive read-only allowlist. No provider key is configured by default. The Vercel deployment remains protected by SSO for all deployment targets; no unprotected public launch or autonomous changes to customer systems are enabled. The optional static-feature inference endpoint remains unavailable until a trusted model artifact is configured.
+Web platform with defensive CVE/KEV intelligence, Argon2id multi-user authentication, Admin/Analyst/Viewer RBAC, CSRF protection, audit logs, PostgreSQL persistence and pre-extracted feature CSV validation. The dashboard also includes a guarded AI Chat Command Center: local read-only commands work without an LLM key; optional server-side Responses API tool selection requires `NANOU_AI_API_KEY` and is restricted to a defensive read-only allowlist. The Attack Simulation Manager creates only deterministic tabletop reports for Admin-authorized, unexpired target scopes; it performs zero network requests and executes no exploits, payloads, malware, or automated changes. No provider key is configured by default. The Vercel deployment remains protected by SSO for all deployment targets; no unprotected public launch or autonomous changes to customer systems are enabled. The optional static-feature inference endpoint remains unavailable until a trusted model artifact is configured.

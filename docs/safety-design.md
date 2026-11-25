@@ -22,6 +22,17 @@ It does **not** store or execute PE, ELF, APK, PDF or script payloads. It does n
 
 Agents return findings and recommended remediation only. Applying a patch or changing a live system is a separate, human-approved workflow outside this MVP.
 
+## Attack Simulation Manager
+
+- Attack Simulation is a deterministic, local-only tabletop checklist generator, not a scanner or penetration-testing engine.
+- It never sends network requests, probes hosts, executes exploits or payloads, tests credentials, runs malware, or changes systems.
+- Only Admin can create/revoke exact-host allowlist entries. Every entry requires a declared authorization basis, explicit operator confirmation, and an expiry no more than 365 days away.
+- Admin/Analyst simulation creation rechecks that the scope is active and unexpired; each request requires a fresh confirmation and is rate limited.
+- Reports explicitly state `simulation_only`, zero verified findings, and `requires_manual_validation` for every check. MITRE ATT&CK IDs are threat-reference mappings, not claims of activity.
+- Scope lifecycle and report creation are audit logged. Viewer and external Developer API credentials cannot access these routes.
+
+See [Attack Simulation Manager](attack-simulation.md) for roles, routes, and operational limits.
+
 ## Dataset controls
 
 - Do not commit raw malware samples or credentials.

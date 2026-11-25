@@ -367,6 +367,9 @@ function setAuthPanels(mode) {
     ? "Fahazoan-dalana: Admin / Analyst — afaka manampy SHA-256 metadata."
     : "Read-only: afaka mijery metadata ianao fa tsy afaka manampy na manova azy.";
   updateInferenceAccess();
+  window.dispatchEvent(new CustomEvent("nanou:auth-changed", {
+    detail: { role: currentUser?.role || null },
+  }));
 }
 
 async function loadAuth() {

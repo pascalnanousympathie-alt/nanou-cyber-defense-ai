@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="/assets/developer.css">
   <link rel="stylesheet" href="/assets/assistant.css">
+  <link rel="stylesheet" href="/assets/attack-simulation.css">
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
@@ -46,6 +47,10 @@
           <span class="nav-group-label">Malware laboratory</span>
           <a class="nav-link" href="#malware-model" data-role-visibility="admin,analyst"><span aria-hidden="true">✳</span> AI feature analysis</a>
           <a class="nav-link" href="#metadata" data-role-visibility="authenticated"><span aria-hidden="true">⬡</span> Malware metadata</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">RED TEAM OPERATIONS</span>
+          <a class="nav-link" href="#attack-simulation" data-role-visibility="admin,analyst"><span aria-hidden="true">◉</span> Attack Simulation</a>
         </div>
         <div class="nav-group">
           <span class="nav-group-label">Intégrations</span>
@@ -226,7 +231,7 @@
         </div>
         <div class="assistant-policy">
           <strong>Fitaovana azo tanterahina</strong>
-          <span>CVE/NVD · CISA KEV · Malware metadata · Model status · MCP tools · Service status</span>
+          <span>CVE/NVD · CISA KEV · Malware metadata · Model status · MCP tools · Service status · Attack Simulation guide</span>
           <small>Read-only ny asa mandeha ho azy. Tsy misy shell, malware execution, exploit, account management na fanovana production.</small>
         </div>
         <div class="assistant-shortcuts" aria-label="Baiko haingana">
@@ -236,6 +241,7 @@
           <button type="button" data-assistant-command="Jereo modely">Model status</button>
           <button type="button" data-assistant-command="MCP tools">MCP tools</button>
           <button type="button" data-assistant-command="Jereo service status">Service status</button>
+          <button type="button" data-assistant-command="Attack simulation help">Attack Simulation</button>
         </div>
         <div id="assistant-chat-log" class="assistant-chat-log" role="log" aria-live="polite" aria-relevant="additions">
           <article class="assistant-message assistant">
@@ -253,6 +259,61 @@
           <button id="assistant-clear" class="text-button" type="button">Diovy ny resaka</button>
         </div>
         <p class="data-note">Tsy mitahiry ny chat history ao amin'ny navigateur na database ity pejy ity. Tsy misy saram-LLM amin'ny Local command mode. Raha voa-configurer ny AI provider, ny hafatra dia alefa aminy ary mety hisy sara araka ny modely sy ny token ampiasaina; aza mandefa secrets na angona saro-pady.</p>
+      </section>
+
+      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst">
+        <div><p class="eyebrow">AUTHORIZED RED TEAM · TABLETOP</p><h2>Attack Simulation Manager</h2></div>
+        <span class="section-tag">Local-only · 0 network requests</span>
+      </section>
+      <section class="panel attack-manager-panel" id="attack-manager-panel" data-role-visibility="admin,analyst">
+        <div class="attack-safety-banner">
+          <span class="attack-safety-mark" aria-hidden="true">✓</span>
+          <div><strong>Simulation locale et non intrusive</strong><p>Produit des scénarios, contrôles à vérifier, mapping MITRE ATT&amp;CK et recommandations. Tsy manao scan, exploit, payload, credential test, malware execution na network request.</p></div>
+          <span class="attack-traffic-pill">0 TRAFIC</span>
+        </div>
+        <div class="attack-manager-grid">
+          <form id="attack-scope-form" class="attack-card" data-role-visibility="admin">
+            <div class="attack-card-heading"><div><span class="eyebrow">ADMIN CONTROL</span><h3>Target allowlist</h3><p>Ny Admin ihany no afaka manoratra scope vaovao.</p></div><span class="attack-step">01</span></div>
+            <div class="field"><label for="attack-scope-name">Anaran'ny scope</label><input id="attack-scope-name" minlength="3" maxlength="80" placeholder="Laboratoire web principal" required></div>
+            <div class="field"><label for="attack-scope-target">Target host / domain / IP</label><input id="attack-scope-target" maxlength="253" placeholder="lab.example.test na 192.168.1.10" autocomplete="off" required><small class="field-hint">Host tokana ihany; tsy URL, CIDR na port. Tsy hifandraisana amin'ny réseau ilay target.</small></div>
+            <div class="field"><label for="attack-scope-basis">Fototry ny fahazoan-dalana</label><select id="attack-scope-basis" required><option value="owned_asset">Fananako / rafitra tantaniko</option><option value="written_permission">Fahazoan-dalana an-tsoratra</option><option value="isolated_lab">Laboratoire mitoka-monina</option></select></div>
+            <div class="field"><label for="attack-scope-expiry">Daty faran'ny alalana</label><input id="attack-scope-expiry" type="date" required><small class="field-hint">1–365 andro manomboka anio.</small></div>
+            <label class="attack-consent"><input id="attack-scope-confirm" type="checkbox" required><span>Manamarina aho fa tompon'andraikitra na nahazo alalana mazava amin'ity target ity.</span></label>
+            <button class="button button-primary" id="attack-scope-submit" type="submit">Ampidiro ao amin'ny allowlist</button>
+            <p id="attack-scope-status" class="attack-status" role="status" aria-live="polite">Admin permission required.</p>
+          </form>
+
+          <form id="attack-run-form" class="attack-card">
+            <div class="attack-card-heading"><div><span class="eyebrow">SIMULATION CONFIG</span><h3>Attack profile</h3><p>Scénario de sécurité no avoaka eto an-toerana.</p></div><span class="attack-step">02</span></div>
+            <div class="field"><label for="attack-scope-select">Target voasoratra</label><select id="attack-scope-select" required><option value="">Miandry ny allowlist…</option></select></div>
+            <div class="field"><label for="attack-profile">Profil de simulation</label><select id="attack-profile" required>
+              <option value="reconnaissance">Reconnaissance &amp; asset exposure</option>
+              <option value="web_security">Web application security</option>
+              <option value="api_security">API security</option>
+              <option value="authentication">Authentication &amp; identity</option>
+            </select></div>
+            <div class="field"><label for="attack-intensity">Haavon'ny simulation</label><select id="attack-intensity" required>
+              <option value="passive">Passive · checklist 3</option>
+              <option value="low">Low · checklist 5</option>
+              <option value="medium">Medium · checklist 7</option>
+            </select><small class="field-hint">Ny intensity dia isan'ny checklist aseho ihany, fa tsy hafainganam-panafihana.</small></div>
+            <div class="field"><label for="attack-duration">Fotoana kasaina hanaovana review (minitra)</label><input id="attack-duration" type="number" min="1" max="30" value="10" required></div>
+            <label class="attack-consent"><input id="attack-run-confirm" type="checkbox" required><span>Manamarina indray aho fa mbola manan-kery ny alalana ary ao anatin'ny scope ity simulation ity.</span></label>
+            <button class="button button-primary" id="attack-run-submit" type="submit" disabled>Hamorona simulation →</button>
+            <p id="attack-run-status" class="attack-status" role="status" aria-live="polite">Safidio ny target mbola manana alalana.</p>
+          </form>
+        </div>
+        <div class="attack-lower-grid">
+          <div class="attack-card">
+            <div class="attack-card-heading"><div><span class="eyebrow">AUTHORIZED ASSETS</span><h3>Scope inventory</h3><p>Active, expired ary revoked targets.</p></div><button id="attack-refresh" class="text-button" type="button">Havaozy</button></div>
+            <div id="attack-scope-list" class="attack-scope-list" aria-live="polite"><div class="loading-line">Manamarina ny allowlist…</div></div>
+          </div>
+          <div class="attack-card">
+            <div class="attack-card-heading"><div><span class="eyebrow">AUDITABLE OUTPUT</span><h3>Simulation reports</h3><p>Vokatra voatahiry sy azo averina jerena.</p></div><span id="attack-run-count" class="count-pill">0</span></div>
+            <div id="attack-report-list" class="attack-report-list" aria-live="polite"><div class="loading-line">Miandry tatitra…</div></div>
+          </div>
+        </div>
+        <p class="data-note">MITRE ATT&amp;CK IDs dia threat-reference mapping fotsiny. Ny SOC detection rules dia soso-kevitra mbola tsy deployed na enabled. Ny checklist rehetra dia <strong>requires manual validation</strong>; tsy lazaina ho vulnerability hita raha tsy misy porofo voamarina.</p>
       </section>
 
       <section class="section-heading" id="vulnerabilities">
@@ -432,5 +493,6 @@
   </div>
   <script src="/assets/developer.js" defer></script>
   <script src="/assets/assistant.js" defer></script>
+  <script src="/assets/attack-simulation.js" defer></script>
 </body>
 </html>

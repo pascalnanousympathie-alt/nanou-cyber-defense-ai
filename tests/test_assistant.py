@@ -24,6 +24,7 @@ def test_local_command_router_understands_defensive_commands() -> None:
         {"limit": 10},
     )
     assert _local_command("MCP tools") == ("list_defensive_tools", {})
+    assert _local_command("Attack simulation help") == ("attack_simulation_help", {})
     assert _local_command("help") == ("help", {})
 
 
@@ -64,6 +65,28 @@ async def test_assistant_cannot_execute_unregistered_or_write_tools() -> None:
             role="admin",
             scopes={"intel:read", "malware:metadata:read"},
         )
+
+
+@pytest.mark.asyncio
+async def test_attack_simulation_help_is_deterministic_and_never_calls_provider(monkeypatch) -> None:
+    async def forbidden_model_call(*_args, **_kwargs):
+        raise AssertionError("Attack simulation help must stay local and deterministic.")
+
+    monkeypatch.setattr(settings, "ai_api_key", None)
+    monkeypatch.setattr("nanou_cyber_ai.assistant.runtime._ask_model", forbidden_model_call)
+    response = await run_assistant(
+        "Attack simulation help",
+        [],
+        role="analyst",
+        scopes={"intel:read", "malware:metadata:read"},
+    )
+    assert response["action"] == "attack_simulation_help"
+    assert response["executed"] is False
+    assert response["data"]["network_requests"] == 0
+    assert response["data"]["exploits_executed"] == 0
+    assert response["data"]["payloads_executed"] == 0
+    assert response["data"]["malware_executed"] is False
+    assert "tabletop" in response["reply"]
 
 
 @pytest.mark.asyncio

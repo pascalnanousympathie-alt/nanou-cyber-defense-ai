@@ -369,6 +369,8 @@ def _local_command(message: str) -> tuple[str, dict[str, Any]] | None:
         return "list_malware_metadata", {"limit": 10}
     if any(token in normalized for token in ("model status", "modely", "inference model", "model")):
         return "get_malware_model_status", {}
+    if any(token in normalized for token in ("attack simulation", "red team", "simulation d'attaque")):
+        return "attack_simulation_help", {}
     if any(token in normalized for token in ("mcp", "tools", "fitaovana")):
         return "list_defensive_tools", {}
     if any(
@@ -417,6 +419,16 @@ def _local_reply(action: str, result: dict[str, Any]) -> str:
         return f"Fitaovana read-only hita: {len(result.get('tools', []))}."
     if action == "get_service_status":
         return f"Service {result.get('status')}; database: {result.get('database')}."
+    if action == "attack_simulation_help":
+        return (
+            "Attack Simulation Manager: Admin no mamorona allowlist misy target tokana sy "
+            "authorization expiry; Admin/Analyst no afaka mamorona tabletop report. "
+            "Profil: reconnaissance, web_security, api_security, authentication. "
+            "Intensity: passive/low/medium (checklist 3/5/7 ihany). "
+            "Sokafy ny menio RED TEAM OPERATIONS > Attack Simulation. "
+            "Local-only izy io: 0 network requests, 0 exploits, 0 payloads; "
+            "manual validation ihany no ataony fa tsy live pentest."
+        )
     return "Afaka manampy amin'ny baiko fiarovana voafetra aho."
 
 
@@ -527,6 +539,9 @@ async def run_assistant(
     scopes: set[str],
 ) -> dict[str, Any]:
     """Use optional Responses API tool-calling; fall back to safe local commands."""
+    selected = _local_command(message)
+    if selected is not None and selected[0] == "attack_simulation_help":
+        return await run_local_command(message, role=role, scopes=scopes)
     if settings.ai_api_key is not None and settings.ai_api_key.get_secret_value():
         try:
             return await _ask_model(message, history, role=role, scopes=scopes)
@@ -560,12 +575,30 @@ async def run_local_command(
             "mode": "local",
         }
     action, arguments = selected
+    if action == "attack_simulation_help":
+        return {
+            "reply": _local_reply(action, {}),
+            "action": action,
+            "data": {
+                "profiles": ["reconnaissance", "web_security", "api_security", "authentication"],
+                "intensity": {"passive": 3, "low": 5, "medium": 7},
+                "execution": "local_deterministic_tabletop",
+                "network_requests": 0,
+                "exploits_executed": 0,
+                "payloads_executed": 0,
+                "malware_executed": False,
+                "automatic_changes": 0,
+            },
+            "executed": False,
+            "mode": "local",
+        }
     if action == "help":
         return {
             "reply": (
                 "Baiko azo tanterahina avy hatrany: CVE ID, CISA KEV, metadata, "
-                "modely status (Admin/Analyst), MCP tools, ary service status. "
-                "Read-only avokoa ireo asa ireo."
+                "modely status (Admin/Analyst), MCP tools, service status, ary "
+                "Attack Simulation help. Read-only ny Chat tools; ny Attack Simulation "
+                "dia tabletop local-only amin'ny Manager."
             ),
             "action": "help",
             "data": {
@@ -576,6 +609,7 @@ async def run_local_command(
                     "Jereo modely",
                     "MCP tools",
                     "Jereo service status",
+                    "Attack simulation help",
                 ]
             },
             "executed": False,

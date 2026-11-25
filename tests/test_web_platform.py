@@ -184,6 +184,36 @@ def test_developer_center_assets_and_read_only_integration_contract() -> None:
             assert "security" in operation
 
 
+def test_attack_simulation_manager_assets_and_local_only_contract() -> None:
+    with TestClient(app) as client:
+        home = client.get("/")
+        script = client.get("/assets/attack-simulation.js")
+        stylesheet = client.get("/assets/attack-simulation.css")
+
+    assert home.status_code == 200
+    assert 'href="#attack-simulation" data-role-visibility="admin,analyst"' in home.text
+    assert 'id="attack-manager-panel"' in home.text
+    assert 'id="attack-scope-form"' in home.text
+    assert 'id="attack-run-form"' in home.text
+    assert 'id="attack-scope-confirm"' in home.text
+    assert 'id="attack-run-confirm"' in home.text
+    assert "SOC detection rules" in home.text
+    assert "0 network requests" in home.text
+
+    assert script.status_code == 200
+    assert 'apiRequest("/api/attack/scopes")' in script.text
+    assert 'apiRequest("/api/attack/simulations?limit=30")' in script.text
+    assert "textContent" in script.text
+    assert "detection_recommendations" in script.text
+    assert "innerHTML" not in script.text
+    assert "localStorage" not in script.text
+
+    assert stylesheet.status_code == 200
+    assert ".attack-manager-panel" in stylesheet.text
+    assert ".attack-safety-banner" in stylesheet.text
+    assert "@media(max-width:760px)" in stylesheet.text
+
+
 def test_assistant_chat_assets_and_command_policy_are_present() -> None:
     with TestClient(app) as client:
         home = client.get("/")
@@ -195,6 +225,7 @@ def test_assistant_chat_assets_and_command_policy_are_present() -> None:
     assert 'id="assistant-chat"' in home.text
     assert 'id="assistant-chat-form"' in home.text
     assert 'data-assistant-command="Jereo CISA KEV"' in home.text
+    assert 'data-assistant-command="Attack simulation help"' in home.text
     assert 'href="/assets/assistant.css"' in home.text
     assert 'src="/assets/assistant.js"' in home.text
 

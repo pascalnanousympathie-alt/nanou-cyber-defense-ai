@@ -1,6 +1,7 @@
+import ipaddress
 import math
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from typing import Literal
 
@@ -161,6 +162,80 @@ class AssistantChatIn(BaseModel):
         if not normalized:
             raise ValueError("Chat message cannot be empty.")
         return normalized
+
+
+class AttackScopeCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=3, max_length=80)
+    target: str = Field(min_length=1, max_length=253)
+    authorization_basis: Literal["owned_asset", "written_permission", "isolated_lab"]
+    authorization_expires_on: date
+    authorization_confirmed: bool
+
+    @field_validator("name")
+    @classmethod
+    def normalize_scope_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 3:
+            raise ValueError("Anaran'ny scope fohy loatra.")
+        return normalized
+
+    @field_validator("target")
+    @classmethod
+    def normalize_scope_target(cls, value: str) -> str:
+        normalized = value.strip().rstrip(".")
+        if not normalized or any(char in normalized for char in "/\\?#@%") or "://" in normalized:
+            raise ValueError("Target dia host/domain/IP tokana ihany; tsy URL na CIDR.")
+        try:
+            return str(ipaddress.ip_address(normalized))
+        except ValueError:
+            try:
+                host = normalized.encode("idna").decode("ascii").lower()
+            except UnicodeError as exc:
+                raise ValueError("Domain tsy manaraka IDNA.") from exc
+            if len(host) > 253:
+                raise ValueError("Domain lava loatra.")
+            labels = host.split(".")
+            if all(label.isdigit() for label in labels):
+                raise ValueError("Adiresy IPv4 tsy marina.")
+            if host != "localhost" and len(labels) < 2:
+                raise ValueError("FQDN na localhost ihany no ekena.")
+            if any(
+                not label
+                or len(label) > 63
+                or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
+                for label in labels
+            ):
+                raise ValueError("Host/domain tsy manaraka ny endrika DNS.")
+            return host
+
+    @model_validator(mode="after")
+    def validate_authorization(self) -> "AttackScopeCreateIn":
+        today = datetime.now(UTC).date()
+        if not self.authorization_confirmed:
+            raise ValueError("Tsy maintsy manamarina fa manana alalana amin'ny target ianao.")
+        if self.authorization_expires_on <= today:
+            raise ValueError("Lany daty na androany ny fahazoan-dalana.")
+        if self.authorization_expires_on > today + timedelta(days=365):
+            raise ValueError("Fahazoan-dalana 365 andro fara-fahabetsany.")
+        return self
+
+
+class AttackSimulationCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scope_id: str = Field(pattern=r"^[a-f0-9]{32}$")
+    profile: Literal["reconnaissance", "web_security", "api_security", "authentication"]
+    intensity: Literal["passive", "low", "medium"]
+    duration_minutes: int = Field(default=10, ge=1, le=30)
+    authorization_confirmed: bool
+
+    @model_validator(mode="after")
+    def require_current_authorization(self) -> "AttackSimulationCreateIn":
+        if not self.authorization_confirmed:
+            raise ValueError("Tsy maintsy manamarina indray ny fahazoan-dalana alohan'ny simulation.")
+        return self
 
 
 class DeveloperApiKeyCreateIn(BaseModel):

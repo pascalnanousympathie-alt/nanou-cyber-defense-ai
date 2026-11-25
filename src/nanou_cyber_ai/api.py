@@ -25,6 +25,8 @@ from nanou_cyber_ai.mcp.registry import list_tools
 from nanou_cyber_ai.models import (
     AdminUserUpdateIn,
     AssistantChatIn,
+    AttackScopeCreateIn,
+    AttackSimulationCreateIn,
     AuthBootstrapIn,
     AuthLoginIn,
     AuthRegisterIn,
@@ -36,6 +38,7 @@ from nanou_cyber_ai.models import (
 )
 from nanou_cyber_ai.security.passwords import hash_password, verify_password
 from nanou_cyber_ai.settings import settings
+from nanou_cyber_ai.storage.attack_simulation import AttackSimulationStore
 from nanou_cyber_ai.storage.auth import AuthStore
 from nanou_cyber_ai.storage.database import SecurityDatabase, get_database
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
@@ -73,6 +76,10 @@ def get_auth_store() -> AuthStore:
 
 def get_store() -> MalwareMetadataStore:
     return MalwareMetadataStore(get_database_instance())
+
+
+def get_attack_store() -> AttackSimulationStore:
+    return AttackSimulationStore(get_database_instance())
 
 
 def _request_id(request: Request) -> str:
@@ -704,6 +711,166 @@ async def api_v1_assistant_chat(
         principal,
         set(principal["api_key_scopes"]),
     )
+
+
+@app.get("/api/attack/scopes")
+async def list_attack_scopes(
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> list[dict]:
+    return get_attack_store().list_scopes(include_inactive=user["role"] == "admin")
+
+
+@app.post("/api/attack/scopes", status_code=201)
+async def create_attack_scope(
+    item: AttackScopeCreateIn,
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin"))],
+) -> dict:
+    auth_store = get_auth_store()
+    fingerprint = hashlib.sha256(f"attack.scope:{user['id']}".encode()).hexdigest()
+    if not auth_store.allow_attempt(
+        fingerprint,
+        maximum=settings.attack_scope_creations_per_day,
+        window_seconds=86400,
+    ):
+        auth_store.record_event(
+            actor_user_id=user["id"],
+            action="attack.scope.create.rate_limited",
+            target_type="attack_scope",
+            outcome="blocked",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=429, detail="Attack scope creation limit exceeded.")
+    expires_at = datetime.combine(item.authorization_expires_on, datetime.max.time()).replace(
+        tzinfo=UTC
+    )
+    scope = get_attack_store().create_scope(
+        created_by_user_id=user["id"],
+        name=item.name,
+        target=item.target,
+        authorization_basis=item.authorization_basis,
+        authorization_expires_at=expires_at,
+    )
+    auth_store.record_event(
+        actor_user_id=user["id"],
+        action="attack.scope.create",
+        target_type="attack_scope",
+        target_id=scope["id"],
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return scope
+
+
+@app.post("/api/attack/scopes/{scope_id}/revoke")
+async def revoke_attack_scope(
+    scope_id: str,
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin"))],
+) -> dict:
+    store = get_attack_store()
+    scope = store.get_scope(scope_id)
+    if scope is None:
+        raise HTTPException(status_code=404, detail="Attack scope not found.")
+    if scope["is_active"]:
+        scope = store.deactivate_scope(scope_id)
+    get_auth_store().record_event(
+        actor_user_id=user["id"],
+        action="attack.scope.revoke",
+        target_type="attack_scope",
+        target_id=scope_id,
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return {"revoked": True, "scope": scope}
+
+
+@app.post("/api/attack/simulations", status_code=201)
+async def create_attack_simulation(
+    item: AttackSimulationCreateIn,
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> dict:
+    auth_store = get_auth_store()
+    fingerprint = hashlib.sha256(f"attack.simulation:{user['id']}".encode()).hexdigest()
+    if not auth_store.allow_attempt(
+        fingerprint,
+        maximum=settings.attack_simulations_per_hour,
+        window_seconds=3600,
+    ):
+        auth_store.record_event(
+            actor_user_id=user["id"],
+            action="attack.simulation.rate_limited",
+            target_type="attack_simulation",
+            outcome="blocked",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=429, detail="Attack simulation limit exceeded.")
+    try:
+        report = get_attack_store().create_simulation(
+            actor_user_id=user["id"],
+            scope_id=item.scope_id,
+            profile=item.profile,
+            intensity=item.intensity,
+            duration_minutes=item.duration_minutes,
+        )
+    except LookupError as exc:
+        auth_store.record_event(
+            actor_user_id=user["id"],
+            action="attack.simulation.scope_missing",
+            target_type="attack_scope",
+            target_id=item.scope_id,
+            outcome="blocked",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        auth_store.record_event(
+            actor_user_id=user["id"],
+            action="attack.simulation.scope_blocked",
+            target_type="attack_scope",
+            target_id=item.scope_id,
+            outcome="blocked",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    auth_store.record_event(
+        actor_user_id=user["id"],
+        action="attack.simulation.create",
+        target_type="attack_simulation",
+        target_id=report["id"],
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return report
+
+
+@app.get("/api/attack/simulations")
+async def list_attack_simulations(
+    _user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+    limit: int = Query(default=30, ge=1, le=100),
+) -> list[dict]:
+    return get_attack_store().list_simulations(limit)
+
+
+@app.get("/api/attack/simulations/{simulation_id}")
+async def get_attack_simulation(
+    simulation_id: str,
+    _user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> dict:
+    report = get_attack_store().get_simulation(simulation_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Attack simulation not found.")
+    return report
 
 
 @app.get("/api/v1/openapi.json")
