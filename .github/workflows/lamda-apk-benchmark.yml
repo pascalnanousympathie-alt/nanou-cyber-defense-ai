@@ -1,6 +1,6 @@
-name: LAMDA APK cross-dataset benchmark
+name: LAMDA APK temporal benchmark
 
-run-name: LAMDA APK benchmark (10k train / 12k test / seed ${{ inputs.sampling_seed }})
+run-name: LAMDA APK temporal benchmark (10k train / up to 12k test / seed ${{ inputs.sampling_seed }})
 
 on:
   workflow_dispatch:
@@ -277,7 +277,7 @@ jobs:
       - name: Upload LAMDA model, metrics and provenance only
         uses: actions/upload-artifact@v4
         with:
-          name: lamda-apk-cross-dataset-${{ inputs.sampling_seed }}
+          name: lamda-apk-temporal-${{ inputs.sampling_seed }}
           path: ${{ runner.temp }}/lamda-results/
           if-no-files-found: error
           retention-days: 14
