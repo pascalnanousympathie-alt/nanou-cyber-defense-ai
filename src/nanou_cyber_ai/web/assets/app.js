@@ -1,8 +1,11 @@
 "use strict";
 
 const byId = (id) => document.getElementById(id);
-let activeMetadataToken = "";
+let csrfToken = "";
+let currentUser = null;
 let configuredMalwareModel = null;
+
+const canAnalyze = () => Boolean(currentUser && ["admin", "analyst"].includes(currentUser.role));
 
 function setMessage(element, message, kind = "") {
   element.textContent = message;
@@ -25,15 +28,43 @@ function setError(element, message) {
   element.append(node);
 }
 
+async function ensureCsrf() {
+  const response = await fetch("/api/auth/csrf", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || typeof payload?.csrf_token !== "string") {
+    throw new Error("Tsy afaka nanokatra CSRF session.");
+  }
+  csrfToken = payload.csrf_token;
+  return csrfToken;
+}
+
 async function apiRequest(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const headers = {
+    Accept: "application/json",
+    ...(options.contentType ? { "Content-Type": options.contentType } : {}),
+    ...(options.body !== undefined && !options.contentType
+      ? { "Content-Type": "application/json" }
+      : {}),
+  };
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    if (!csrfToken) await ensureCsrf();
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  const body = options.rawBody !== undefined
+    ? options.rawBody
+    : options.body !== undefined
+      ? JSON.stringify(options.body)
+      : undefined;
   const response = await fetch(path, {
-    method: options.method || "GET",
-    headers: {
-      Accept: "application/json",
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    method,
+    headers,
+    body,
     credentials: "same-origin",
     cache: "no-store",
     redirect: "error",
@@ -45,6 +76,9 @@ async function apiRequest(path, options = {}) {
     payload = null;
   }
   if (!response.ok) {
+    if (response.status === 403 && payload?.detail?.startsWith("CSRF") && method !== "GET") {
+      await ensureCsrf();
+    }
     const detail = typeof payload?.detail === "string" ? payload.detail : `HTTP ${response.status}`;
     throw new Error(detail);
   }
@@ -232,6 +266,245 @@ async function loadTools() {
   }
 }
 
+function setAuthPanels(mode) {
+  byId("bootstrap-panel").hidden = mode !== "bootstrap";
+  byId("login-panel").hidden = mode !== "login";
+  byId("account-panel").hidden = mode !== "account";
+  byId("admin-panel").hidden = mode !== "account" || currentUser?.role !== "admin";
+  const badge = byId("user-badge");
+  badge.hidden = !currentUser;
+  badge.textContent = currentUser ? `${currentUser.display_name} · ${currentUser.role}` : "";
+  byId("auth-state-pill").textContent = currentUser ? "Voamarina" : mode === "bootstrap" ? "Setup voalohany" : "Tsy tafiditra";
+  byId("metadata-workspace").hidden = !currentUser;
+  byId("metadata-auth-status").textContent = currentUser
+    ? `Miditra amin'ny metadata amin'ny andraikitra ${currentUser.role}.`
+    : "Midira amin'ny kaonty voa-approve raha hijery na hitahiry metadata.";
+  const createButton = byId("metadata-create-form").querySelector("button[type=submit]");
+  createButton.disabled = !canAnalyze();
+  updateInferenceAccess();
+}
+
+async function loadAuth() {
+  try {
+    const status = await apiRequest("/api/auth/me");
+    currentUser = status.user || null;
+    if (currentUser) {
+      setAuthPanels("account");
+      byId("account-name").textContent = currentUser.display_name;
+      byId("account-email").textContent = currentUser.email;
+      byId("account-role").textContent = currentUser.role.toUpperCase();
+      byId("auth-message").textContent = "Voaaro amin'ny session manokana ny fidirana. Mikatona ho azy rehefa lany daty.";
+      await loadMetadata();
+      if (currentUser.role === "admin") await loadAdminConsole();
+    } else if (status.bootstrap_required) {
+      setAuthPanels("bootstrap");
+      byId("auth-message").textContent = "Tsy mbola misy Administrator. Ny kaonty voalohany ihany no mahazo andraikitra Admin.";
+    } else {
+      setAuthPanels("login");
+      byId("auth-message").textContent = "Mila miditra amin'ny kaonty voa-approve ianao. Ny fisoratana anarana vaovao dia mila fankatoavan'ny Admin.";
+      byId("metadata-list").replaceChildren();
+      byId("metadata-total").textContent = "0";
+    }
+  } catch (error) {
+    currentUser = null;
+    setAuthPanels("login");
+    byId("auth-message").textContent = error.message || "Tsy afaka nanamarina ny kaonty. Zahao ny database connection.";
+  }
+}
+
+async function submitBootstrap(event) {
+  event.preventDefault();
+  const submit = byId("bootstrap-form").querySelector("button[type=submit]");
+  submit.disabled = true;
+  try {
+    await apiRequest("/api/auth/bootstrap", {
+      method: "POST",
+      body: {
+        display_name: byId("bootstrap-name").value.trim(),
+        email: byId("bootstrap-email").value.trim(),
+        password: byId("bootstrap-password").value,
+      },
+    });
+    byId("bootstrap-form").reset();
+    await loadAuth();
+  } catch (error) {
+    byId("auth-message").textContent = error.message || "Tsy nahomby ny fametrahana Admin.";
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+async function submitLogin(event) {
+  event.preventDefault();
+  const submit = byId("login-form").querySelector("button[type=submit]");
+  submit.disabled = true;
+  try {
+    await apiRequest("/api/auth/login", {
+      method: "POST",
+      body: {
+        email: byId("login-email").value.trim(),
+        password: byId("login-password").value,
+      },
+    });
+    byId("login-form").reset();
+    await loadAuth();
+  } catch (error) {
+    byId("auth-message").textContent = error.message || "Tsy nahomby ny fidirana.";
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+async function submitRegistration(event) {
+  event.preventDefault();
+  const submit = byId("register-form").querySelector("button[type=submit]");
+  submit.disabled = true;
+  try {
+    const result = await apiRequest("/api/auth/register", {
+      method: "POST",
+      body: {
+        display_name: byId("register-name").value.trim(),
+        email: byId("register-email").value.trim(),
+        password: byId("register-password").value,
+      },
+    });
+    byId("register-form").reset();
+    byId("auth-message").textContent = result.message || "Voaray ny fangatahana. Miandry fankatoavan'ny Admin.";
+  } catch (error) {
+    byId("auth-message").textContent = error.message || "Tsy voaray ny fisoratana anarana.";
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+async function logoutAccount() {
+  try {
+    await apiRequest("/api/auth/logout", { method: "POST" });
+  } catch (error) {
+    byId("auth-message").textContent = error.message || "Tsy nahomby ny logout.";
+    return;
+  }
+  currentUser = null;
+  byId("metadata-create-form").reset();
+  byId("metadata-list").replaceChildren();
+  byId("metadata-total").textContent = "0";
+  byId("inference-features").value = "";
+  byId("inference-result").replaceChildren();
+  await loadAuth();
+}
+
+function renderAdminUsers(items) {
+  const list = byId("admin-users");
+  list.replaceChildren();
+  for (const item of items) {
+    const row = document.createElement("article");
+    row.className = "admin-user-row";
+    const identity = document.createElement("div");
+    identity.className = "admin-user-identity";
+    const name = document.createElement("strong");
+    name.textContent = item.display_name;
+    const email = document.createElement("span");
+    email.textContent = item.email;
+    const status = document.createElement("small");
+    status.textContent = item.is_approved && item.is_active ? "Active" : "Miandry / voasakana";
+    identity.append(name, email, status);
+
+    const controls = document.createElement("div");
+    controls.className = "admin-user-controls";
+    const role = document.createElement("select");
+    role.setAttribute("aria-label", `Andraikitry ny ${item.email}`);
+    for (const value of ["viewer", "analyst", "admin"]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value.toUpperCase();
+      option.selected = item.role === value;
+      role.append(option);
+    }
+    const activeLabel = document.createElement("label");
+    activeLabel.className = "active-toggle";
+    const active = document.createElement("input");
+    active.type = "checkbox";
+    active.checked = item.is_active && item.is_approved;
+    activeLabel.append(active, document.createTextNode(" Active / approve"));
+    const save = document.createElement("button");
+    save.className = "button button-secondary";
+    save.type = "button";
+    save.textContent = "Tehirizo";
+    const isSelf = item.id === currentUser?.id;
+    if (isSelf) {
+      role.disabled = true;
+      active.disabled = true;
+      save.disabled = true;
+    }
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try {
+        await apiRequest(`/api/admin/users/${encodeURIComponent(item.id)}`, {
+          method: "PATCH",
+          body: { role: role.value, is_active: active.checked },
+        });
+        await loadAdminConsole();
+      } catch (error) {
+        byId("auth-message").textContent = error.message || "Tsy voatahiry ny fanovana.";
+      } finally {
+        save.disabled = false;
+      }
+    });
+    controls.append(role, activeLabel, save);
+    row.append(identity, controls);
+    list.append(row);
+  }
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "loading-line";
+    empty.textContent = "Tsy mbola misy kaonty.";
+    list.append(empty);
+  }
+}
+
+function renderAudit(items) {
+  const list = byId("audit-list");
+  list.replaceChildren();
+  for (const item of items) {
+    const row = document.createElement("div");
+    row.className = "audit-row";
+    const action = document.createElement("strong");
+    action.textContent = item.action;
+    const detail = document.createElement("span");
+    detail.textContent = `${item.outcome} · ${item.created_at}`;
+    row.append(action, detail);
+    list.append(row);
+  }
+}
+
+async function loadAdminConsole() {
+  if (currentUser?.role !== "admin") return;
+  try {
+    const [users, audit] = await Promise.all([
+      apiRequest("/api/admin/users"),
+      apiRequest("/api/admin/audit?limit=30"),
+    ]);
+    renderAdminUsers(users);
+    renderAudit(audit);
+  } catch (error) {
+    byId("admin-users").textContent = error.message || "Tsy afaka namaky ny admin workspace.";
+  }
+}
+
+function renderCvePlaceholder() {
+  const result = byId("cve-result");
+  if (!result.childElementCount) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    const icon = document.createElement("span");
+    icon.textContent = "⌕";
+    const message = document.createElement("p");
+    message.textContent = "Ampidiro ny ID CVE hahitana ny antsipiriany sy ny isa CVSS.";
+    empty.append(icon, message);
+    result.append(empty);
+  }
+}
+
 function renderMetadata(items) {
   const list = byId("metadata-list");
   list.replaceChildren();
@@ -256,35 +529,19 @@ function renderMetadata(items) {
 }
 
 async function loadMetadata() {
+  if (!currentUser) return;
   try {
-    const items = await apiRequest("/api/malware/metadata?limit=100", { token: activeMetadataToken });
+    const items = await apiRequest("/api/malware/metadata?limit=100");
     renderMetadata(Array.isArray(items) ? items : []);
-    byId("metadata-workspace").hidden = false;
-    setMessage(byId("metadata-auth-status"), "Voamarina ny token. Azo ampiasaina ny metadata.", "success");
-    updateInferenceAccess();
   } catch (error) {
-    activeMetadataToken = "";
-    byId("api-token").value = "";
-    byId("metadata-workspace").hidden = true;
-    updateInferenceAccess();
-    setMessage(byId("metadata-auth-status"), error.message || "Tsy nahomby ny fanamarinana.", "error");
+    setMessage(byId("metadata-auth-status"), error.message || "Tsy afaka namaky metadata.", "error");
   }
-}
-
-async function authenticateMetadata(event) {
-  event.preventDefault();
-  const token = byId("api-token").value.trim();
-  if (!token) return;
-  activeMetadataToken = token;
-  byId("api-token").value = "";
-  setMessage(byId("metadata-auth-status"), "Manamarina token…");
-  await loadMetadata();
 }
 
 async function createMetadata(event) {
   event.preventDefault();
-  if (!activeMetadataToken) {
-    setMessage(byId("metadata-auth-status"), "Lany ny fidirana; ampidiro indray ny token.", "error");
+  if (!canAnalyze()) {
+    setMessage(byId("metadata-auth-status"), "Admin na Analyst ihany no afaka manampy metadata.", "error");
     return;
   }
   const payload = {
@@ -294,11 +551,7 @@ async function createMetadata(event) {
     family: byId("sample-family").value.trim() || null,
   };
   try {
-    await apiRequest("/api/malware/metadata", {
-      method: "POST",
-      token: activeMetadataToken,
-      body: payload,
-    });
+    await apiRequest("/api/malware/metadata", { method: "POST", body: payload });
     byId("metadata-create-form").reset();
     setMessage(byId("metadata-auth-status"), "Voatahiry ny metadata.", "success");
     await loadMetadata();
@@ -307,22 +560,9 @@ async function createMetadata(event) {
   }
 }
 
-function logoutMetadata() {
-  activeMetadataToken = "";
-  byId("api-token").value = "";
-  byId("metadata-workspace").hidden = true;
-  byId("metadata-list").replaceChildren();
-  byId("metadata-total").textContent = "0";
-  updateInferenceAccess();
-  byId("inference-result").replaceChildren();
-  setMessage(byId("metadata-auth-status"), "Nakatona ny fidirana. Tsy nisy token notehirizina.");
-}
-
-
-
 function updateInferenceAccess() {
   const ready = Boolean(configuredMalwareModel?.available);
-  const authenticated = Boolean(activeMetadataToken);
+  const authenticated = canAnalyze();
   byId("inference-fields").disabled = !(ready && authenticated);
   const status = byId("model-status");
   if (!ready) {
@@ -336,7 +576,7 @@ function updateInferenceAccess() {
   const datasetName = selected === "ember2024-apk" ? "EMBER2024" : "LAMDA";
   status.textContent = authenticated
     ? `Modely ${datasetName} voamarina · ${configuredMalwareModel.feature_count} features · afaka manao inference.`
-    : `Modely ${datasetName} voamarina. Ampidiro ny bearer token ao amin'ny fizarana Metadata mba hampiasana azy.`;
+    : "Midira amin'ny kaonty Analyst na Admin mba hampiasa inference.";
 }
 
 async function loadMalwareModelStatus() {
@@ -348,10 +588,60 @@ async function loadMalwareModelStatus() {
   updateInferenceAccess();
 }
 
+
+async function readFileAsText(file) {
+  if (typeof file.text === "function") return file.text();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Tsy afaka namaky ny CSV."));
+    reader.readAsText(file, "UTF-8");
+  });
+}
+
+async function prepareFeatureCsv() {
+  if (!canAnalyze()) {
+    setMessage(byId("feature-prepare-status"), "Admin na Analyst ihany no afaka manomana features.", "error");
+    return;
+  }
+  const file = byId("feature-csv").files?.[0];
+  if (!file) {
+    setMessage(byId("feature-prepare-status"), "Safidio aloha ny CSV feature.", "error");
+    return;
+  }
+  if (!file.name.toLowerCase().endsWith(".csv") || file.size > 1_048_576) {
+    setMessage(byId("feature-prepare-status"), "CSV ihany no azo atao ary 1 MiB no fetra.", "error");
+    return;
+  }
+  const datasetId = byId("inference-dataset").value;
+  const button = byId("prepare-features");
+  button.disabled = true;
+  setMessage(byId("feature-prepare-status"), "Manamarina ny schema sy ny feature values…");
+  try {
+    const csvText = await readFileAsText(file);
+    const prepared = await apiRequest(`/api/malware/features/prepare/${encodeURIComponent(datasetId)}`, {
+      method: "POST",
+      contentType: "text/csv",
+      rawBody: csvText,
+    });
+    byId("inference-features").value = JSON.stringify(prepared.features);
+    setMessage(
+      byId("feature-prepare-status"),
+      `PASS · ${prepared.feature_count} features · CSV SHA-256: ${prepared.source_content_sha256}`,
+      "success",
+    );
+  } catch (error) {
+    byId("inference-features").value = "";
+    setMessage(byId("feature-prepare-status"), error.message || "Tsy nety ny feature CSV.", "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function runMalwareInference(event) {
   event.preventDefault();
-  if (!activeMetadataToken || !configuredMalwareModel?.available) {
-    setError(byId("inference-result"), "Mila modely voamarina sy bearer token aloha.");
+  if (!canAnalyze() || !configuredMalwareModel?.available) {
+    setError(byId("inference-result"), "Mila modely voamarina sy kaonty Analyst/Admin aloha.");
     return;
   }
   let features;
@@ -381,7 +671,6 @@ async function runMalwareInference(event) {
   try {
     const result = await apiRequest("/api/malware/inference", {
       method: "POST",
-      token: activeMetadataToken,
       body: { dataset_id: datasetId, schema_version: 1, features },
     });
     const area = byId("inference-result");
@@ -404,12 +693,29 @@ async function runMalwareInference(event) {
 
 byId("cve-form").addEventListener("submit", searchCve);
 byId("refresh-kev").addEventListener("click", loadKev);
-byId("metadata-auth-form").addEventListener("submit", authenticateMetadata);
+byId("bootstrap-form").addEventListener("submit", submitBootstrap);
+byId("login-form").addEventListener("submit", submitLogin);
+byId("register-form").addEventListener("submit", submitRegistration);
+byId("logout-button").addEventListener("click", logoutAccount);
+byId("refresh-admin").addEventListener("click", loadAdminConsole);
 byId("metadata-create-form").addEventListener("submit", createMetadata);
-byId("metadata-logout").addEventListener("click", logoutMetadata);
+byId("prepare-features").addEventListener("click", prepareFeatureCsv);
+byId("inference-dataset").addEventListener("change", () => {
+  byId("feature-csv").value = "";
+  byId("inference-features").value = "";
+  setMessage(byId("feature-prepare-status"), "Miova ny dataset; safidio indray ny CSV mifanaraka.");
+});
 byId("malware-inference-form").addEventListener("submit", runMalwareInference);
 
-loadHealth();
-loadKev();
-loadTools();
-loadMalwareModelStatus();
+async function initializePlatform() {
+  renderCvePlaceholder();
+  try {
+    await ensureCsrf();
+  } catch (error) {
+    byId("auth-message").textContent = error.message || "Tsy azo namboarina ny CSRF session.";
+  }
+  await loadAuth();
+  await Promise.all([loadHealth(), loadKev(), loadTools(), loadMalwareModelStatus()]);
+}
+
+initializePlatform();

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr, ValidationError
+from pydantic import ValidationError
 
 from nanou_cyber_ai.api import app
 from nanou_cyber_ai.malware.inference import (
@@ -15,6 +15,8 @@ from nanou_cyber_ai.malware.inference import (
 )
 from nanou_cyber_ai.models import MalwareInferenceIn
 from nanou_cyber_ai.settings import settings
+from nanou_cyber_ai.storage.auth import AuthStore
+from nanou_cyber_ai.storage.database import get_database
 
 
 class FakeClassifier:
@@ -92,23 +94,49 @@ def test_classifier_uses_explicit_threshold_and_returns_provenance() -> None:
     assert result["model_sha256"] == "a" * 64
 
 
-def test_inference_endpoint_requires_bearer_token_and_verified_model(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(settings, "metadata_api_token", SecretStr("test-only-token"))
-    monkeypatch.setattr(settings, "malware_model_path", tmp_path / "model.joblib")
-    monkeypatch.setattr(settings, "malware_model_sha256", "a" * 64)
-    monkeypatch.setattr(settings, "malware_model_dataset_id", "ember2024-apk")
+def _authenticated_test_client(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    store = AuthStore(get_database(None, tmp_path))
+    user = store.create_bootstrap_admin(
+        email="analyst@example.test",
+        display_name="Test Analyst",
+        password_hash="test-only-hash",
+        request_id=None,
+        ip_digest=None,
+    )
+    assert user is not None
+    raw_token = "a-session-token-used-only-in-tests"
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    from datetime import UTC, datetime, timedelta
 
+    store.create_session(
+        user_id=user["id"],
+        token_hash=token_hash,
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
+    )
+    client = TestClient(app)
+    client.cookies.set(settings.session_cookie_name, raw_token)
+    csrf_response = client.get("/api/auth/csrf")
+    assert csrf_response.status_code == 200
+    return client, csrf_response.json()["csrf_token"]
+
+
+def test_inference_endpoint_requires_approved_session(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
     with TestClient(app) as client:
+        csrf = client.get("/api/auth/csrf").json()["csrf_token"]
         denied = client.post(
             "/api/malware/inference",
+            headers={"X-CSRF-Token": csrf},
             json={"dataset_id": "ember2024-apk", "features": [0.0] * 2568},
         )
 
-    assert denied.status_code in (401, 403)
+    assert denied.status_code == 401
 
 
 def test_inference_endpoint_runs_only_after_authenticated_model_load(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(settings, "metadata_api_token", SecretStr("test-only-token"))
     monkeypatch.setattr(settings, "malware_model_path", tmp_path / "model.joblib")
     monkeypatch.setattr(settings, "malware_model_sha256", "a" * 64)
     monkeypatch.setattr(settings, "malware_model_dataset_id", "ember2024-apk")
@@ -120,10 +148,11 @@ def test_inference_endpoint_runs_only_after_authenticated_model_load(monkeypatch
     )
     monkeypatch.setattr("nanou_cyber_ai.api.load_configured_malware_model", lambda: loaded)
 
-    with TestClient(app) as client:
+    client, csrf = _authenticated_test_client(monkeypatch, tmp_path)
+    with client:
         response = client.post(
             "/api/malware/inference",
-            headers={"Authorization": "Bearer test-only-token"},
+            headers={"X-CSRF-Token": csrf},
             json={"dataset_id": "ember2024-apk", "features": [0.0] * 2568},
         )
 

@@ -1,44 +1,79 @@
 # Nanou Cyber Defense AI — Web platform
 
-The application is delivered as a responsive browser-based platform served by the existing FastAPI service. It does not require an Android APK, a Node build chain, external frontend CDNs, or browser extensions.
+The application is a responsive browser-based platform served directly by FastAPI. It does not require an Android APK or a separate frontend build.
 
-## Current web interface
+## Web interface and APIs
 
-- `/` — responsive dashboard in Malagasy, suitable for phone and desktop browsers.
+- `/` — responsive Malagasy dashboard for mobile and desktop browsers.
+- `/health` — process health.
+- `/ready` — readiness check; requires a reachable durable database on hosted deployments.
+- `/api/auth/csrf` — issues the CSRF cookie/token for browser forms.
+- `/api/auth/me` — current account and first-administrator bootstrap status.
+- `/api/auth/bootstrap` — creates the one-time first Administrator.
+- `/api/auth/register` — creates a pending Viewer account.
+- `/api/auth/login`, `/api/auth/logout` — password login and server-side session revocation.
+- `/api/admin/users`, `/api/admin/users/{id}` — Admin-only approval, role changes and deactivation.
+- `/api/admin/audit` — Admin-only audit-event listing.
 - `/api/cve/{cve_id}` — read-only NVD vulnerability lookup.
 - `/api/kev` — read-only CISA Known Exploited Vulnerabilities feed.
-- `/api/mcp/tools` — inventory of the registered, scope-limited MCP tools.
-- `/api/malware/metadata` — protected local metadata listing and ingestion; requires a bearer token.
-- `/docs` — FastAPI API documentation.
+- `/api/mcp/tools` — scope-limited MCP tool inventory.
+- `/api/malware/metadata` — authenticated malware-hash metadata.
+- `/api/malware/inference/status` — model integrity/schema status.
+- `/api/malware/features/prepare/{dataset_id}` — validate one pre-extracted CSV feature row.
+- `/api/malware/inference` — Admin/Analyst-only classification of a validated numeric vector.
+- `/docs` — FastAPI OpenAPI documentation.
 
-The dashboard uses same-origin API requests. Remote feed content is rendered as text, not interpreted as HTML. The metadata token is held in page memory only; it is not written to cookies, local storage or session storage. Reloading the page clears the token.
+## Authentication and access control
 
-## Run locally
+Passwords use Argon2id. Browser sessions use opaque HttpOnly cookies with SameSite=Strict and Secure on HTTPS; only token hashes are stored. Sessions have a configurable absolute expiry (default 12 hours). Logout revokes the server-side session.
 
-```bash
-python -m pip install -e ".[dev]"
-export NANOU_METADATA_API_TOKEN="<set-a-long-random-token-locally>"
-uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
-```
+State-changing requests require a double-submit CSRF token and same-origin validation when an Origin header is present. The app applies request-size limits, auth rate limits, restrictive CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and HSTS on HTTPS.
 
-Open `http://127.0.0.1:8000/` from the same device. Do not expose this development server directly to the public internet.
+Roles:
+- `admin` — approve/manage users, assign roles, view audit events, and use analyst features.
+- `analyst` — prepare feature data, run inference, add metadata and view intelligence.
+- `viewer` — read permitted intelligence and metadata.
 
-## Configure the feature classifier
+The first account is the one-time Administrator bootstrap. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
 
-Install the optional ML dependencies on the server and configure one trusted artifact produced by the controlled benchmark workflow:
+Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses are not stored; only a digest is retained.
+
+## Local development
 
 ~~~bash
-python -m pip install -e ".[ml]"
-export NANOU_MALWARE_MODEL_PATH="/absolute/path/to/static-malware-detector-v1.joblib"
-export NANOU_MALWARE_MODEL_SHA256="<trusted-artifact-sha256>"
-export NANOU_MALWARE_MODEL_DATASET_ID="ember2024-apk"
-export NANOU_METADATA_API_TOKEN="<long-random-token>"
+python -m pip install -e ".[dev]"
+uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 ~~~
 
-Use ember2024-apk only with its 2,568 named EMBER features, or lamda-apk-2022-train-2023-test only with its 4,561 signed-int8 LAMDA features. One model is configured per service process. The browser can submit a JSON array of pre-extracted numbers; it cannot upload APKs or model files. The inference endpoint checks the model file digest before deserialization, and then checks its dataset ID, schema version and exact ordered feature names. The default threshold 0.5 is experimental, not a production operating point; choose a candidate on a separate validation set and test it on a later untouched set.
+Without `NANOU_DATABASE_URL`, local development uses SQLite at `NANOU_DATA_DIR/malware_metadata.sqlite3`. This fallback is blocked on Vercel/AWS Lambda because their local filesystems are not durable.
 
-## Before public deployment
+## PostgreSQL hosting
 
-This repository change supplies a web UI, not a production hosting deployment. Before opening it to public traffic, configure HTTPS and a reverse proxy, rate limits and request-size limits, individual user identity with role-based access control, audit logging, secret management and monitored backups. The current metadata endpoints use one configured bearer token; that is not a multi-user login system. Do not distribute the shared token to normal users.
+Set `NANOU_DATABASE_URL` to a dedicated PostgreSQL project. The application requires TLS and uses a small connection pool. Do not reuse a database belonging to LudoMada, Mada Commander, Nanou Browser or another unrelated service.
 
-The current malware workflow is feature-data-only. The site does not accept or execute APKs, PE files, scripts or other binaries. An operator may configure one trusted research model artifact with its expected SHA-256 and dataset ID. The API verifies the artifact hash, model metadata, schema version and exact feature names before using it. The inference endpoint accepts only finite numeric feature vectors; the API never deserializes an uploaded model or runs an uploaded binary.
+## Safe feature-data preparation
+
+The preparation endpoint accepts CSV text only, capped at 1 MiB and exactly one data row. Headers must match the selected model schema, in order:
+- EMBER2024: 2,568 numeric columns named `ember_feature_0000` through `ember_feature_2567`.
+- LAMDA: 4,561 columns named `feat_0` through `feat_4560`, signed int8 values from -128 through 127.
+
+Optional metadata columns are `sha256` and `label`; these are validated but excluded from model input. Unknown, missing, duplicate, reordered or extra columns, multiple rows, non-finite values and out-of-range LAMDA values are rejected. CSV content is not persisted.
+
+This is not an APK scanner. The platform does not yet parse APK binaries or extract their features. A genuine APK-to-feature extractor must be separately implemented and validated against the exact training schema before claiming direct APK scanning.
+
+## Vercel deployment
+
+The repository includes `index.py`, `requirements.txt`, `.python-version`, and `vercel.json`. Vercel project protection is configured for all deployments; the first Administrator must be created while that protection remains enabled.
+
+The Vercel Hobby plan is free but restricted to personal/non-commercial use. Do not use it for commercial or third-party service delivery. See [deployment runbook](deployment.md).
+
+## Before public launch
+
+1. A dedicated PostgreSQL project and `NANOU_DATABASE_URL`.
+2. HTTPS and provider-side deployment protection.
+3. First Admin bootstrap and end-to-end login/approval/RBAC verification.
+4. Backup/restore test.
+5. Separate validation-set selection of the ML decision threshold.
+6. Email verification and self-service recovery before accepting public registrations at scale.
+
+Do not expose the app publicly while the database is unconfigured or the first Administrator has not been created.

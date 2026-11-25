@@ -23,6 +23,7 @@
       <div class="nav-caption">SEHATRA</div>
       <nav class="side-nav">
         <a class="nav-link active" href="#overview"><span aria-hidden="true">◈</span> Topimaso</a>
+        <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty</a>
         <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE sy faharefoana</a>
         <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
         <a class="nav-link" href="#malware-model"><span aria-hidden="true">✳</span> AI malware model</a>
@@ -42,8 +43,11 @@
           <p class="eyebrow">SECURITY OPERATIONS CENTER</p>
           <h1>Foibe fiarovana</h1>
         </div>
-        <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
-          <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
+        <div class="topbar-actions">
+          <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
+            <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
+          </div>
+          <span id="user-badge" class="user-badge" hidden></span>
         </div>
       </header>
 
@@ -63,6 +67,57 @@
           <span class="graphic-node node-three"></span>
         </div>
         <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina</div>
+      </section>
+
+
+      <section class="panel auth-panel" id="account">
+        <div class="panel-heading">
+          <div><span class="panel-icon auth-icon">♙</span><div><h3>Kaonty sy fidirana</h3><p>Kaonty manokana, session azo esorina ary andraikitra voafetra.</p></div></div>
+          <span id="auth-state-pill" class="count-pill">Manamarina…</span>
+        </div>
+        <div id="auth-message" class="auth-message" role="status" aria-live="polite">Manamarina ny fiarovana sy ny kaonty…</div>
+
+        <div id="bootstrap-panel" class="auth-form-grid" hidden>
+          <div class="auth-intro"><strong>Fametrahana voalohany — Administrator</strong><p>Ny kaonty voalohany ihany no mahazo Admin. Ampidiro eto ny tenimiafinao manokana; tsy ho hita amin'ny tompon'andraikitra na amin'ny audit log izany.</p></div>
+          <form id="bootstrap-form" class="auth-form">
+            <div class="field"><label for="bootstrap-name">Anarana</label><input id="bootstrap-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="bootstrap-email">Email</label><input id="bootstrap-email" type="email" maxlength="320" autocomplete="email" required></div>
+            <div class="field"><label for="bootstrap-password">Tenimiafina Admin (12+ caractères)</label><input id="bootstrap-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-primary" type="submit">Hamorona Administrator</button></div>
+          </form>
+        </div>
+
+        <div id="login-panel" class="auth-form-grid" hidden>
+          <form id="login-form" class="auth-form">
+            <strong>Hiditra</strong>
+            <div class="field"><label for="login-email">Email</label><input id="login-email" type="email" maxlength="320" autocomplete="username" required></div>
+            <div class="field"><label for="login-password">Tenimiafina</label><input id="login-password" type="password" maxlength="128" autocomplete="current-password" required></div>
+            <div class="field"><button class="button button-primary" type="submit">Hiditra amin'ny kaonty</button></div>
+          </form>
+          <form id="register-form" class="auth-form">
+            <strong>Hangataka kaonty</strong>
+            <p>Ny kaonty vaovao dia Viewer ary miandry fankatoavan'ny Administrator.</p>
+            <div class="field"><label for="register-name">Anarana</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="register-email">Email</label><input id="register-email" type="email" maxlength="320" autocomplete="email" required></div>
+            <div class="field"><label for="register-password">Tenimiafina (12+ caractères)</label><input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-secondary" type="submit">Handefa fangatahana</button></div>
+          </form>
+        </div>
+
+        <div id="account-panel" class="account-panel" hidden>
+          <div class="account-summary">
+            <div><strong id="account-name">—</strong><span id="account-email">—</span></div>
+            <span id="account-role" class="role-pill">viewer</span>
+            <button id="logout-button" class="button button-secondary" type="button">Hivoaka</button>
+          </div>
+        </div>
+
+        <div id="admin-panel" class="admin-panel" hidden>
+          <div class="workspace-heading"><h4>Fitantanana mpampiasa</h4><button id="refresh-admin" class="text-button" type="button">Havaozy</button></div>
+          <div id="admin-users" class="admin-users" aria-live="polite"></div>
+          <div class="workspace-heading list-heading"><h4>Audit log farany</h4></div>
+          <div id="audit-list" class="audit-list" aria-live="polite"></div>
+        </div>
       </section>
 
       <section class="metrics-grid" aria-label="Toe-draharaha ankapobeny">
@@ -148,8 +203,17 @@
                 </select>
               </div>
               <div class="field field-wide">
-                <label for="inference-features">JSON numeric feature array</label>
-                <textarea id="inference-features" rows="5" spellcheck="false" placeholder="[0.12, 0.04, 1.5, ...]" required></textarea>
+                <label for="feature-csv">CSV iray misy features efa nalaina mialoha</label>
+                <input id="feature-csv" type="file" accept=".csv,text/csv">
+                <small class="field-hint">CSV text ihany (max 1 MiB, row iray). Tsy manaiky APK, executable na model file.</small>
+              </div>
+              <div class="field field-wide">
+                <button class="button button-secondary" id="prepare-features" type="button">Hamarino sy alamino ny CSV</button>
+                <p id="feature-prepare-status" class="form-message" aria-live="polite">Mila analyst/admin sy modely mifanaraka.</p>
+              </div>
+              <div class="field field-wide">
+                <label for="inference-features">Feature vector voaomana (JSON)</label>
+                <textarea id="inference-features" rows="5" spellcheck="false" placeholder="Safidio aloha ny CSV feature ..." readonly required></textarea>
               </div>
               <div class="field field-wide"><button class="button button-primary" id="inference-submit" type="submit">Diniho ny feature vector</button></div>
             </div>
@@ -170,17 +234,10 @@
           <div class="metadata-mark">⬡</div>
           <div><h3>Rakitra famantarana malware</h3><p>SHA-256, label ary loharano ihany. Tsy misy APK, executable na payload alefa eto.</p></div>
         </div>
-        <div class="security-note"><span aria-hidden="true">🔒</span><span>Ny token ampidirina dia tazonina vetivety ao amin'ity pejy ity ihany; tsy tehirizina ao amin'ny localStorage na cookie.</span></div>
-        <form id="metadata-auth-form" class="token-form">
-          <label for="api-token">API bearer token</label>
-          <div class="token-row">
-            <input id="api-token" type="password" autocomplete="off" placeholder="Ampidiro ny token nomen'ny tompon'andraikitra" required>
-            <button class="button button-secondary" type="submit">Hiditra amin'ny metadata</button>
-          </div>
-          <p id="metadata-auth-status" class="form-message" aria-live="polite">Mila token voa-configure ao amin'ny server ity fizarana ity.</p>
-        </form>
+        <div class="security-note"><span aria-hidden="true">🔒</span><span>Ny fidirana dia amin'ny session HttpOnly, tenimiafina voatahiry Argon2id, CSRF protection ary andraikitra admin/analyst/viewer.</span></div>
+        <p id="metadata-auth-status" class="form-message" aria-live="polite">Midira amin'ny kaonty voa-approve raha hijery na hitahiry metadata.</p>
         <div id="metadata-workspace" class="metadata-workspace" hidden>
-          <div class="workspace-heading"><h4>Hanampy metadata</h4><button class="text-button" id="metadata-logout" type="button">Hivoaka</button></div>
+          <div class="workspace-heading"><h4>Hanampy metadata</h4></div>
           <form id="metadata-create-form" class="metadata-form">
             <div class="field field-wide"><label for="sample-hash">SHA-256</label><input id="sample-hash" name="sha256" minlength="64" maxlength="64" pattern="[a-fA-F0-9]{64}" placeholder="64 hexadecimal characters" required></div>
             <div class="field"><label for="sample-label">Label</label><select id="sample-label" name="label"><option value="unknown">Unknown</option><option value="benign">Benign</option><option value="malicious">Malicious</option></select></div>

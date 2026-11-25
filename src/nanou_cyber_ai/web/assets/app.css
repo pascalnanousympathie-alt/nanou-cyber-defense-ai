@@ -224,3 +224,47 @@ textarea { border: 1px solid rgba(145,171,202,.2); border-radius: 7px; color: va
   .field-wide { grid-column: auto; }
   .footer { align-items: flex-start; flex-direction: column; gap: 10px; }
 }
+
+/* Multi-user authentication, administration and feature preparation */
+.topbar-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 9px; justify-content: flex-end; }
+.user-badge { background: rgba(91,214,163,.1); border: 1px solid rgba(91,214,163,.18); border-radius: 20px; color: #a6e6c6; font-size: 9px; font-weight: 800; padding: 7px 10px; }
+.auth-panel { margin: 0 0 19px; scroll-margin-top: 20px; }
+.auth-icon { background: rgba(181,162,255,.12); color: var(--purple); }
+.auth-message { background: rgba(92,159,255,.06); border: 1px solid var(--border); border-radius: 8px; color: #a9bdd1; font-size: 10px; line-height: 1.6; margin: 15px 0; padding: 10px 12px; }
+.auth-form-grid { display: grid; gap: 18px; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); }
+.auth-intro { background: #101d2d; border: 1px solid var(--border); border-radius: 9px; padding: 15px; }
+.auth-intro strong, .auth-form > strong { color: #dceafa; display: block; font-size: 12px; }
+.auth-intro p, .auth-form > p { color: #8ea4bc; font-size: 10px; line-height: 1.7; margin: 7px 0 0; }
+.auth-form { background: #101d2d; border: 1px solid var(--border); border-radius: 9px; display: grid; gap: 11px; padding: 15px; }
+.account-panel { border-top: 1px solid var(--border); padding-top: 13px; }
+.account-summary { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+.account-summary > div { display: grid; gap: 2px; margin-right: auto; }
+.account-summary strong { color: #e0edf8; font-size: 12px; }
+.account-summary span:not(.role-pill) { color: #8299b2; font-size: 9px; }
+.role-pill { background: rgba(181,162,255,.12); border: 1px solid rgba(181,162,255,.18); border-radius: 16px; color: #c6b9ff; font-size: 8px; font-weight: 900; letter-spacing: .6px; padding: 5px 8px; }
+.admin-panel { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+.admin-users { display: grid; gap: 7px; }
+.admin-user-row { align-items: center; background: #101d2d; border: 1px solid var(--border); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; padding: 10px 11px; }
+.admin-user-identity { display: grid; gap: 2px; min-width: 160px; }
+.admin-user-identity strong { color: #dceafa; font-size: 10px; }
+.admin-user-identity span, .admin-user-identity small { color: #8197af; font-size: 8px; overflow-wrap: anywhere; }
+.admin-user-controls { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; }
+.admin-user-controls select { font-size: 9px; padding: 7px 8px; width: auto; }
+.active-toggle { align-items: center; color: #9db2c7; display: inline-flex; font-size: 8px; gap: 5px; }
+.active-toggle input { accent-color: var(--green); height: 13px; margin: 0; width: 13px; }
+.admin-user-controls .button { min-height: 30px; padding: 6px 9px; }
+.audit-list { display: grid; gap: 5px; max-height: 190px; overflow: auto; }
+.audit-row { align-items: center; background: #101d2d; border: 1px solid var(--border); border-radius: 7px; display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; padding: 7px 9px; }
+.audit-row strong { color: #b8d3ee; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; }
+.audit-row span { color: #788fa8; font-size: 8px; }
+.field-hint { color: #7f96af; display: block; font-size: 8px; line-height: 1.5; margin-top: 5px; }
+input[type="file"] { font-size: 9px; padding: 8px; }
+input[type="file"]::file-selector-button { background: #243d59; border: 0; border-radius: 5px; color: #dceafa; cursor: pointer; font-size: 9px; margin-right: 9px; padding: 7px 9px; }
+button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: .52; }
+
+@media (max-width: 760px) {
+  .auth-form-grid { grid-template-columns: 1fr; }
+  .topbar-actions { align-items: flex-end; flex-direction: column; }
+  .admin-user-row { align-items: flex-start; }
+  .admin-user-controls { width: 100%; }
+}

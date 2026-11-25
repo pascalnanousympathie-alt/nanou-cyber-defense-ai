@@ -9,7 +9,12 @@ class Settings(BaseSettings):
 
     data_dir: Path = Field(default=Path("~/.local/share/nanou-cyber-defense-ai").expanduser())
     http_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
-    metadata_api_token: SecretStr | None = None
+    database_url: SecretStr | None = None
+    bootstrap_token: SecretStr | None = None
+    session_cookie_name: str = Field(default="nanou_session", min_length=8, max_length=40)
+    session_ttl_hours: int = Field(default=12, ge=1, le=168)
+    auth_attempts_per_window: int = Field(default=10, ge=3, le=50)
+    auth_rate_window_seconds: int = Field(default=900, ge=60, le=3600)
     malware_model_path: Path | None = None
     malware_model_sha256: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{64}$")
     malware_model_dataset_id: str | None = Field(default=None, max_length=80)

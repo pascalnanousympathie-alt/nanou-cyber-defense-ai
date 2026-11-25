@@ -1,0 +1,229 @@
+from __future__ import annotations
+
+import hashlib
+from datetime import UTC, datetime, timedelta
+
+from fastapi.testclient import TestClient
+
+from nanou_cyber_ai.api import app
+from nanou_cyber_ai.settings import settings
+from nanou_cyber_ai.storage.auth import AuthStore
+from nanou_cyber_ai.storage.database import SecurityDatabase
+
+
+def _admin(store: AuthStore):
+    return store.create_bootstrap_admin(
+        email="admin@example.test",
+        display_name="First Admin",
+        password_hash="test-only-argon2id-hash",
+        request_id="test-bootstrap",
+        ip_digest="b" * 64,
+    )
+
+
+def test_bootstrap_is_one_time_and_registers_pending_viewers(tmp_path) -> None:
+    database = SecurityDatabase(None, tmp_path)
+    store = AuthStore(database)
+
+    assert store.bootstrap_available() is True
+    admin = _admin(store)
+    assert admin is not None
+    assert admin["role"] == "admin"
+    assert admin["is_active"] is True
+    assert store.bootstrap_available() is False
+    assert _admin(store) is None
+
+    viewer = store.register(
+        email="viewer@example.test",
+        display_name="Pending Viewer",
+        password_hash="another-test-hash",
+        request_id="test-registration",
+        ip_digest="c" * 64,
+    )
+    assert viewer["role"] == "viewer"
+    assert viewer["is_approved"] is False
+    assert viewer["is_active"] is False
+
+    events = store.list_audit_events()
+    assert {event["action"] for event in events} >= {"auth.bootstrap", "auth.register"}
+    database.close()
+
+
+def test_role_change_approves_and_revokes_existing_sessions(tmp_path) -> None:
+    database = SecurityDatabase(None, tmp_path)
+    store = AuthStore(database)
+    admin = _admin(store)
+    viewer = store.register(
+        email="analyst@example.test",
+        display_name="Pending Analyst",
+        password_hash="test-hash",
+        request_id=None,
+        ip_digest=None,
+    )
+    token = "session-token-for-test"
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    store.create_session(
+        user_id=admin["id"],
+        token_hash=token_hash,
+        expires_at=datetime.now(UTC) + timedelta(hours=2),
+    )
+    assert store.get_user_for_session(token_hash)["id"] == admin["id"]
+
+    approved = store.update_user(
+        actor_user_id=admin["id"],
+        target_user_id=viewer["id"],
+        role="analyst",
+        is_active=True,
+        request_id="test-approval",
+        ip_digest=None,
+    )
+    assert approved["role"] == "analyst"
+    assert approved["is_approved"] is True
+    assert approved["is_active"] is True
+    assert store.get_user_for_session(token_hash) is None
+    database.close()
+
+
+def test_last_active_admin_cannot_be_demoted_or_deactivated(tmp_path) -> None:
+    database = SecurityDatabase(None, tmp_path)
+    store = AuthStore(database)
+    admin = _admin(store)
+
+    try:
+        store.update_user(
+            actor_user_id=admin["id"],
+            target_user_id=admin["id"],
+            role="viewer",
+            is_active=False,
+            request_id=None,
+            ip_digest=None,
+        )
+    except ValueError as exc:
+        assert "cannot demote" in str(exc)
+    else:
+        raise AssertionError("Self-demotion should be rejected.")
+
+    database.close()
+
+
+def _csrf(client: TestClient) -> str:
+    response = client.get("/api/auth/csrf")
+    assert response.status_code == 200
+    return response.json()["csrf_token"]
+
+
+def test_web_auth_bootstrap_register_approve_and_rbac(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "auth_attempts_per_window", 50)
+
+    with TestClient(app) as admin_client:
+        csrf = _csrf(admin_client)
+        bootstrap = admin_client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "email": "admin@example.test",
+                "display_name": "First Admin",
+                "password": "Correct-Horse-Battery-42!",
+                "bootstrap_token": "test-bootstrap-token-long-enough-1234567890",
+            },
+        )
+        assert bootstrap.status_code == 200
+        assert bootstrap.json()["user"]["role"] == "admin"
+        assert settings.session_cookie_name in admin_client.cookies
+
+        current = admin_client.get("/api/auth/me")
+        assert current.status_code == 200
+        assert current.json()["authenticated"] is True
+        assert current.json()["user"]["role"] == "admin"
+
+        repeated = admin_client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "email": "second@example.test",
+                "display_name": "Second Admin",
+                "password": "Different-Password-44!",
+                "bootstrap_token": "test-bootstrap-token-long-enough-1234567890",
+            },
+        )
+        assert repeated.status_code == 409
+
+        registration = admin_client.post(
+            "/api/auth/register",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "email": "analyst@example.test",
+                "display_name": "Pending Analyst",
+                "password": "Another-Strong-Password-51!",
+            },
+        )
+        assert registration.status_code == 202
+        pending_user_id = registration.json()["user"]["id"]
+
+        approval = admin_client.patch(
+            f"/api/admin/users/{pending_user_id}",
+            headers={"X-CSRF-Token": csrf},
+            json={"role": "analyst", "is_active": True},
+        )
+        assert approval.status_code == 200
+        assert approval.json()["is_approved"] is True
+
+    with TestClient(app) as analyst_client:
+        analyst_csrf = _csrf(analyst_client)
+        login = analyst_client.post(
+            "/api/auth/login",
+            headers={"X-CSRF-Token": analyst_csrf},
+            json={
+                "email": "analyst@example.test",
+                "password": "Another-Strong-Password-51!",
+            },
+        )
+        assert login.status_code == 200
+        assert login.json()["user"]["role"] == "analyst"
+
+        denied = analyst_client.get("/api/admin/users")
+        assert denied.status_code == 403
+
+        allowed_metadata = analyst_client.get("/api/malware/metadata")
+        assert allowed_metadata.status_code == 200
+
+
+def test_bootstrap_requires_secret_and_does_not_claim_first_admin(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "bootstrap_token", None)
+
+    with TestClient(app) as client:
+        csrf = _csrf(client)
+        denied = client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "email": "attacker@example.test",
+                "display_name": "Attacker",
+                "password": "Strong-Password-999!",
+                "bootstrap_token": "attacker-controlled-token-is-not-valid-123456",
+            },
+        )
+        assert denied.status_code == 403
+        assert client.get("/api/auth/me").json()["bootstrap_required"] is True
+
+
+def test_csrf_and_unauthenticated_access_are_rejected(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+
+    with TestClient(app) as client:
+        missing_csrf = client.post("/api/auth/register", json={
+            "email": "user@example.test",
+            "display_name": "Test User",
+            "password": "A-Strong-Password-55!",
+        })
+        assert missing_csrf.status_code == 403
+
+        csrf = _csrf(client)
+        denied = client.get("/api/malware/metadata")
+        assert denied.status_code == 401
+        assert csrf

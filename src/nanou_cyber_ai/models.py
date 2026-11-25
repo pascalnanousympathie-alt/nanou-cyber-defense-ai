@@ -1,5 +1,7 @@
 import math
+import re
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
@@ -21,8 +23,6 @@ class MalwareMetadataIn(BaseModel):
     @field_validator("features")
     @classmethod
     def finite_features(cls, value: dict[str, float]) -> dict[str, float]:
-        import math
-
         if any(not math.isfinite(number) for number in value.values()):
             raise ValueError("feature values must be finite numbers")
         return value
@@ -85,3 +85,60 @@ class MalwareInferenceResult(BaseModel):
     decision_threshold: float = Field(ge=0, le=1)
     model_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     limitation: str
+
+
+
+class AuthBootstrapIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=6, max_length=320)
+    display_name: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=12, max_length=128)
+    bootstrap_token: str = Field(min_length=32, max_length=256)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized):
+            raise ValueError("A valid email address is required.")
+        return normalized
+
+    @field_validator("display_name")
+    @classmethod
+    def normalize_display_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if len(normalized) < 2:
+            raise ValueError("Display name is too short.")
+        return normalized
+
+
+class AuthRegisterIn(AuthBootstrapIn):
+    pass
+
+
+class AuthLoginIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=6, max_length=320)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized):
+            raise ValueError("A valid email address is required.")
+        return normalized
+
+
+class AdminUserUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["admin", "analyst", "viewer"]
+    is_active: bool
+
+
+class MalwareFeatureDatasetId(str, Enum):
+    EMBER = "ember2024-apk"
+    LAMDA = "lamda-apk-2022-train-2023-test"

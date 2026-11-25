@@ -34,17 +34,22 @@ Health: `GET /health`
 - `GET /api/mcp/tools` — list the registered, scope-limited tools.
 - `GET /api/kev` — fetch the CISA Known Exploited Vulnerabilities catalog.
 - `GET /api/cve/{cve_id}` — fetch one CVE from the NVD API.
-- `GET /api/malware/metadata` — list stored metadata records (requires bearer token).
-- `POST /api/malware/metadata` — add a hash/label/feature-summary record (requires bearer token; never a binary).
+- `GET /api/auth/me` — current account and first-Admin setup status.
+- `POST /api/auth/bootstrap` — one-time first Administrator setup (requires a private bootstrap token).
+- `POST /api/auth/register`, `/api/auth/login`, `/api/auth/logout` — account and session lifecycle.
+- `GET /api/admin/users`, `PATCH /api/admin/users/{id}`, `GET /api/admin/audit` — Admin-only RBAC and audit operations.
+- `GET /api/malware/metadata` — list stored metadata (authenticated account).
+- `POST /api/malware/metadata` — add a hash/label/feature-summary record (Admin/Analyst only; never a binary).
 
-- GET /api/malware/inference/status — report whether an operator-configured model passed integrity/schema checks.
-- POST /api/malware/inference — classify a strict pre-extracted numeric feature vector (requires bearer token; no APK or binary uploads).
+- `GET /api/malware/inference/status` — report whether an operator-configured model passed integrity/schema checks.
+- `POST /api/malware/features/prepare/{dataset_id}` — validate one pre-extracted feature CSV row (Admin/Analyst only).
+- `POST /api/malware/inference` — classify an exact numeric feature vector (Admin/Analyst only; no APK or binary uploads).
 
-The service stores metadata under `~/.local/share/nanou-cyber-defense-ai` by default. Set `NANOU_DATA_DIR` to use another directory. Set `NANOU_METADATA_API_TOKEN` locally before using metadata endpoints. Never put actual tokens, private reports, customer data, or malware samples in this public repository.
+Local development uses SQLite under `~/.local/share/nanou-cyber-defense-ai` by default. Hosted/serverless environments require a dedicated PostgreSQL `NANOU_DATABASE_URL` and a private `NANOU_BOOTSTRAP_TOKEN`. Passwords are hashed with Argon2id; browser sessions use HttpOnly cookies and CSRF protection. Never put actual secrets, private reports, customer data, or malware samples in this public repository.
 
 ## Web platform
 
-The responsive web interface is served directly by FastAPI; it uses local CSS/JavaScript assets and does not need a separate frontend build or external CDN. See [the web platform guide](docs/web-platform.md) for its current capabilities and the controls required before public deployment.
+The responsive web interface is served directly by FastAPI; it uses local CSS/JavaScript assets and does not need a separate frontend build or external CDN. See [the web platform guide](docs/web-platform.md) and [deployment runbook](docs/deployment.md) for authentication, feature CSV preparation and hosting configuration.
 
 ## Optional MCP server
 
@@ -98,4 +103,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-MVP web platform with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, safe EMBER2024 archive import, feature-vector conversion and optional static-feature training baselines. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
+Web platform with defensive CVE/KEV intelligence, Argon2id multi-user authentication, Admin/Analyst/Viewer RBAC, CSRF protection, audit logs, PostgreSQL-ready persistence, pre-extracted feature CSV validation and optional static-feature inference. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
