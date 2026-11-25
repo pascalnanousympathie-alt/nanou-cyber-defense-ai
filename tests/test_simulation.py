@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -78,7 +79,7 @@ def test_simulation_requires_authorization_and_allowlisted_target(monkeypatch) -
         authorization_reference="CHANGE-2026-015",
         authorization_acknowledged=False,
     )
-    with __import__("pytest").raises(PermissionError):
+    with pytest.raises(PermissionError):
         run_offline_simulation(unconfirmed, configured_targets=settings.simulation_allowed_targets)
 
     unlisted = AttackSimulationIn(
@@ -88,7 +89,7 @@ def test_simulation_requires_authorization_and_allowlisted_target(monkeypatch) -
         authorization_reference="CHANGE-2026-016",
         authorization_acknowledged=True,
     )
-    with __import__("pytest").raises(PermissionError):
+    with pytest.raises(PermissionError):
         run_offline_simulation(unlisted, configured_targets=settings.simulation_allowed_targets)
 
 
