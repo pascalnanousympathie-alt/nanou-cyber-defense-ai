@@ -96,7 +96,7 @@ The artifact does not contain the original dataset, raw JSONL metadata or export
 
 1. Increase the selected training and test sample sizes, or evaluate all unique labeled records on a runner sized for that experiment.
 2. Repeat with multiple fixed seeds and report metric variance; seed 42 provides reproducibility, not uncertainty estimates.
-3. Add calibration and threshold analysis, including false-positive rate and precision/recall at explicit operating thresholds.
+3. Select a candidate threshold using a separate validation split; the descriptive held-out test threshold sweep is recorded in [the threshold analysis report](ember2024-apk-threshold-analysis-2026-11-25.md).
 4. Compare with a simple baseline and a second model family before considering deployment.
 5. Keep temporal separation and the SHA-256 leakage checks in every future evaluation.
 
