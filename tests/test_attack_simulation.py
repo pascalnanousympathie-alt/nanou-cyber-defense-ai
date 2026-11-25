@@ -122,8 +122,7 @@ def test_simulation_report_is_local_and_never_claims_verified_findings(
     assert len(report["checks"]) == expected_checks
     assert all(item["status"] == "requires_manual_validation" for item in report["checks"])
     assert all(
-        "Threat-reference mapping only" in item["usage"]
-        for item in report["attack_mapping"]
+        "Threat-reference mapping only" in item["usage"] for item in report["attack_mapping"]
     )
     assert len(report["detection_recommendations"]) == 3
     assert all(
@@ -307,9 +306,7 @@ def test_attack_scope_expiry_is_rechecked_at_execution(monkeypatch, tmp_path) ->
             connection.execute(
                 update(attack_scopes)
                 .where(attack_scopes.c.id == scope_id)
-                .values(
-                    authorization_expires_at=datetime.now(UTC) - timedelta(minutes=1)
-                )
+                .values(authorization_expires_at=datetime.now(UTC) - timedelta(minutes=1))
             )
 
         response = client.post(

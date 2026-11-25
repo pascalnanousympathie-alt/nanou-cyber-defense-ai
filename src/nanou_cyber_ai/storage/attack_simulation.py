@@ -68,9 +68,11 @@ class AttackSimulationStore:
                     created_at=now,
                 )
             )
-            row = connection.execute(
-                select(attack_scopes).where(attack_scopes.c.id == scope_id)
-            ).mappings().one()
+            row = (
+                connection.execute(select(attack_scopes).where(attack_scopes.c.id == scope_id))
+                .mappings()
+                .one()
+            )
         return _scope_payload(row)
 
     def list_scopes(self, *, include_inactive: bool = False) -> list[dict[str, Any]]:
@@ -84,9 +86,7 @@ class AttackSimulationStore:
     def get_scope(self, scope_id: str) -> dict[str, Any] | None:
         with self.database.engine.connect() as connection:
             row = (
-                connection.execute(
-                    select(attack_scopes).where(attack_scopes.c.id == scope_id)
-                )
+                connection.execute(select(attack_scopes).where(attack_scopes.c.id == scope_id))
                 .mappings()
                 .first()
             )
@@ -100,9 +100,7 @@ class AttackSimulationStore:
                 .values(is_active=False)
             )
             row = (
-                connection.execute(
-                    select(attack_scopes).where(attack_scopes.c.id == scope_id)
-                )
+                connection.execute(select(attack_scopes).where(attack_scopes.c.id == scope_id))
                 .mappings()
                 .first()
             )
@@ -122,9 +120,7 @@ class AttackSimulationStore:
         with self.database.engine.begin() as connection:
             scope_row = (
                 connection.execute(
-                    select(attack_scopes)
-                    .where(attack_scopes.c.id == scope_id)
-                    .with_for_update()
+                    select(attack_scopes).where(attack_scopes.c.id == scope_id).with_for_update()
                 )
                 .mappings()
                 .first()
@@ -170,12 +166,9 @@ class AttackSimulationStore:
 
     def get_simulation(self, simulation_id: str) -> dict[str, Any] | None:
         with self.database.engine.connect() as connection:
-            row = (
-                connection.execute(
-                    select(attack_simulations.c.result_json).where(
-                        attack_simulations.c.id == simulation_id
-                    )
+            row = connection.execute(
+                select(attack_simulations.c.result_json).where(
+                    attack_simulations.c.id == simulation_id
                 )
-                .first()
-            )
+            ).first()
         return json.loads(row[0]) if row is not None else None

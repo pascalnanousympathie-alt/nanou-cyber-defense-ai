@@ -370,8 +370,7 @@ def _local_command(message: str) -> tuple[str, dict[str, Any]] | None:
     if any(token in normalized for token in ("model status", "modely", "inference model", "model")):
         return "get_malware_model_status", {}
     if any(
-        token in normalized
-        for token in ("attack simulation", "red team", "simulation d'attaque")
+        token in normalized for token in ("attack simulation", "red team", "simulation d'attaque")
     ):
         return "attack_simulation_help", {}
     if any(token in normalized for token in ("mcp", "tools", "fitaovana")):
