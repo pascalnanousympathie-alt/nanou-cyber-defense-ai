@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from nanou_cyber_ai.assistant.runtime import (
     _local_command,
@@ -8,6 +9,7 @@ from nanou_cyber_ai.assistant.runtime import (
     execute_tool,
     run_assistant,
 )
+from nanou_cyber_ai.models import AssistantChatIn, DeveloperApiKeyCreateIn
 from nanou_cyber_ai.settings import settings
 
 
@@ -86,3 +88,18 @@ async def test_viewer_cannot_request_analyst_only_model_status() -> None:
             role="viewer",
             scopes={"intel:read", "malware:metadata:read"},
         )
+
+
+
+def test_assistant_chat_and_remote_key_scopes_are_validated() -> None:
+    with pytest.raises(ValidationError):
+        AssistantChatIn(message="x" * 1001)
+    with pytest.raises(ValidationError):
+        DeveloperApiKeyCreateIn(name="AI Bot", scopes=["ai:chat"])
+
+    valid = DeveloperApiKeyCreateIn(
+        name="Remote AI bot",
+        scopes=["ai:chat", "intel:read"],
+        expires_in_days=30,
+    )
+    assert set(valid.scopes) == {"ai:chat", "intel:read"}
