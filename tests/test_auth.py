@@ -338,3 +338,98 @@ def test_viewer_role_is_read_only_and_admin_audit_is_restricted(monkeypatch, tmp
         assert denied_audit.status_code == 403
         assert denied_metadata_write.status_code == 403
         assert denied_feature_prepare.status_code == 403
+
+
+
+def test_developer_api_keys_are_hashed_scoped_rate_limited_and_revocable(tmp_path) -> None:
+    database = SecurityDatabase(None, tmp_path)
+    store = AuthStore(database)
+    admin = _admin(store)
+    token = "ncd_live_test-only-random-token-value"
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    created = store.create_api_key(
+        owner_user_id=admin["id"],
+        name="AI security assistant",
+        token_prefix=token[:20],
+        token_hash=token_hash,
+        scopes=["intel:read"],
+        expires_at=datetime.now(UTC) + timedelta(days=30),
+        request_id="test-api-key-create",
+        ip_digest=None,
+    )
+    assert created["name"] == "AI security assistant"
+    assert created["scopes"] == ["intel:read"]
+    assert "token_hash" not in created
+    assert "token" not in created
+
+    listed = store.list_api_keys(admin["id"])
+    assert len(listed) == 1
+    assert listed[0]["token_prefix"] == token[:20]
+    principal = store.get_api_key_principal(token_hash)
+    assert principal is not None
+    assert principal["api_key_scopes"] == ["intel:read"]
+    assert principal["role"] == "admin"
+
+    assert store.consume_api_key_request(created["id"], maximum=2) is True
+    assert store.consume_api_key_request(created["id"], maximum=2) is True
+    assert store.consume_api_key_request(created["id"], maximum=2) is False
+
+    revoked = store.revoke_api_key(
+        owner_user_id=admin["id"],
+        key_id=created["id"],
+        request_id="test-api-key-revoke",
+        ip_digest=None,
+    )
+    assert revoked is not None
+    assert revoked["revoked_at"] is not None
+    assert store.get_api_key_principal(token_hash) is None
+    assert {event["action"] for event in store.list_audit_events()} >= {
+        "developer.api_key.create",
+        "developer.api_key.revoke",
+    }
+    database.close()
+
+
+def test_user_role_change_revokes_owned_developer_api_keys(tmp_path) -> None:
+    database = SecurityDatabase(None, tmp_path)
+    store = AuthStore(database)
+    admin = _admin(store)
+    analyst = store.register(
+        email="api-analyst@example.test",
+        display_name="API Analyst",
+        password_hash="test-hash",
+        request_id=None,
+        ip_digest=None,
+    )
+    approved = store.update_user(
+        actor_user_id=admin["id"],
+        target_user_id=analyst["id"],
+        role="analyst",
+        is_active=True,
+        request_id="test-api-analyst-approval",
+        ip_digest=None,
+    )
+    token_hash = hashlib.sha256(b"ncd_live_analyst-token").hexdigest()
+    key = store.create_api_key(
+        owner_user_id=approved["id"],
+        name="Temporary analyst key",
+        token_prefix="ncd_live_analyst",
+        token_hash=token_hash,
+        scopes=["intel:read"],
+        expires_at=datetime.now(UTC) + timedelta(days=7),
+        request_id=None,
+        ip_digest=None,
+    )
+
+    store.update_user(
+        actor_user_id=admin["id"],
+        target_user_id=analyst["id"],
+        role="analyst",
+        is_active=False,
+        request_id="test-api-analyst-disable",
+        ip_digest=None,
+    )
+    assert store.get_api_key_principal(token_hash) is None
+    assert store.list_api_keys(analyst["id"])[0]["revoked_at"] is not None
+    database.close()
