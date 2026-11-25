@@ -28,9 +28,7 @@ def _write_parquet(
         "year_month": ["2022-01"] * len(labels),
     }
     for feature_index, name in enumerate(FEATURE_NAMES):
-        feature_values = [
-            (row_index + feature_index) % 3 for row_index in range(len(labels))
-        ]
+        feature_values = [(row_index + feature_index) % 3 for row_index in range(len(labels))]
         feature_type = pyarrow.int16() if invalid_feature_type == name else pyarrow.int8()
         values[name] = pyarrow.array(feature_values, type=feature_type)
     parquet.write_table(pyarrow.table(values), path)
@@ -47,12 +45,8 @@ def test_lamda_prepare_drops_cross_split_hash_overlap_and_exports_int8_features(
     test_source = tmp_path / "2023_test.parquet"
     train_csv = tmp_path / "train.csv"
     test_csv = tmp_path / "test.csv"
-    _write_parquet(
-        train_source, [_hash(i) for i in (1, 2, 3, 4)], [0, 0, 1, 1], binary_hashes=True
-    )
-    _write_parquet(
-        test_source, [_hash(i) for i in (3, 5, 6, 7)], [0, 0, 1, 0], binary_hashes=True
-    )
+    _write_parquet(train_source, [_hash(i) for i in (1, 2, 3, 4)], [0, 0, 1, 1], binary_hashes=True)
+    _write_parquet(test_source, [_hash(i) for i in (3, 5, 6, 7)], [0, 0, 1, 0], binary_hashes=True)
 
     result = prepare_lamda_parquet(
         train_source,
@@ -96,20 +90,26 @@ def test_lamda_prepare_is_deterministic_and_refuses_overwrite(tmp_path: Path) ->
     second_train = tmp_path / "second-train.csv"
     second_test = tmp_path / "second-test.csv"
     prepare_lamda_parquet(
-        train_source, test_source, first_train, first_test,
-        max_train_rows=4, sampling_seed=2026,
+        train_source,
+        test_source,
+        first_train,
+        first_test,
+        max_train_rows=4,
+        sampling_seed=2026,
     )
     prepare_lamda_parquet(
-        train_source, test_source, second_train, second_test,
-        max_train_rows=4, sampling_seed=2026,
+        train_source,
+        test_source,
+        second_train,
+        second_test,
+        max_train_rows=4,
+        sampling_seed=2026,
     )
     assert first_train.read_bytes() == second_train.read_bytes()
     assert first_test.read_bytes() == second_test.read_bytes()
 
     with pytest.raises(FileExistsError):
-        prepare_lamda_parquet(
-            train_source, test_source, first_train, tmp_path / "unused.csv"
-        )
+        prepare_lamda_parquet(train_source, test_source, first_train, tmp_path / "unused.csv")
 
 
 def test_lamda_prepare_preserves_signed_int8_feature_values(tmp_path: Path) -> None:
@@ -127,9 +127,7 @@ def test_lamda_prepare_preserves_signed_int8_feature_values(tmp_path: Path) -> N
     )
     parquet.write_table(table, test_source)
 
-    prepare_lamda_parquet(
-        train_source, test_source, train_csv, test_csv
-    )
+    prepare_lamda_parquet(train_source, test_source, train_csv, test_csv)
     with test_csv.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert sorted(int(row["feat_19"]) for row in rows) == [-1, 2]
