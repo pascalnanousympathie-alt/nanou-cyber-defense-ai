@@ -27,9 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      DATA_DIR: ${{ runner.temp }}/ember2024-apk-data
-      RESULTS_DIR: ${{ runner.temp }}/ember2024-apk-results
-      HF_HOME: ${{ runner.temp }}/ember2024-hf-cache
       TRAIN_ROWS: ${{ inputs.max_train_rows }}
       TEST_ROWS: ${{ inputs.max_test_rows }}
     steps:
@@ -67,6 +64,14 @@ jobs:
               output.write(f"train_scan_rows={train_rows * 4}\n")
               output.write(f"test_scan_rows={test_rows * 4}\n")
           PY
+          export DATA_DIR="$RUNNER_TEMP/ember2024-apk-data"
+          export RESULTS_DIR="$RUNNER_TEMP/ember2024-apk-results"
+          export HF_HOME="$RUNNER_TEMP/ember2024-hf-cache"
+          {
+            echo "DATA_DIR=$DATA_DIR"
+            echo "RESULTS_DIR=$RESULTS_DIR"
+            echo "HF_HOME=$HF_HOME"
+          } >> "$GITHUB_ENV"
           mkdir -p "$DATA_DIR" "$RESULTS_DIR/models"
           df -h "$RUNNER_TEMP"
 
