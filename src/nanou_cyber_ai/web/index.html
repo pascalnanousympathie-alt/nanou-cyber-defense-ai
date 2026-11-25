@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="mg">
+<html lang="mg" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101b2b">
+  <meta name="theme-color" content="#080f1b">
   <meta name="description" content="Nanou Cyber Defense AI — sehatra web ho an'ny fiarovana nomerika sy threat intelligence.">
   <title>Nanou Cyber Defense AI</title>
   <link rel="stylesheet" href="/assets/app.css">
@@ -20,15 +20,30 @@
         </span>
       </a>
 
-      <div class="nav-caption">SEHATRA</div>
-      <nav class="side-nav">
-        <a class="nav-link active" href="#overview"><span aria-hidden="true">◈</span> Topimaso</a>
-        <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty</a>
-        <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE sy faharefoana</a>
-        <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
-        <a class="nav-link" href="#malware-model"><span aria-hidden="true">✳</span> AI malware model</a>
-        <a class="nav-link" href="#metadata"><span aria-hidden="true">⬡</span> Malware metadata</a>
-        <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
+      <div class="nav-caption">ESPACE DE TRAVAIL</div>
+      <nav class="side-nav" aria-label="Navigation principale">
+        <div class="nav-group">
+          <span class="nav-group-label">Vue générale</span>
+          <a class="nav-link active" href="#overview" aria-current="page"><span aria-hidden="true">◈</span> Topimaso</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Accès & gouvernance</span>
+          <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty sy rôles</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Threat intelligence</span>
+          <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE · NVD</a>
+          <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Malware laboratory</span>
+          <a class="nav-link" href="#malware-model"><span aria-hidden="true">✳</span> AI feature analysis</a>
+          <a class="nav-link" href="#metadata"><span aria-hidden="true">⬡</span> Malware metadata</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Intégrations</span>
+          <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
+        </div>
       </nav>
 
       <div class="sidebar-bottom">
@@ -44,6 +59,7 @@
           <h1>Foibe fiarovana</h1>
         </div>
         <div class="topbar-actions">
+          <div class="theme-pill" aria-label="Affichage en mode sombre"><span aria-hidden="true">☾</span><span>Mode sombre</span></div>
           <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
             <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
           </div>
@@ -56,7 +72,10 @@
           <span class="hero-kicker">NANOÛ CYBER DEFENSE AI</span>
           <h2>Fantaro aloha ny loza.<br><em>Arovy ny rafitrao.</em></h2>
           <p>Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
-          <a class="primary-link" href="#vulnerabilities">Hanomboka hijery <span aria-hidden="true">→</span></a>
+          <div class="hero-actions">
+            <a class="primary-link" href="#vulnerabilities">Hanomboka hijery <span aria-hidden="true">→</span></a>
+            <a class="hero-secondary-link" href="#kev">Hizaha ny CISA KEV <span aria-hidden="true">↗</span></a>
+          </div>
         </div>
         <div class="hero-graphic" aria-hidden="true">
           <div class="orbit orbit-one"></div>
@@ -66,7 +85,7 @@
           <span class="graphic-node node-two"></span>
           <span class="graphic-node node-three"></span>
         </div>
-        <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina</div>
+        <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina <span class="hero-foot-divider">•</span> Defensive operations only</div>
       </section>
 
 
