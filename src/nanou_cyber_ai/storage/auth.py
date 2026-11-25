@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import case, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from nanou_cyber_ai.storage.database import (
     SecurityDatabase,
+    api_keys,
     audit_events,
     auth_attempts,
     platform_state,
@@ -32,6 +34,23 @@ def public_user(row: Any) -> dict[str, Any]:
         "is_approved": bool(row["is_approved"]),
         "is_active": bool(row["is_active"]),
         "created_at": _as_utc(row["created_at"]).isoformat(),
+    }
+
+
+def public_api_key(row: Any) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "token_prefix": row["token_prefix"],
+        "scopes": json.loads(row["scopes"]),
+        "created_at": _as_utc(row["created_at"]).isoformat(),
+        "expires_at": _as_utc(row["expires_at"]).isoformat(),
+        "last_used_at": _as_utc(row["last_used_at"]).isoformat()
+        if row["last_used_at"] is not None
+        else None,
+        "revoked_at": _as_utc(row["revoked_at"]).isoformat()
+        if row["revoked_at"] is not None
+        else None,
     }
 
 
@@ -326,6 +345,11 @@ class AuthStore:
             )
             # Role/suspension changes invalidate every prior session immediately.
             connection.execute(delete(sessions).where(sessions.c.user_id == target_user_id))
+            connection.execute(
+                update(api_keys)
+                .where(api_keys.c.owner_user_id == target_user_id, api_keys.c.revoked_at.is_(None))
+                .values(revoked_at=now)
+            )
             self._audit(
                 connection,
                 actor_user_id=actor_user_id,
@@ -342,6 +366,173 @@ class AuthStore:
                 .one()
             )
         return public_user(row)
+
+    def create_api_key(
+        self,
+        *,
+        owner_user_id: str,
+        name: str,
+        token_prefix: str,
+        token_hash: str,
+        scopes: list[str],
+        expires_at: datetime,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> dict[str, Any]:
+        key_id = uuid.uuid4().hex
+        now = datetime.now(UTC)
+        with self.database.engine.begin() as connection:
+            active_count = connection.execute(
+                select(func.count())
+                .select_from(api_keys)
+                .where(
+                    api_keys.c.owner_user_id == owner_user_id,
+                    api_keys.c.revoked_at.is_(None),
+                    api_keys.c.expires_at > now,
+                )
+            ).scalar_one()
+            if int(active_count) >= 10:
+                raise ValueError("Each account can have at most 10 active API keys.")
+            connection.execute(
+                insert(api_keys).values(
+                    id=key_id,
+                    owner_user_id=owner_user_id,
+                    name=name,
+                    token_prefix=token_prefix,
+                    token_hash=token_hash,
+                    scopes=json.dumps(scopes, separators=(",", ":")),
+                    created_at=now,
+                    expires_at=expires_at,
+                    request_count=0,
+                )
+            )
+            self._audit(
+                connection,
+                actor_user_id=owner_user_id,
+                action="developer.api_key.create",
+                target_type="api-key",
+                target_id=key_id,
+                outcome="success",
+                request_id=request_id,
+                ip_digest=ip_digest,
+            )
+            row = connection.execute(select(api_keys).where(api_keys.c.id == key_id)).mappings().one()
+        return public_api_key(row)
+
+    def list_api_keys(self, owner_user_id: str) -> list[dict[str, Any]]:
+        with self.database.engine.connect() as connection:
+            rows = connection.execute(
+                select(api_keys)
+                .where(api_keys.c.owner_user_id == owner_user_id)
+                .order_by(api_keys.c.created_at.desc())
+                .limit(100)
+            ).mappings()
+        return [public_api_key(row) for row in rows]
+
+    def revoke_api_key(
+        self,
+        *,
+        owner_user_id: str,
+        key_id: str,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> dict[str, Any] | None:
+        now = datetime.now(UTC)
+        with self.database.engine.begin() as connection:
+            row = connection.execute(
+                select(api_keys).where(
+                    api_keys.c.id == key_id,
+                    api_keys.c.owner_user_id == owner_user_id,
+                )
+            ).mappings().first()
+            if row is None:
+                return None
+            if row["revoked_at"] is None:
+                connection.execute(
+                    update(api_keys)
+                    .where(api_keys.c.id == key_id, api_keys.c.owner_user_id == owner_user_id)
+                    .values(revoked_at=now)
+                )
+                self._audit(
+                    connection,
+                    actor_user_id=owner_user_id,
+                    action="developer.api_key.revoke",
+                    target_type="api-key",
+                    target_id=key_id,
+                    outcome="success",
+                    request_id=request_id,
+                    ip_digest=ip_digest,
+                )
+            updated = connection.execute(
+                select(api_keys).where(api_keys.c.id == key_id)
+            ).mappings().one()
+        return public_api_key(updated)
+
+    def get_api_key_principal(self, token_hash: str) -> dict[str, Any] | None:
+        now = datetime.now(UTC)
+        statement = (
+            select(
+                users,
+                api_keys.c.id.label("api_key_id"),
+                api_keys.c.name.label("api_key_name"),
+                api_keys.c.scopes.label("api_key_scopes_json"),
+            )
+            .select_from(api_keys.join(users, api_keys.c.owner_user_id == users.c.id))
+            .where(
+                api_keys.c.token_hash == token_hash,
+                api_keys.c.revoked_at.is_(None),
+                api_keys.c.expires_at > now,
+                users.c.is_active.is_(True),
+                users.c.is_approved.is_(True),
+            )
+        )
+        with self.database.engine.connect() as connection:
+            row = connection.execute(statement).mappings().first()
+        if row is None:
+            return None
+        principal = public_user(row)
+        principal["api_key_id"] = row["api_key_id"]
+        principal["api_key_name"] = row["api_key_name"]
+        principal["api_key_scopes"] = json.loads(row["api_key_scopes_json"])
+        return principal
+
+    def consume_api_key_request(
+        self,
+        key_id: str,
+        *,
+        maximum: int = 60,
+        window_seconds: int = 60,
+    ) -> bool:
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(seconds=window_seconds)
+        reset_window = or_(
+            api_keys.c.rate_window_started_at.is_(None),
+            api_keys.c.rate_window_started_at <= cutoff,
+        )
+        statement = (
+            update(api_keys)
+            .where(
+                api_keys.c.id == key_id,
+                or_(reset_window, api_keys.c.request_count < maximum),
+                api_keys.c.revoked_at.is_(None),
+                api_keys.c.expires_at > now,
+            )
+            .values(
+                rate_window_started_at=case(
+                    (reset_window, now),
+                    else_=api_keys.c.rate_window_started_at,
+                ),
+                request_count=case(
+                    (reset_window, 1),
+                    else_=api_keys.c.request_count + 1,
+                ),
+                last_used_at=now,
+            )
+            .returning(api_keys.c.id)
+        )
+        with self.database.engine.begin() as connection:
+            row = connection.execute(statement).first()
+        return row is not None
 
     def list_audit_events(self, limit: int = 100) -> list[dict[str, Any]]:
         with self.database.engine.connect() as connection:
