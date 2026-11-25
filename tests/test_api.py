@@ -1,7 +1,6 @@
+import nanou_cyber_ai.api as api_module
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-
-import nanou_cyber_ai.api as api_module
 
 from nanou_cyber_ai.api import app
 from nanou_cyber_ai.settings import settings
