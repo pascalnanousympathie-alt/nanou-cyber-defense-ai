@@ -89,7 +89,14 @@ async function sendAssistantCommand(message) {
     const status = result.executed
       ? "Vita avy hatrany · " + (result.action || "defensive tool") + " · " + (result.mode || "local")
       : "Valiny fanazavana · " + (result.mode || "local");
-    appendAssistantMessage("assistant", reply, result.data, status);
+    const assistantMessage = appendAssistantMessage("assistant", reply, result.data, status);
+    if (result.action === "attack_simulation_help") {
+      const managerLink = document.createElement("a");
+      managerLink.href = "#attack-simulation";
+      managerLink.className = "assistant-manager-link";
+      managerLink.textContent = "Sokafy ny Attack Simulation Manager →";
+      assistantMessage.append(managerLink);
+    }
     assistantHistory.push({ role: "assistant", content: reply });
     if (result.provider_notice) {
       assistantElement("assistant-status").textContent = result.provider_notice;
