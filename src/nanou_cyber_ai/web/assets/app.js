@@ -4,6 +4,8 @@ const byId = (id) => document.getElementById(id);
 let csrfToken = "";
 let currentUser = null;
 let configuredMalwareModel = null;
+let adminUsersCache = [];
+let adminAuditCache = [];
 
 const canAnalyze = () => Boolean(currentUser && ["admin", "analyst"].includes(currentUser.role));
 
@@ -477,10 +479,36 @@ async function logoutAccount() {
   await loadAuth();
 }
 
+function adminUserState(item) {
+  if (!item.is_approved) return "pending";
+  return item.is_active ? "active" : "disabled";
+}
+
 function renderAdminUsers(items) {
   const list = byId("admin-users");
   list.replaceChildren();
-  for (const item of items) {
+  const users = Array.isArray(items) ? items : [];
+  const counts = {
+    active: users.filter((item) => adminUserState(item) === "active").length,
+    pending: users.filter((item) => adminUserState(item) === "pending").length,
+    disabled: users.filter((item) => adminUserState(item) === "disabled").length,
+  };
+  byId("admin-total-users").textContent = String(users.length);
+  byId("admin-active-users").textContent = String(counts.active);
+  byId("admin-pending-users").textContent = String(counts.pending);
+  byId("admin-disabled-users").textContent = String(counts.disabled);
+
+  const query = byId("admin-user-search").value.trim().toLocaleLowerCase();
+  const stateFilter = byId("admin-user-filter").value;
+  const filtered = users.filter((item) => {
+    const state = adminUserState(item);
+    const matchesState = stateFilter === "all" || state === stateFilter;
+    const searchable = [item.display_name, item.email, item.role, state].join(" ").toLocaleLowerCase();
+    return matchesState && (!query || searchable.includes(query));
+  });
+  byId("admin-user-result-count").textContent = `${filtered.length} / ${users.length} kaonty aseho`;
+
+  for (const item of filtered) {
     const row = document.createElement("article");
     row.className = "admin-user-row";
     const identity = document.createElement("div");
@@ -489,8 +517,12 @@ function renderAdminUsers(items) {
     name.textContent = item.display_name;
     const email = document.createElement("span");
     email.textContent = item.email;
+    const state = adminUserState(item);
     const status = document.createElement("small");
-    status.textContent = item.is_approved && item.is_active ? "Active" : "Miandry / voasakana";
+    status.className = `admin-user-status status-${state}`;
+    status.textContent = state === "pending"
+      ? "Miandry fankatoavana"
+      : state === "active" ? "Mavitrika" : "Voasakana / tsy mavitrika";
     identity.append(name, email, status);
 
     const controls = document.createElement("div");
@@ -509,7 +541,7 @@ function renderAdminUsers(items) {
     const active = document.createElement("input");
     active.type = "checkbox";
     active.checked = item.is_active && item.is_approved;
-    activeLabel.append(active, document.createTextNode(" Active / approve"));
+    activeLabel.append(active, document.createTextNode(" Mankatoaka / mampavitrika"));
     const save = document.createElement("button");
     save.className = "button button-secondary";
     save.type = "button";
@@ -519,6 +551,7 @@ function renderAdminUsers(items) {
       role.disabled = true;
       active.disabled = true;
       save.disabled = true;
+      save.title = "Tsy azo ovaina eto ny kaontinao manokana.";
     }
     save.addEventListener("click", async () => {
       save.disabled = true;
@@ -531,33 +564,96 @@ function renderAdminUsers(items) {
       } catch (error) {
         byId("auth-message").textContent = error.message || "Tsy voatahiry ny fanovana.";
       } finally {
-        save.disabled = false;
+        save.disabled = isSelf;
       }
     });
     controls.append(role, activeLabel, save);
     row.append(identity, controls);
     list.append(row);
   }
-  if (!items.length) {
+  if (!filtered.length) {
     const empty = document.createElement("p");
     empty.className = "loading-line";
-    empty.textContent = "Tsy mbola misy kaonty.";
+    empty.textContent = users.length
+      ? "Tsy misy kaonty mifanaraka amin'ny fikarohana na sivana."
+      : "Tsy mbola misy kaonty voasoratra.";
     list.append(empty);
   }
+}
+
+function formatAuditDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value || "Daty tsy fantatra";
+  try {
+    return new Intl.DateTimeFormat("fr-FR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Indian/Antananarivo",
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
+
+function auditOutcomeLabel(value) {
+  const labels = {
+    success: "Tafita",
+    pending: "Miandry",
+    failed: "Tsy tafita",
+    blocked: "Voasakana",
+    invalid_bootstrap_token: "Token diso",
+    pending_or_disabled: "Kaonty tsy mavitrika",
+  };
+  return labels[value] || value || "Tsy fantatra";
 }
 
 function renderAudit(items) {
   const list = byId("audit-list");
   list.replaceChildren();
-  for (const item of items) {
-    const row = document.createElement("div");
+  const events = Array.isArray(items) ? items : [];
+  const query = byId("audit-search").value.trim().toLocaleLowerCase();
+  const outcomeFilter = byId("audit-outcome-filter").value;
+  const filtered = events.filter((item) => {
+    const outcome = item.outcome || "unknown";
+    const searchable = [item.action, outcome, item.target_type, item.target_id, item.request_id]
+      .filter(Boolean).join(" ").toLocaleLowerCase();
+    return (outcomeFilter === "all" || outcome === outcomeFilter)
+      && (!query || searchable.includes(query));
+  });
+
+  for (const item of filtered) {
+    const row = document.createElement("article");
     row.className = "audit-row";
+    const main = document.createElement("div");
+    main.className = "audit-row-main";
     const action = document.createElement("strong");
-    action.textContent = item.action;
+    action.textContent = item.action || "Hetsika tsy fantatra";
+    const outcome = item.outcome || "unknown";
+    const badge = document.createElement("span");
+    const outcomeClass = outcome.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    badge.className = `audit-outcome outcome-${outcomeClass}`;
+    badge.textContent = auditOutcomeLabel(outcome);
+    main.append(action, badge);
+
     const detail = document.createElement("span");
-    detail.textContent = `${item.outcome} · ${item.created_at}`;
-    row.append(action, detail);
+    detail.className = "audit-row-detail";
+    const target = item.target_type ? `Target: ${item.target_type}` : "";
+    const request = item.request_id ? `Ref: ${item.request_id.slice(0, 14)}` : "";
+    detail.textContent = [target, request].filter(Boolean).join(" · ") || "Tsy misy antsipiriany fanampiny";
+
+    const timestamp = document.createElement("time");
+    timestamp.dateTime = item.created_at || "";
+    timestamp.textContent = formatAuditDate(item.created_at);
+    row.append(main, detail, timestamp);
     list.append(row);
+  }
+  if (!filtered.length) {
+    const empty = document.createElement("p");
+    empty.className = "loading-line";
+    empty.textContent = events.length
+      ? "Tsy misy hetsika mifanaraka amin'ny fikarohana na sivana."
+      : "Mbola tsy misy audit event voarakitra.";
+    list.append(empty);
   }
 }
 
@@ -566,10 +662,12 @@ async function loadAdminConsole() {
   try {
     const [users, audit] = await Promise.all([
       apiRequest("/api/admin/users"),
-      apiRequest("/api/admin/audit?limit=30"),
+      apiRequest("/api/admin/audit?limit=100"),
     ]);
-    renderAdminUsers(users);
-    renderAudit(audit);
+    adminUsersCache = Array.isArray(users) ? users : [];
+    adminAuditCache = Array.isArray(audit) ? audit : [];
+    renderAdminUsers(adminUsersCache);
+    renderAudit(adminAuditCache);
   } catch (error) {
     byId("admin-users").textContent = error.message || "Tsy afaka namaky ny admin workspace.";
   }
@@ -782,6 +880,10 @@ byId("login-form").addEventListener("submit", submitLogin);
 byId("register-form").addEventListener("submit", submitRegistration);
 byId("logout-button").addEventListener("click", logoutAccount);
 byId("refresh-admin").addEventListener("click", loadAdminConsole);
+byId("admin-user-search").addEventListener("input", () => renderAdminUsers(adminUsersCache));
+byId("admin-user-filter").addEventListener("change", () => renderAdminUsers(adminUsersCache));
+byId("audit-search").addEventListener("input", () => renderAudit(adminAuditCache));
+byId("audit-outcome-filter").addEventListener("change", () => renderAudit(adminAuditCache));
 byId("metadata-create-form").addEventListener("submit", createMetadata);
 byId("prepare-features").addEventListener("click", prepareFeatureCsv);
 byId("inference-dataset").addEventListener("change", () => {
