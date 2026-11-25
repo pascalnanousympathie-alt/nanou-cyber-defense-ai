@@ -113,7 +113,6 @@ def test_role_workspace_styles_remain_responsive_in_black_theme() -> None:
     assert ".nav-group[hidden]" in response.text
 
 
-
 def test_admin_workspace_has_account_and_audit_filters() -> None:
     with TestClient(app) as client:
         home = client.get("/")
