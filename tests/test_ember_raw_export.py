@@ -102,8 +102,17 @@ def test_raw_jsonl_export_rejects_conflicting_duplicate_hashes(tmp_path):
 
 
 def test_official_thrember_feature_extractor_is_importable():
-    pytest.importorskip("thrember")
+    try:
+        import thrember
+    except ModuleNotFoundError as exc:
+        if exc.name == "thrember":
+            pytest.skip("Install the optional pinned EMBER extractor to run this check.")
+        raise
+
+    from signify.authenticode import SignedPEFile
     from thrember import PEFeatureExtractor
 
+    assert callable(SignedPEFile)
+    assert hasattr(SignedPEFile, "iter_signed_datas")
     extractor = PEFeatureExtractor()
     assert extractor.dim >= 2000
