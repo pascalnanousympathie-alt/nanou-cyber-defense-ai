@@ -13,4 +13,4 @@ It exposes two read-only tools:
 
 The server intentionally does not expose shell execution, arbitrary HTTP fetches, file reads, process management, payload execution, exploit generation, credential access, or remote-control tools. Run it as a local stdio subprocess under a trusted MCP host. Do not wrap it in a public HTTP endpoint without authentication, TLS, authorization and rate limiting.
 
-The optional SDK currently targets the official MCP Python SDK v2 line. See https://github.com/modelcontextprotocol/python-sdk and its authorization guide before adding remote transports.
+The optional SDK follows the official Python SDK v2 API: `from mcp.server import MCPServer`. See https://github.com/modelcontextprotocol/python-sdk and https://py.sdk.modelcontextprotocol.io/ before adding transports or tools.

@@ -26,6 +26,9 @@ def prioritize_cve(cve_id: str, kev_ids: set[str], cvss_score: float | None = No
     if not rationale:
         rationale.append("No KEV match or CVSS score was supplied.")
     return TriageResult(
-        cve_id=normalized, priority=priority, in_kev=in_kev,
-        cvss_score=cvss_score, rationale=rationale,
+        cve_id=normalized,
+        priority=priority,
+        in_kev=in_kev,
+        cvss_score=cvss_score,
+        rationale=rationale,
     )

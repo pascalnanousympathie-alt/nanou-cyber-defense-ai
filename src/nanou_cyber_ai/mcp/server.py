@@ -3,10 +3,11 @@
 Install the optional SDK with: pip install -e ".[mcp]"
 Do not expose this server to an untrusted network.
 """
+
 import re
 
 import httpx
-from mcp.server.mcpserver import MCPServer
+from mcp.server import MCPServer
 
 from nanou_cyber_ai.connectors.kev import KEV_URL
 from nanou_cyber_ai.connectors.nvd import NVD_URL
@@ -30,9 +31,7 @@ def nvd_get_cve(cve_id: str) -> dict:
         return {"cve_id": cve_id.upper(), "found": False}
     cve = entries[0].get("cve", {})
     descriptions = [
-        item.get("value", "")
-        for item in cve.get("descriptions", [])
-        if item.get("lang") == "en"
+        item.get("value", "") for item in cve.get("descriptions", []) if item.get("lang") == "en"
     ]
     return {
         "cve_id": cve.get("id", cve_id.upper()),
@@ -55,7 +54,8 @@ def cisa_kev_check(cve_id: str) -> dict:
         catalog = response.json()
     match = next(
         (
-            item for item in catalog.get("vulnerabilities", [])
+            item
+            for item in catalog.get("vulnerabilities", [])
             if item.get("cveID", "").upper() == cve_id.upper()
         ),
         None,

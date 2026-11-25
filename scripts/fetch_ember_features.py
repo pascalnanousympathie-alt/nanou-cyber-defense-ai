@@ -4,6 +4,7 @@
 The archive contains pre-extracted static features, not executable PE samples.
 No malware binaries are downloaded or executed by this script.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -23,9 +24,7 @@ def main() -> int:
     total = 0
     temporary = TARGET.with_suffix(TARGET.suffix + ".part")
     try:
-        request = urllib.request.Request(
-            URL, headers={"User-Agent": "NanouCyberDefenseAI/0.1"}
-        )
+        request = urllib.request.Request(URL, headers={"User-Agent": "NanouCyberDefenseAI/0.1"})
         with (
             urllib.request.urlopen(request, timeout=30) as response,
             temporary.open("wb") as output,

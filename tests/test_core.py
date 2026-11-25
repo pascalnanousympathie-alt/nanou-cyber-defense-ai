@@ -36,7 +36,9 @@ def test_unknown_mcp_tool_fails_closed() -> None:
 
 def test_metadata_accepts_sha256_and_numeric_features() -> None:
     record = MalwareMetadataIn(
-        sha256="a" * 64, label="malicious", source="EMBER feature dataset",
+        sha256="a" * 64,
+        label="malicious",
+        source="EMBER feature dataset",
         features={"section_entropy_mean": 4.5, "imports_count": 21},
     )
     assert record.label == "malicious"
@@ -47,5 +49,6 @@ def test_metadata_rejects_invalid_hash_and_extra_binary_fields() -> None:
     with pytest.raises(ValidationError):
         MalwareMetadataIn(sha256="not-a-hash", label="unknown", source="test")
     with pytest.raises(ValidationError):
-        MalwareMetadataIn(sha256="a" * 64, label="unknown", source="test",
-                          file_bytes="MZ...")
+        MalwareMetadataIn(
+            sha256="a" * 64, label="unknown", source="test", file_bytes="MZ..."
+        )

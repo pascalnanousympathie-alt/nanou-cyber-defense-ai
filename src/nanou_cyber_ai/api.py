@@ -65,9 +65,7 @@ async def kev_catalog() -> dict:
         async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
             return await fetch_kev_catalog(client)
     except (httpx.HTTPError, ValueError) as exc:
-        raise HTTPException(
-            status_code=502, detail="CISA KEV feed unavailable or invalid"
-        ) from exc
+        raise HTTPException(status_code=502, detail="CISA KEV feed unavailable or invalid") from exc
 
 
 @app.get("/api/cve/{cve_id}")

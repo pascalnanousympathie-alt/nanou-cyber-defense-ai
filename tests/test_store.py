@@ -5,7 +5,9 @@ from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
 def test_metadata_store_round_trip(tmp_path) -> None:
     store = MalwareMetadataStore(tmp_path)
     item = MalwareMetadataIn(
-        sha256="b" * 64, label="malicious", source="test-fixture",
+        sha256="b" * 64,
+        label="malicious",
+        source="test-fixture",
         features={"entropy_mean": 5.2},
     )
     saved = store.add(item)

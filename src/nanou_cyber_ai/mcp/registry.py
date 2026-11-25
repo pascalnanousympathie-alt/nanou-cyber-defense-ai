@@ -13,10 +13,18 @@ class ToolDescriptor:
 TOOLS: tuple[ToolDescriptor, ...] = (
     ToolDescriptor("cisa.kev.list", "Read the CISA KEV catalog.", "read", "intel:read"),
     ToolDescriptor("nvd.cve.get", "Read a CVE from the NVD API.", "read", "intel:read"),
-    ToolDescriptor("malware.metadata.list", "List hashes, labels and static features.",
-                   "read", "malware:metadata:read"),
-    ToolDescriptor("malware.metadata.add", "Store validated metadata locally.",
-                   "local_write", "malware:metadata:write"),
+    ToolDescriptor(
+        "malware.metadata.list",
+        "List hashes, labels and static features.",
+        "read",
+        "malware:metadata:read",
+    ),
+    ToolDescriptor(
+        "malware.metadata.add",
+        "Store validated metadata locally.",
+        "local_write",
+        "malware:metadata:write",
+    ),
 )
 
 
