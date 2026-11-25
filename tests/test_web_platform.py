@@ -178,10 +178,7 @@ def test_developer_center_assets_and_read_only_integration_contract() -> None:
         "/api/v1/malware/metadata",
         "/api/v1/assistant/chat",
     }
-    assert "ai:chat" in document["paths"]["/api/v1/assistant/chat"]["post"]["security"][0]["NanouBearer"] or (
-        "AssistantChatRequest" in document["components"]["schemas"]
-    )
-    for path_item in document["paths"].values():
+    assert "AssistantChatRequest" in document["components"]["schemas"]
         for operation in path_item.values():
             assert "security" in operation
 
@@ -213,4 +210,5 @@ def test_assistant_chat_assets_and_command_policy_are_present() -> None:
     assert schema.status_code == 200
     operation = schema.json()["paths"]["/api/v1/assistant/chat"]["post"]
     assert operation["requestBody"]["required"] is True
-    assert "AssistantChatRequest" in operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    request_ref = operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    assert "AssistantChatRequest" in request_ref
