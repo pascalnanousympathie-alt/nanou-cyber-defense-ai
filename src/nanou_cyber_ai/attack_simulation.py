@@ -93,8 +93,7 @@ PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     + "supplier-owned system."
                 ),
                 "validation": (
-                    "Verify written permission and precise scope for every third-party "
-                    + "asset."
+                    "Verify written permission and precise scope for every third-party " + "asset."
                 ),
                 "remediation": (
                     "Exclude third-party systems until the owner grants explicit written "
@@ -159,8 +158,7 @@ PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     + "operation."
                 ),
                 "remediation": (
-                    "Authorize every object lookup against the current principal and "
-                    + "tenant."
+                    "Authorize every object lookup against the current principal and " + "tenant."
                 ),
                 "priority": "critical",
             },
@@ -195,8 +193,7 @@ PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "id": "WEB-05",
                 "title": "CSRF and origin checks",
                 "scenario": (
-                    "A state-changing request is accepted without a valid anti-CSRF "
-                    + "control."
+                    "A state-changing request is accepted without a valid anti-CSRF " + "control."
                 ),
                 "validation": (
                     "Review cookie-authenticated writes, token comparison, SameSite policy, "
@@ -340,8 +337,7 @@ PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     + "protections."
                 ),
                 "validation": (
-                    "Review TLS termination, HSTS, and Cache-Control for authenticated "
-                    + "data."
+                    "Review TLS termination, HSTS, and Cache-Control for authenticated " + "data."
                 ),
                 "remediation": "Enforce HTTPS and no-store for sensitive authenticated responses.",
                 "priority": "high",
@@ -497,8 +493,7 @@ DETECTION_CATALOG: dict[str, list[dict[str, str]]] = {
             "alert_when": "A baseline-adjusted query or NXDOMAIN burst crosses the SOC threshold.",
             "severity": "medium",
             "triage": (
-                "Correlate device identity, user, approved inventory, and endpoint "
-                + "telemetry."
+                "Correlate device identity, user, approved inventory, and endpoint " + "telemetry."
             ),
         },
         {
@@ -566,8 +561,7 @@ DETECTION_CATALOG: dict[str, list[dict[str, str]]] = {
                 + "single application path."
             ),
             "alert_when": (
-                "Error ratios exceed the service baseline and correlate with security "
-                + "events."
+                "Error ratios exceed the service baseline and correlate with security " + "events."
             ),
             "severity": "medium",
             "triage": (
@@ -601,8 +595,7 @@ DETECTION_CATALOG: dict[str, list[dict[str, str]]] = {
             "log_sources": "API gateway rate-limit counters, service metrics",
             "signal": "A key or user repeatedly reaches 429 responses across consecutive windows.",
             "alert_when": (
-                "429 rate exceeds the configured service threshold for a sustained "
-                + "interval."
+                "429 rate exceeds the configured service threshold for a sustained " + "interval."
             ),
             "severity": "medium",
             "triage": (
@@ -653,12 +646,10 @@ DETECTION_CATALOG: dict[str, list[dict[str, str]]] = {
             "name": "Repeated MFA denials or timeouts",
             "log_sources": "Identity provider MFA audit, push notification provider events",
             "signal": (
-                "Multiple denied, expired, or timed-out MFA challenges occur for one "
-                + "account."
+                "Multiple denied, expired, or timed-out MFA challenges occur for one " + "account."
             ),
             "alert_when": (
-                "Challenge denials/timeouts cross the identity team's configured "
-                + "threshold."
+                "Challenge denials/timeouts cross the identity team's configured " + "threshold."
             ),
             "severity": "high",
             "triage": (
@@ -675,8 +666,7 @@ DETECTION_CATALOG: dict[str, list[dict[str, str]]] = {
                 + "reduction or account disablement."
             ),
             "alert_when": (
-                "A request succeeds after a session-revocation event for the same "
-                + "account."
+                "A request succeeds after a session-revocation event for the same " + "account."
             ),
             "severity": "critical",
             "triage": (
