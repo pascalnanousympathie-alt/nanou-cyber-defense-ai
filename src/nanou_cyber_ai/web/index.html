@@ -369,7 +369,7 @@
           <p>REST API versioned ho an'ny server hafa sy AI tools. Ny key dia mifamatotra amin'ny kaontinao ary voafetra amin'ny scopes.</p></div>
           <a class="button button-secondary" href="/api/v1/openapi.json" target="_blank" rel="noopener noreferrer">OpenAPI spec ↗</a>
         </div>
-        <div class="developer-security-note"><strong>Read-only</strong><span>CVE/NVD, CISA KEV ary malware metadata ihany no azo vakiana. Tsy misy admin, write, APK upload, inference na command execution.</span></div>
+        <div class="developer-security-note"><strong>Read-only + AI chat</strong><span>CVE/NVD, CISA KEV, malware metadata ary chat command voafetra. Tsy misy admin, write, APK upload, shell, malware execution na command execution.</span></div>
         <div class="developer-grid">
           <div class="developer-card">
             <h4>Mamorona API key</h4>
@@ -379,6 +379,7 @@
               <fieldset class="developer-scopes"><legend>Scopes</legend>
                 <label><input type="checkbox" value="intel:read" name="scope" checked><span><strong>intel:read</strong><small>CVE/NVD sy CISA KEV</small></span></label>
                 <label><input type="checkbox" value="malware:metadata:read" name="scope"><span><strong>malware:metadata:read</strong><small>Metadata voatahiry</small></span></label>
+                <label><input type="checkbox" value="ai:chat" name="scope"><span><strong>ai:chat</strong><small>Fidirana amin'ny assistant chat voafetra; ampio koa ny read scope ilaina</small></span></label>
               </fieldset>
               <button class="button button-primary" id="developer-key-create" type="submit">Hamorona API key</button>
               <p id="developer-message" class="form-message" role="status" aria-live="polite">10 keys max · 90 andro max · Aseho indray mandeha ihany ny token.</p>
@@ -399,6 +400,7 @@
           <div class="developer-endpoint"><code>GET /api/v1/kev</code><span>intel:read</span></div>
           <div class="developer-endpoint"><code>GET /api/v1/cve/{cve_id}</code><span>intel:read</span></div>
           <div class="developer-endpoint"><code>GET /api/v1/malware/metadata</code><span>malware:metadata:read</span></div>
+          <div class="developer-endpoint"><code>POST /api/v1/assistant/chat</code><span>ai:chat + read scope</span></div>
         </div>
         <div class="developer-ai-guide">
           <h4>Fampifandraisana amin'ny AI</h4>
