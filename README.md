@@ -9,7 +9,7 @@ A defensive, multi-agent cybersecurity research platform. The first release focu
 - FastAPI service for health, NVD CVE lookup, CISA KEV intelligence, and malware metadata.
 - Modular defensive agents for research, triage, code review and remediation recommendations.
 - Optional official MCP Python SDK v2 server (stdio) exposing only NVD and CISA read-only tools.
-- Malware feature-data manifests and validated metadata ingestion. Executable samples are intentionally excluded.
+- Malware feature-data manifests, validated metadata ingestion and a baseline static-feature classifier.
 - CI with lint, format and tests using standard GitHub-hosted runners.
 
 ## Architecture
@@ -46,6 +46,20 @@ python -m nanou_cyber_ai.mcp.server
 
 The MCP server uses local stdio and exposes only fixed-origin NVD/CISA read-only lookups. See [docs/mcp.md](docs/mcp.md).
 
+## Static malware-feature model
+
+Prepare two CSV files from a licensed, pre-extracted feature dataset. Each needs a `label` column containing `malicious`/`benign` (or 1/0) plus numeric feature columns. Optional `sha256`, `family`, and provenance columns are ignored as metadata. Raw binaries, payloads, executable paths and non-finite feature values are rejected.
+
+```bash
+python -m pip install -e ".[ml]"
+python scripts/train_static_malware_detector.py \
+  --train-csv /path/to/temporal-train-features.csv \
+  --test-csv /path/to/temporal-test-features.csv \
+  --dataset-id ember2024-static-features
+```
+
+The baseline uses a HistGradientBoosting classifier, writes the model and metrics under the ignored `models/` directory, and enforces conservative row/feature caps to limit memory. Keep the upstream temporal train/test split; do not randomly mix future samples into training. This is a research baseline, not a production verdict or a substitute for analyst review.
+
 ## Malware research data
 
 See [datasets/README.md](datasets/README.md). EMBER feature datasets contain extracted features and labels rather than executable sample files. Large datasets are not checked into Git or automatically downloaded by CI.
@@ -56,4 +70,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-MVP scaffold. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
+MVP scaffold with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, feature CSV validation and an optional static-feature training baseline. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.

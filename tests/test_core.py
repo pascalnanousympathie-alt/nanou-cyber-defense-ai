@@ -49,6 +49,4 @@ def test_metadata_rejects_invalid_hash_and_extra_binary_fields() -> None:
     with pytest.raises(ValidationError):
         MalwareMetadataIn(sha256="not-a-hash", label="unknown", source="test")
     with pytest.raises(ValidationError):
-        MalwareMetadataIn(
-            sha256="a" * 64, label="unknown", source="test", file_bytes="MZ..."
-        )
+        MalwareMetadataIn(sha256="a" * 64, label="unknown", source="test", file_bytes="MZ...")
