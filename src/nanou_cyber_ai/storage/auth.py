@@ -417,9 +417,7 @@ class AuthStore:
                 ip_digest=ip_digest,
             )
             row = (
-                connection.execute(select(api_keys).where(api_keys.c.id == key_id))
-                .mappings()
-                .one()
+                connection.execute(select(api_keys).where(api_keys.c.id == key_id)).mappings().one()
             )
         return public_api_key(row)
 
