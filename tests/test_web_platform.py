@@ -177,4 +177,6 @@ def test_developer_center_assets_and_read_only_integration_contract() -> None:
         "/api/v1/cve/{cve_id}",
         "/api/v1/malware/metadata",
     }
-    assert all("security" in operation for path_item in document["paths"].values() for operation in path_item.values())
+    for path_item in document["paths"].values():
+        for operation in path_item.values():
+            assert "security" in operation
