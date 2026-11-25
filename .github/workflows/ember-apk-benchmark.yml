@@ -1,0 +1,282 @@
+name: EMBER2024 APK benchmark
+run-name: EMBER2024 APK baseline (${{ inputs.max_train_rows }} train / ${{ inputs.max_test_rows }} test)
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_train_rows:
+        description: Maximum unique training rows exported
+        required: true
+        default: "10000"
+        type: string
+      max_test_rows:
+        description: Maximum unique temporal test rows exported
+        required: true
+        default: "2000"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ember2024-apk-benchmark
+  cancel-in-progress: false
+
+jobs:
+  apk-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      DATA_DIR: ${{ runner.temp }}/ember2024-apk-data
+      RESULTS_DIR: ${{ runner.temp }}/ember2024-apk-results
+      HF_HOME: ${{ runner.temp }}/ember2024-hf-cache
+      TRAIN_ROWS: ${{ inputs.max_train_rows }}
+      TEST_ROWS: ${{ inputs.max_test_rows }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Validate bounded row limits
+        id: caps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+
+          train_raw = os.environ["TRAIN_ROWS"]
+          test_raw = os.environ["TEST_ROWS"]
+          if not train_raw.isascii() or not train_raw.isdigit():
+              raise SystemExit("max_train_rows must be a positive integer.")
+          if not test_raw.isascii() or not test_raw.isdigit():
+              raise SystemExit("max_test_rows must be a positive integer.")
+          train_rows = int(train_raw)
+          test_rows = int(test_raw)
+          if not 1000 <= train_rows <= 20000:
+              raise SystemExit("max_train_rows must be between 1000 and 20000.")
+          if not 500 <= test_rows <= 5000:
+              raise SystemExit("max_test_rows must be between 500 and 5000.")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"train_scan_rows={train_rows * 4}\n")
+              output.write(f"test_scan_rows={test_rows * 4}\n")
+          PY
+          mkdir -p "$DATA_DIR" "$RESULTS_DIR/models"
+          df -h "$RUNNER_TEMP"
+
+      - name: Install detector and pinned EMBER feature extractor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[ember-download,ml]"
+          python -m pip install "git+https://github.com/FutureComputing4AI/EMBER2024.git@0ef753e81d98bf209f71b03cd331dfc190b5b54d"
+
+      - name: Import pinned APK train and test feature archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/import_ember2024_archives.py \
+            --data-dir "$DATA_DIR" --subset train --file-type APK \
+            | tee "$RESULTS_DIR/import-train.json"
+          python scripts/import_ember2024_archives.py \
+            --data-dir "$DATA_DIR" --subset test --file-type APK \
+            | tee "$RESULTS_DIR/import-test.json"
+          python - <<'PY'
+          import os
+          import shutil
+          from pathlib import Path
+
+          cache = Path(os.environ["HF_HOME"]).resolve()
+          temp_root = Path(os.environ["RUNNER_TEMP"]).resolve()
+          if cache.parent != temp_root:
+              raise SystemExit("Refusing to remove a Hugging Face cache outside RUNNER_TEMP.")
+          shutil.rmtree(cache, ignore_errors=True)
+          PY
+          df -h "$RUNNER_TEMP"
+
+      - name: Export bounded APK rows with the official thrember extractor
+        shell: bash
+        env:
+          TRAIN_SCAN_ROWS: ${{ steps.caps.outputs.train_scan_rows }}
+          TEST_SCAN_ROWS: ${{ steps.caps.outputs.test_scan_rows }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DATA_DIR/export"
+          python scripts/export_ember_jsonl_features.py \
+            --data-dir "$DATA_DIR" --subset train \
+            --output "$DATA_DIR/export/train.csv" \
+            --max-source-rows "$TRAIN_SCAN_ROWS" \
+            --max-exported-rows "$TRAIN_ROWS" \
+            | tee "$RESULTS_DIR/export-train.json"
+          python scripts/export_ember_jsonl_features.py \
+            --data-dir "$DATA_DIR" --subset test \
+            --output "$DATA_DIR/export/test.csv" \
+            --max-source-rows "$TEST_SCAN_ROWS" \
+            --max-exported-rows "$TEST_ROWS" \
+            | tee "$RESULTS_DIR/export-test.json"
+          df -h "$RUNNER_TEMP"
+
+      - name: Audit label balance and train/test SHA-256 separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv
+          import json
+          import os
+          from pathlib import Path
+
+          data_dir = Path(os.environ["DATA_DIR"])
+          results_dir = Path(os.environ["RESULTS_DIR"])
+
+          def read_rows(path):
+              with path.open("r", encoding="utf-8", newline="") as handle:
+                  return list(csv.DictReader(handle))
+
+          train_rows = read_rows(data_dir / "export/train.csv")
+          test_rows = read_rows(data_dir / "export/test.csv")
+          train_hashes = [row["sha256"] for row in train_rows]
+          test_hashes = [row["sha256"] for row in test_rows]
+          train_labels = {int(row["label"]) for row in train_rows}
+          test_labels = {int(row["label"]) for row in test_rows}
+          overlap = sorted(set(train_hashes) & set(test_hashes))
+
+          if len(train_rows) < 1000 or len(test_rows) < 500:
+              raise SystemExit("Too few unique labeled samples were exported.")
+          if train_labels != {0, 1} or test_labels != {0, 1}:
+              raise SystemExit("Both train and temporal test splits must contain both labels.")
+          if overlap:
+              raise SystemExit(
+                  f"Train/test SHA-256 leakage detected for {len(overlap)} sample(s)."
+              )
+
+          audit = {
+              "train_unique_rows": len(train_rows),
+              "test_unique_rows": len(test_rows),
+              "train_label_counts": {
+                  str(label): sum(int(row["label"]) == label for row in train_rows)
+                  for label in (0, 1)
+              },
+              "test_label_counts": {
+                  str(label): sum(int(row["label"]) == label for row in test_rows)
+                  for label in (0, 1)
+              },
+              "train_test_sha256_overlap": len(overlap),
+          }
+          (results_dir / "split-audit.json").write_text(
+              json.dumps(audit, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(audit, indent=2))
+          PY
+
+      - name: Release temporary raw JSONL feature records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          data_dir = Path(os.environ["DATA_DIR"]).resolve()
+          temp_root = Path(os.environ["RUNNER_TEMP"]).resolve()
+          if data_dir.parent != temp_root:
+              raise SystemExit("Refusing to remove data outside RUNNER_TEMP.")
+          for path in data_dir.iterdir():
+              if path.is_file() and path.suffix in {".jsonl", ".dat"}:
+                  path.unlink()
+          PY
+          df -h "$RUNNER_TEMP"
+
+      - name: Train and evaluate bounded APK baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/train_static_malware_detector.py \
+            --train-csv "$DATA_DIR/export/train.csv" \
+            --test-csv "$DATA_DIR/export/test.csv" \
+            --dataset-id ember2024-apk \
+            --max-train-rows "$TRAIN_ROWS" \
+            --max-test-rows "$TEST_ROWS" \
+            --output-dir "$RESULTS_DIR/models" \
+            | tee "$RESULTS_DIR/model-report.json"
+
+      - name: Write dataset and model provenance manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          results_dir = Path(os.environ["RESULTS_DIR"])
+          def load(name):
+              return json.loads((results_dir / name).read_text(encoding="utf-8"))
+
+          manifest = {
+              "benchmark": "EMBER2024 APK static-feature baseline",
+              "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+              "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "dataset": {
+                  "repository": "joyce8/EMBER2024",
+                  "revision": "3d23efef7c0f0b702c5024400cfff4c3744a3832",
+                  "license": "Apache-2.0 (as declared by upstream repository and dataset card)",
+                  "file_type": "APK",
+                  "source_feature_archives": {
+                      "train": load("import-train.json"),
+                      "test": load("import-test.json"),
+                      },
+              },
+              "feature_extractor": {
+                  "repository": "FutureComputing4AI/EMBER2024",
+                  "revision": "0ef753e81d98bf209f71b03cd331dfc190b5b54d",
+                  "feature_type": "EMBER feature version 3 / thrember",
+                  "vectorizer": "PEFeatureExtractor.process_raw_features",
+                  "feature_vector_dtype": "float32",
+              },
+              "sampling": {
+                  "max_unique_train_rows": int(os.environ["TRAIN_ROWS"]),
+                  "max_unique_test_rows": int(os.environ["TEST_ROWS"]),
+                  "source_rows_scan_limit_multiplier": 4,
+                  "duplicate_sha256_rows_are_skipped": True,
+              },
+              "feature_exports": {
+                  "train": load("export-train.json"),
+                  "test": load("export-test.json"),
+              },
+              "split_audit": load("split-audit.json"),
+              "model_report": load("model-report.json"),
+              "limitations": [
+                  "This is a bounded baseline, not a full-dataset benchmark.",
+                  "Metrics apply only to the sampled, unique, labeled rows.",
+                  "No executable samples were downloaded or run.",
+                  "The dataset, JSONL metadata and feature CSVs are not included in artifacts.",
+              ],
+          }
+          (results_dir / "manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Upload model, metrics and provenance only
+        uses: actions/upload-artifact@v4
+        with:
+          name: ember2024-apk-baseline-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/ember2024-apk-results/models/
+            ${{ runner.temp }}/ember2024-apk-results/model-report.json
+            ${{ runner.temp }}/ember2024-apk-results/split-audit.json
+            ${{ runner.temp }}/ember2024-apk-results/manifest.json
+            ${{ runner.temp }}/ember2024-apk-results/import-*.json
+            ${{ runner.temp }}/ember2024-apk-results/export-*.json
+          if-no-files-found: error
+          retention-days: 14

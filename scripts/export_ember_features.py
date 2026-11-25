@@ -20,6 +20,7 @@ def main() -> int:
         help="Maximum source rows to scan (defaults: 2,000 train; 500 test).",
     )
     parser.add_argument("--max-features", type=int, default=4096)
+    parser.add_argument("--max-exported-rows", type=int, default=None)
     args = parser.parse_args()
     row_limit = args.max_source_rows
     if row_limit is None:
@@ -30,6 +31,7 @@ def main() -> int:
         subset=args.subset,
         max_source_rows=row_limit,
         max_features=args.max_features,
+        max_exported_rows=args.max_exported_rows,
     )
     print(json.dumps(report, indent=2))
     return 0

@@ -11,6 +11,7 @@ from nanou_cyber_ai.malware.ember_archive import (
 )
 
 REPOSITORY_ID = "joyce8/EMBER2024"
+DATASET_REVISION = "3d23efef7c0f0b702c5024400cfff4c3744a3832"
 FILE_TYPES = ("Win32", "Win64", "Dot_Net", "APK", "ELF", "PDF")
 
 
@@ -42,6 +43,7 @@ def main() -> int:
             repo_id=REPOSITORY_ID,
             filename=archive_name,
             repo_type="dataset",
+            revision=DATASET_REVISION,
         )
     )
     report = safe_extract_ember_archive(

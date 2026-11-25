@@ -7,13 +7,14 @@ This directory contains manifests and import guidance only. Large datasets are n
 EMBER2024 is a multi-format benchmark with extracted features, hashes, metadata and labels for more than 3.2 million files across Win32, Win64, .NET, APK, ELF and PDF. Its collection window is 24 September 2023 through 14 December 2024. The challenge split contains 6,315 malicious files.
 
 - Upstream: https://github.com/FutureComputing4AI/EMBER2024
+- Dataset mirror: https://huggingface.co/datasets/joyce8/EMBER2024 (pinned revision: `3d23efef7c0f0b702c5024400cfff4c3744a3832`).
+- License declared by the source repository and dataset card: Apache-2.0. Preserve attribution and cite the benchmark paper in research outputs.
 - Paper: https://arxiv.org/abs/2506.05074
 - Feature data and benchmark models are hosted by the upstream project on Hugging Face.
 - Approximate dataset sizes are large (for example, Win32 train 23.7 GB); choose one format/split and keep it outside this repo.
-- Upstream layout: raw pre-extracted feature/label JSONL; `thrember.create_vectorized_features()` produces float32 X and int32 y `.dat` files.
-- The upstream README does not clearly state a dataset license in the checked material. Verify the current license/terms before reuse or redistribution.
+- Upstream layout: raw pre-extracted feature/label JSONL; the pinned `thrember.create_vectorized_features()` writes float32 X and float32 y `.dat` files.
 
-The importer downloads only the official feature archives and extracts flat JSONL files. It rejects traversal paths, symlinks, non-JSONL members, oversized members, suspicious compression ratios and overwrites. The vector exporter then joins sorted JSONL metadata to the corresponding .dat rows; it does not fetch, open or execute original sample files.
+The importer downloads only the official feature archives and extracts flat JSONL files. It rejects traversal paths, symlinks, non-JSONL members, oversized members, suspicious compression ratios and overwrites. The vector exporter then joins sorted JSONL metadata to corresponding float32 `.dat` rows, skips exact duplicate SHA-256 records, rejects conflicting duplicate hashes and checks train/test hash separation in the APK benchmark workflow. It does not fetch, open or execute original sample files.
 
 ## EMBER 2018 static PE features (reproducible legacy baseline)
 
