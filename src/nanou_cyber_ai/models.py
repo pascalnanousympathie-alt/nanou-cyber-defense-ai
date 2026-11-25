@@ -191,6 +191,15 @@ class DeveloperApiKeyCreateIn(BaseModel):
             raise ValueError("Duplicate API key scopes are not allowed.")
         return value
 
+    @model_validator(mode="after")
+    def validate_assistant_scope(self) -> "DeveloperApiKeyCreateIn":
+        if "ai:chat" in self.scopes and not {
+            "intel:read",
+            "malware:metadata:read",
+        }.intersection(self.scopes):
+            raise ValueError("The ai:chat scope requires at least one read scope.")
+        return self
+
 
 class MalwareFeatureDatasetId(StrEnum):
     EMBER = "ember2024-apk"
