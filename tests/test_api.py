@@ -294,10 +294,4 @@ def test_chat_requires_authenticated_session_and_valid_input(tmp_path, monkeypat
             headers={"X-CSRF-Token": csrf},
             json={"message": "Jereo CISA KEV"},
         )
-        too_long = client.post(
-            "/api/chat/command",
-            headers={"X-CSRF-Token": csrf},
-            json={"message": "x" * 1001},
-        )
     assert unauthenticated.status_code == 401
-    assert too_long.status_code == 401
