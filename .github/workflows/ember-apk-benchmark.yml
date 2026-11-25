@@ -317,6 +317,71 @@ jobs:
             --output-dir "$RESULTS_DIR/models" \
             | tee "$RESULTS_DIR/model-report.json"
 
+      - name: Validate and persist threshold operating-point analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          results_dir = Path(os.environ["RESULTS_DIR"])
+          report = json.loads(
+              (results_dir / "model-report.json").read_text(encoding="utf-8")
+          )
+          analysis = report.get("threshold_analysis")
+          expected_thresholds = [index / 10 for index in range(1, 10)]
+          if not isinstance(analysis, dict):
+              raise SystemExit("Training report has no threshold analysis.")
+          if analysis.get("threshold_values") != expected_thresholds:
+              raise SystemExit("Threshold analysis does not cover 0.1 through 0.9.")
+          if analysis.get("sample_count") != report.get("test_rows"):
+              raise SystemExit("Threshold analysis sample count does not match test rows.")
+          points = analysis.get("operating_points")
+          if not isinstance(points, list) or len(points) != len(expected_thresholds):
+              raise SystemExit("Threshold analysis operating-point count is invalid.")
+
+          for point in points:
+              counts = [
+                  point.get("true_positive"),
+                  point.get("false_positive"),
+                  point.get("true_negative"),
+                  point.get("false_negative"),
+              ]
+              if any(not isinstance(count, int) or count < 0 for count in counts):
+                  raise SystemExit("Threshold analysis contains invalid confusion counts.")
+              if sum(counts) != analysis["sample_count"]:
+                  raise SystemExit("Threshold confusion counts do not sum to test rows.")
+              if counts[0] + counts[3] != analysis.get("malicious_count"):
+                  raise SystemExit("Threshold positive-class counts are inconsistent.")
+              if counts[1] + counts[2] != analysis.get("benign_count"):
+                  raise SystemExit("Threshold negative-class counts are inconsistent.")
+              for metric in (
+                  "accuracy",
+                  "precision",
+                  "recall",
+                  "specificity",
+                  "f1",
+                  "false_positive_rate",
+                  "false_negative_rate",
+              ):
+                  value = point.get(metric)
+                  if not isinstance(value, (int, float)) or not 0.0 <= value <= 1.0:
+                      raise SystemExit(f"Invalid threshold metric: {metric}")
+
+          output = {
+              "dataset_id": report["dataset_id"],
+              "train_rows": report["train_rows"],
+              "test_rows": report["test_rows"],
+              **analysis,
+          }
+          (results_dir / "threshold-analysis.json").write_text(
+              json.dumps(output, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(output, indent=2))
+          PY
+
       - name: Reload model and validate real APK feature inference
         shell: bash
         run: |
@@ -447,10 +512,12 @@ jobs:
               },
               "split_audit": load("split-audit.json"),
               "model_report": load("model-report.json"),
+              "threshold_analysis": load("threshold-analysis.json"),
               "model_validation": load("model-validation.json"),
               "limitations": [
                   "This is a bounded baseline, not a full-dataset benchmark.",
                   "Metrics apply only to the sampled, unique, labeled rows.",
+                  "Threshold operating points are descriptive on the held-out test split; production threshold selection requires a separate validation split.",
                   "No executable samples were downloaded or run.",
                   "The dataset, JSONL metadata and feature CSVs are not included in artifacts.",
               ],
@@ -467,6 +534,7 @@ jobs:
           path: |
             ${{ runner.temp }}/ember2024-apk-results/models/
             ${{ runner.temp }}/ember2024-apk-results/model-report.json
+            ${{ runner.temp }}/ember2024-apk-results/threshold-analysis.json
             ${{ runner.temp }}/ember2024-apk-results/model-validation.json
             ${{ runner.temp }}/ember2024-apk-results/split-audit.json
             ${{ runner.temp }}/ember2024-apk-results/manifest.json
