@@ -158,7 +158,9 @@ async def _lookup_cve(cve_id: str) -> dict[str, Any]:
             return_exceptions=True,
         )
     if isinstance(nvd_result, Exception):
-        raise RuntimeError("Tsy afaka naka ny firaketana NVD amin'izao fotoana izao.") from nvd_result
+        raise RuntimeError(
+            "Tsy afaka naka ny firaketana NVD amin'izao fotoana izao."
+        ) from nvd_result
 
     vulnerabilities = nvd_result.get("vulnerabilities", [])
     cve = vulnerabilities[0].get("cve", {}) if vulnerabilities else {}
@@ -374,7 +376,10 @@ def _local_command(message: str) -> tuple[str, dict[str, Any]] | None:
         return "get_malware_model_status", {}
     if any(token in normalized for token in ("mcp", "tools", "fitaovana")):
         return "list_defensive_tools", {}
-    if any(token in normalized for token in ("status", "health", "toe-draharaha", "database", "serivisy")):
+    if any(
+        token in normalized
+        for token in ("status", "health", "toe-draharaha", "database", "serivisy")
+    ):
         return "get_service_status", {}
     if normalized in {"help", "aide", "baiko", "fanampiana", "commands", "?"}:
         return "help", {}
@@ -422,7 +427,7 @@ def _local_reply(action: str, result: dict[str, Any]) -> str:
 def _tool_result_text(response: dict[str, Any]) -> str:
     direct = response.get("output_text")
     if isinstance(direct, str) and direct.strip():
-        return " ".join(collected).strip()
+        return direct.strip()
     collected: list[str] = []
     for item in response.get("output", []):
         if item.get("type") != "message":
