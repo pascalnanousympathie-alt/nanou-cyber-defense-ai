@@ -25,17 +25,35 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "technique_id": "T1595.002",
                 "technique": "Active Scanning: Vulnerability Scanning",
                 "severity": "low",
-                "signal": "SIMULATED: repeated discovery requests across a small asset inventory",
-                "detection": "Correlate repeated discovery indicators across one source and a short time window.",
-                "recommendation": "Validate asset inventory coverage and alert thresholds; confirm that authorized scanners are allowlisted.",
+                "signal": (
+                    "SIMULATED: repeated discovery requests across a small "
+                    "asset inventory"
+                ),
+                "detection": (
+                    "Correlate repeated discovery indicators across one source "
+                    "and a short time window."
+                ),
+                "recommendation": (
+                    "Validate asset inventory coverage and alert thresholds; "
+                    "confirm that authorized scanners are allowlisted."
+                ),
             },
             {
                 "technique_id": "T1046",
                 "technique": "Network Service Discovery",
                 "severity": "low",
-                "signal": "SIMULATED: an unusual service-discovery event was placed in the training stream",
-                "detection": "Alert on service-discovery activity that falls outside the approved maintenance window.",
-                "recommendation": "Document approved discovery jobs and review unexpected source identities.",
+                "signal": (
+                    "SIMULATED: an unusual service-discovery event was placed "
+                    "in the training stream"
+                ),
+                "detection": (
+                    "Alert on service-discovery activity that falls outside "
+                    "the approved maintenance window."
+                ),
+                "recommendation": (
+                    "Document approved discovery jobs and review unexpected "
+                    "source identities."
+                ),
             },
             {
                 "technique_id": "T1595.001",
@@ -43,37 +61,66 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "severity": "info",
                 "signal": "SIMULATED: broad asset-enumeration pattern in synthetic telemetry",
                 "detection": "Baseline normal inventory activity and flag material deviations.",
-                "recommendation": "Keep the network asset inventory current and verify monitoring coverage.",
+                "recommendation": (
+                    "Keep the network asset inventory current and verify "
+                    "monitoring coverage."
+                ),
             },
         ],
     },
     "web_security": {
         "label": "Web security signals",
-        "description": "Synthetic web-application security alerts; no request is sent to a website.",
+        "description": (
+            "Synthetic web-application security alerts; no request is sent "
+            "to a website."
+        ),
         "scenarios": [
             {
                 "technique_id": "T1190",
                 "technique": "Exploit Public-Facing Application",
                 "severity": "medium",
-                "signal": "SIMULATED: web application request matched a generic exploit-attempt detection pattern",
-                "detection": "Correlate WAF rule identifiers, request anomaly score, and application error spikes.",
+                "signal": (
+                    "SIMULATED: web application request matched a generic "
+                    "exploit-attempt detection pattern"
+                ),
+                "detection": (
+                    "Correlate WAF rule identifiers, request anomaly score, "
+                    "and application error spikes."
+                ),
                 "recommendation": "Review the affected route, patch status, WAF coverage, and application logs.",
             },
             {
                 "technique_id": "T1595.002",
                 "technique": "Active Scanning: Vulnerability Scanning",
                 "severity": "low",
-                "signal": "SIMULATED: unusual web route enumeration pattern",
-                "detection": "Flag high-volume route discovery that is inconsistent with normal client behavior.",
-                "recommendation": "Check rate limits, route exposure, and whether the source belongs to an approved test.",
+                "signal": (
+                    "SIMULATED: unusual web route enumeration pattern"
+                ),
+                "detection": (
+                    "Flag high-volume route discovery that is inconsistent "
+                    "with normal client behavior."
+                ),
+                "recommendation": (
+                    "Check rate limits, route exposure, and whether the "
+                    "source belongs to an approved test."
+                ),
             },
             {
                 "technique_id": "T1190",
                 "technique": "Exploit Public-Facing Application",
                 "severity": "info",
-                "signal": "SIMULATED: application-layer defensive control generated a test alert",
-                "detection": "Verify that application and edge security alerts share a trace or correlation ID.",
-                "recommendation": "Preserve request metadata safely and test the incident escalation workflow.",
+                "signal": (
+                    "SIMULATED: application-layer defensive control generated "
+                    "a test alert"
+                ),
+                "detection": (
+                    "Verify that application and edge security alerts share "
+                    "a trace or correlation ID."
+                ),
+                "recommendation": (
+                    "Preserve request metadata safely and test the incident "
+                    "escalation workflow."
+                ),
             },
         ],
     },
@@ -85,17 +132,32 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "technique_id": "T1078",
                 "technique": "Valid Accounts",
                 "severity": "medium",
-                "signal": "SIMULATED: an API identity attempted an operation outside its assigned scope",
-                "detection": "Alert on repeated authorization denials grouped by principal, route, and time window.",
-                "recommendation": "Review least-privilege scopes, token ownership, and API authorization tests.",
+                "signal": (
+                    "SIMULATED: an API identity attempted an operation "
+                    "outside its assigned scope"
+                ),
+                "detection": (
+                    "Alert on repeated authorization denials grouped by "
+                    "principal, route, and time window."
+                ),
+                "recommendation": (
+                    "Review least-privilege scopes, token ownership, and API "
+                    "authorization tests."
+                ),
             },
             {
                 "technique_id": "T1190",
                 "technique": "Exploit Public-Facing Application",
                 "severity": "low",
                 "signal": "SIMULATED: malformed API input was rejected by request validation",
-                "detection": "Track validation failures without logging request bodies, credentials, or tokens.",
-                "recommendation": "Keep strict schemas, reject unknown fields, and cap request size.",
+                "detection": (
+                    "Track validation failures without logging request "
+                    "bodies, credentials, or tokens."
+                ),
+                "recommendation": (
+                    "Keep strict schemas, reject unknown fields, and cap "
+                    "request size."
+                ),
             },
             {
                 "technique_id": "T1499",
@@ -103,21 +165,36 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "severity": "info",
                 "signal": "SIMULATED: API rate-limit threshold was reached in training telemetry",
                 "detection": "Correlate throttling responses with per-principal request counts.",
-                "recommendation": "Check rate-limit coverage and ensure throttling does not expose sensitive data.",
+                "recommendation": (
+                    "Check rate-limit coverage and ensure throttling does not "
+                    "expose sensitive data."
+                ),
             },
         ],
     },
     "authentication": {
         "label": "Authentication signals",
-        "description": "Synthetic identity-security alerts; no login attempts or credential checks occur.",
+        "description": (
+            "Synthetic identity-security alerts; no login attempts or "
+            "credential checks occur."
+        ),
         "scenarios": [
             {
                 "technique_id": "T1110.003",
                 "technique": "Brute Force: Password Spraying",
                 "severity": "medium",
-                "signal": "SIMULATED: distributed authentication failures were inserted into the training stream",
-                "detection": "Correlate failure ratios, distinct accounts, and source reputation without retaining passwords.",
-                "recommendation": "Review MFA coverage, password policy, and identity-provider alert routing.",
+                "signal": (
+                    "SIMULATED: distributed authentication failures were "
+                    "inserted into the training stream"
+                ),
+                "detection": (
+                    "Correlate failure ratios, distinct accounts, and source "
+                    "reputation without retaining passwords."
+                ),
+                "recommendation": (
+                    "Review MFA coverage, password policy, and identity-provider "
+                    "alert routing."
+                ),
             },
             {
                 "technique_id": "T1078",
@@ -125,15 +202,24 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "severity": "low",
                 "signal": "SIMULATED: a sign-in succeeded from an unusual context",
                 "detection": "Evaluate risk-based sign-in alerts and session anomaly signals.",
-                "recommendation": "Review session lifetime, device trust, MFA, and account recovery controls.",
+                "recommendation": (
+                    "Review session lifetime, device trust, MFA, and account "
+                    "recovery controls."
+                ),
             },
             {
                 "technique_id": "T1110",
                 "technique": "Brute Force",
                 "severity": "info",
                 "signal": "SIMULATED: identity rate-limit control emitted a training alert",
-                "detection": "Confirm that authentication throttling and lockout telemetry reaches the SOC.",
-                "recommendation": "Use progressive throttling and safe account recovery; avoid permanent lockout patterns.",
+                "detection": (
+                    "Confirm that authentication throttling and lockout "
+                    "telemetry reaches the SOC."
+                ),
+                "recommendation": (
+                    "Use progressive throttling and safe account recovery; "
+                    "avoid permanent lockout patterns."
+                ),
             },
         ],
     },
