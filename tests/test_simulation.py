@@ -27,10 +27,10 @@ def _bootstrap_admin(client: TestClient) -> str:
 
 
 def test_allowed_targets_accept_only_opaque_lab_ids() -> None:
-    assert allowed_target_ids("local-lab, Staging_Web, staging-web, https://example.test, 192.0.2.1") == [
-        "local-lab",
-        "staging-web",
-    ]
+    configured = (
+        "local-lab, Staging_Web, staging-web, https://example.test, 192.0.2.1"
+    )
+    assert allowed_target_ids(configured) == ["local-lab", "staging-web"]
 
 
 def test_simulation_request_rejects_unknown_fields_and_bad_scope() -> None:
@@ -94,7 +94,6 @@ def test_simulation_requires_authorization_and_allowlisted_target(monkeypatch) -
 
 
 def test_simulation_routes_are_session_protected_and_audited(monkeypatch, tmp_path) -> None:
-    import pytest
     from pydantic import SecretStr
 
     monkeypatch.setattr(settings, "database_url", None)
@@ -145,8 +144,9 @@ def test_simulation_routes_are_session_protected_and_audited(monkeypatch, tmp_pa
         audit = client.get("/api/admin/audit?limit=30")
         assert audit.status_code == 200
         events = audit.json()
-        assert any(event["action"] == "attack_simulation.run" and event["outcome"] == "simulated" for event in events)
-        assert any(event["action"] == "attack_simulation.run" and event["outcome"] == "blocked" for event in events)
+        outcomes = [(event["action"], event["outcome"]) for event in events]
+        assert ("attack_simulation.run", "simulated") in outcomes
+        assert ("attack_simulation.run", "blocked") in outcomes
 
     with pytest.raises(ValidationError):
         AttackSimulationIn(
