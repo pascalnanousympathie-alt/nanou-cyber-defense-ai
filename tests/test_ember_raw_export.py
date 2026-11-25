@@ -1,5 +1,6 @@
 import csv
 import json
+from importlib import import_module
 
 import pytest
 
@@ -103,7 +104,7 @@ def test_raw_jsonl_export_rejects_conflicting_duplicate_hashes(tmp_path):
 
 def test_official_thrember_feature_extractor_is_importable():
     try:
-        import thrember
+        import_module("thrember")
     except ModuleNotFoundError as exc:
         if exc.name == "thrember":
             pytest.skip("Install the optional pinned EMBER extractor to run this check.")
