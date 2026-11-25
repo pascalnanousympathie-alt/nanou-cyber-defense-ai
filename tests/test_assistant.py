@@ -90,7 +90,6 @@ async def test_viewer_cannot_request_analyst_only_model_status() -> None:
         )
 
 
-
 def test_assistant_chat_and_remote_key_scopes_are_validated() -> None:
     with pytest.raises(ValidationError):
         AssistantChatIn(message="x" * 1001)
