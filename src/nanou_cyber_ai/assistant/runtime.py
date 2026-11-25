@@ -157,7 +157,7 @@ async def _lookup_cve(cve_id: str) -> dict[str, Any]:
             kev_task,
             return_exceptions=True,
         )
-    if isinstance(nvd_result, BaseException):
+    if isinstance(nvd_result, Exception):
         raise RuntimeError("Tsy afaka naka ny firaketana NVD amin'izao fotoana izao.") from nvd_result
 
     vulnerabilities = nvd_result.get("vulnerabilities", [])
@@ -183,7 +183,7 @@ async def _lookup_cve(cve_id: str) -> dict[str, Any]:
 
     kev_match = None
     kev_error = None
-    if isinstance(kev_result, BaseException):
+    if isinstance(kev_result, Exception):
         kev_error = "CISA KEV tsy azo nohamarinina tamin'ity fangatahana ity."
     else:
         kev_match = next(
@@ -479,72 +479,46 @@ async def _ask_model(
             json=payload,
         )
         response.raise_for_status()
-        first = response.json()
+        model_response = response.json()
 
-        calls = [
-            item for item in first.get("output", [])
-            if item.get("type") == "function_call"
-        ]
-        if not calls:
-            text = _tool_result_text(first)
-            return {
-                "reply": text or "Tsy nahazo valiny azo aseho avy amin'ny AI provider.",
-                "action": "chat",
-                "data": None,
-                "executed": False,
-                "mode": "ai",
-            }
-
-        if len(calls) > 3:
-            raise RuntimeError("Nangataka fitaovana mihoatra ny fetra ny AI.")
-
-        outputs: list[dict[str, str]] = []
-        results: list[dict[str, Any]] = []
-        for call in calls:
-            name = call.get("name", "")
-            try:
-                arguments = json.loads(call.get("arguments", "{}"))
-            except (TypeError, json.JSONDecodeError) as exc:
-                raise ValueError("Tsy marina ny arguments navoakan'ny AI.") from exc
-            result = await execute_tool(name, arguments, role=role, scopes=scopes)
-            results.append({"action": name, "data": result})
-            outputs.append(
-                {
-                    "type": "function_call_output",
-                    "call_id": call.get("call_id", ""),
-                    "output": json.dumps(result, ensure_ascii=False, default=str),
-                }
-            )
-
-        response_id = first.get("id")
-        final_text = ""
-        if response_id:
-            followup = await client.post(
-                "https://api.openai.com/v1/responses",
-                headers=headers,
-                json={
-                    "model": settings.ai_model,
-                    "previous_response_id": response_id,
-                    "input": outputs,
-                    "tool_choice": "none",
-                    "max_output_tokens": 700,
-                    "store": False,
-                },
-            )
-            followup.raise_for_status()
-            final_text = _tool_result_text(followup.json())
-
-        if not final_text:
-            final_text = "\\n".join(
-                _local_reply(item["action"], item["data"]) for item in results
-            )
+    calls = [
+        item for item in model_response.get("output", [])
+        if item.get("type") == "function_call"
+    ]
+    if not calls:
+        text = _tool_result_text(model_response)
         return {
-            "reply": final_text,
-            "action": ", ".join(item["action"] for item in results),
-            "data": results,
-            "executed": True,
+            "reply": text or "Tsy nahazo valiny azo aseho avy amin'ny AI provider.",
+            "action": "chat",
+            "data": None,
+            "executed": False,
             "mode": "ai",
         }
+
+    if len(calls) > 3:
+        raise RuntimeError("Nangataka fitaovana mihoatra ny fetra ny AI.")
+
+    results: list[dict[str, Any]] = []
+    for call in calls:
+        name = call.get("name", "")
+        try:
+            arguments = json.loads(call.get("arguments", "{}"))
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ValueError("Tsy marina ny arguments navoakan'ny AI.") from exc
+        result = await execute_tool(name, arguments, role=role, scopes=scopes)
+        results.append({"action": name, "data": result})
+
+    # Keep provider responses non-persistent and avoid a second model call.
+    final_text = "\\n".join(
+        _local_reply(item["action"], item["data"]) for item in results
+    )
+    return {
+        "reply": final_text,
+        "action": ", ".join(item["action"] for item in results),
+        "data": results,
+        "executed": True,
+        "mode": "ai",
+    }
 
 
 async def run_assistant(
