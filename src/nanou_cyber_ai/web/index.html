@@ -29,6 +29,7 @@
         <div class="nav-group">
           <span class="nav-group-label">Accès &amp; gouvernance</span>
           <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty sy rôles</a>
+          <a class="nav-link" href="#account" data-role-visibility="admin"><span aria-hidden="true">⚙</span> Fitantanana sy audit</a>
         </div>
         <div class="nav-group">
           <span class="nav-group-label">Threat intelligence</span>
@@ -37,8 +38,8 @@
         </div>
         <div class="nav-group">
           <span class="nav-group-label">Malware laboratory</span>
-          <a class="nav-link" href="#malware-model"><span aria-hidden="true">✳</span> AI feature analysis</a>
-          <a class="nav-link" href="#metadata"><span aria-hidden="true">⬡</span> Malware metadata</a>
+          <a class="nav-link" href="#malware-model" data-role-visibility="admin,analyst"><span aria-hidden="true">✳</span> AI feature analysis</a>
+          <a class="nav-link" href="#metadata" data-role-visibility="authenticated"><span aria-hidden="true">⬡</span> Malware metadata</a>
         </div>
         <div class="nav-group">
           <span class="nav-group-label">Intégrations</span>
@@ -167,6 +168,19 @@
         </article>
       </section>
 
+      <section class="panel role-workspace" id="role-workspace" data-role-visibility="authenticated" hidden aria-labelledby="role-workspace-title">
+        <div class="role-workspace-heading">
+          <div>
+            <p class="eyebrow">ROLE-BASED WORKSPACE</p>
+            <h2 id="role-workspace-title">Workspace</h2>
+            <p id="role-workspace-summary">Fitaovana sy fahazoan-dalana mifanaraka amin'ny andraikitrao.</p>
+          </div>
+          <span id="role-workspace-badge" class="role-pill">—</span>
+        </div>
+        <div id="role-workspace-permissions" class="role-permissions" aria-live="polite"></div>
+        <p id="role-workspace-guidance" class="role-workspace-guidance"></p>
+      </section>
+
       <section class="section-heading" id="vulnerabilities">
         <div><p class="eyebrow">VULNERABILITY INTELLIGENCE</p><h2>Fikarohana CVE</h2></div>
         <span class="section-tag">NVD · Read-only</span>
@@ -202,11 +216,11 @@
       </section>
 
 
-      <section class="section-heading" id="malware-model">
+      <section class="section-heading" id="malware-model" data-role-visibility="admin,analyst">
         <div><p class="eyebrow">STATIC FEATURE CLASSIFIER</p><h2>AI malware feature analysis</h2></div>
         <span class="section-tag">Model integrity check</span>
       </section>
-      <section class="panel inference-panel">
+      <section class="panel inference-panel" id="malware-analysis-panel" data-role-visibility="admin,analyst">
         <div class="metadata-intro">
           <div class="metadata-mark model-mark">✳</div>
           <div><h3>Famakafakana amin'ny modely ML</h3><p>Vector numérique efa nalaina mialoha ihany no raisina; tsy mandray APK na binary.</p></div>
@@ -245,11 +259,11 @@
         <p class="data-note">Ny valiny dia tombana avy amin'ny static features, fa tsy porofo fa voa-infecté ny fitaovana. Tsy tokony hampiasaina ho fanapahan-kevitra mandeha ho azy ny threshold 0.5 raha tsy voamarina amin'ny validation set misaraka.</p>
       </section>
 
-      <section class="section-heading" id="metadata">
+      <section class="section-heading" id="metadata" data-role-visibility="authenticated">
         <div><p class="eyebrow">MALWARE INTELLIGENCE</p><h2>Metadata voaaro</h2></div>
         <span class="section-tag">Multi-user RBAC</span>
       </section>
-      <section class="panel metadata-panel">
+      <section class="panel metadata-panel" data-role-visibility="authenticated">
         <div class="metadata-intro">
           <div class="metadata-mark">⬡</div>
           <div><h3>Rakitra famantarana malware</h3><p>SHA-256, label ary loharano ihany. Tsy misy APK, executable na payload alefa eto.</p></div>
@@ -257,6 +271,7 @@
         <div class="security-note"><span aria-hidden="true">🔒</span><span>Ny fidirana dia amin'ny session HttpOnly, tenimiafina voatahiry Argon2id, CSRF protection ary andraikitra admin/analyst/viewer.</span></div>
         <p id="metadata-auth-status" class="form-message" aria-live="polite">Midira amin'ny kaonty voa-approve raha hijery na hitahiry metadata.</p>
         <div id="metadata-workspace" class="metadata-workspace" hidden>
+          <p id="metadata-write-access" class="access-note" role="status" aria-live="polite"></p>
           <div class="workspace-heading"><h4>Hanampy metadata</h4></div>
           <form id="metadata-create-form" class="metadata-form">
             <div class="field field-wide"><label for="sample-hash">SHA-256</label><input id="sample-hash" name="sha256" minlength="64" maxlength="64" pattern="[a-fA-F0-9]{64}" placeholder="64 hexadecimal characters" required></div>
