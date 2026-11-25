@@ -150,7 +150,11 @@ def allowed_target_ids(configured: str) -> list[str]:
     return sorted(targets)
 
 
-def simulation_configuration(configured_targets: str) -> dict[str, Any]:
+def simulation_configuration(
+    configured_targets: str,
+    *,
+    max_runs_per_hour: int = 10,
+) -> dict[str, Any]:
     return {
         "mode": "offline_synthetic_only",
         "targets": [{"id": target_id, "label": target_id.replace("-", " ").title()}
@@ -172,7 +176,7 @@ def simulation_configuration(configured_targets: str) -> dict[str, Any]:
             "exploit_execution": False,
             "credential_access": False,
             "malware_execution": False,
-            "max_runs_per_hour": 10,
+            "max_runs_per_hour": max_runs_per_hour,
         },
     }
 
