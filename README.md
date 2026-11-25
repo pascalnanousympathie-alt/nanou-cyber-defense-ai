@@ -103,4 +103,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-Web platform with defensive CVE/KEV intelligence, Argon2id multi-user authentication, Admin/Analyst/Viewer RBAC, CSRF protection, audit logs, PostgreSQL-ready persistence, pre-extracted feature CSV validation and optional static-feature inference. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
+Web platform with defensive CVE/KEV intelligence, Argon2id multi-user authentication, Admin/Analyst/Viewer RBAC, CSRF protection, audit logs, PostgreSQL persistence and pre-extracted feature CSV validation. The Vercel deployment is protected by SSO for all deployment targets; no unprotected public launch, external LLM credentials, or autonomous changes to customer systems are enabled. The optional static-feature inference endpoint remains unavailable until a trusted model artifact is configured.
