@@ -416,7 +416,11 @@ class AuthStore:
                 request_id=request_id,
                 ip_digest=ip_digest,
             )
-            row = connection.execute(select(api_keys).where(api_keys.c.id == key_id)).mappings().one()
+            row = (
+                connection.execute(select(api_keys).where(api_keys.c.id == key_id))
+                .mappings()
+                .one()
+            )
         return public_api_key(row)
 
     def list_api_keys(self, owner_user_id: str) -> list[dict[str, Any]]:
