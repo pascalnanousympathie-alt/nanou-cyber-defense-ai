@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
+from nanou_cyber_ai.assistant.runtime import run_assistant
 from nanou_cyber_ai.connectors.kev import fetch_kev_catalog
 from nanou_cyber_ai.connectors.nvd import fetch_cve
 from nanou_cyber_ai.malware.feature_csv import prepare_feature_csv
@@ -23,6 +24,7 @@ from nanou_cyber_ai.malware.inference import classify_features, load_verified_mo
 from nanou_cyber_ai.mcp.registry import list_tools
 from nanou_cyber_ai.models import (
     AdminUserUpdateIn,
+    AssistantChatIn,
     AuthBootstrapIn,
     AuthLoginIn,
     AuthRegisterIn,
@@ -511,6 +513,74 @@ async def revoke_developer_api_key(
     return {"revoked": True, "key": key}
 
 
+async def _assistant_command_response(
+    item: AssistantChatIn,
+    request: Request,
+    user: dict,
+    scopes: set[str],
+) -> dict:
+    store = get_auth_store()
+    fingerprint = hashlib.sha256(f"assistant:{user['id']}".encode("utf-8")).hexdigest()
+    if not store.allow_attempt(
+        fingerprint,
+        maximum=settings.assistant_requests_per_minute,
+        window_seconds=60,
+    ):
+        store.record_event(
+            actor_user_id=user["id"],
+            action="assistant.rate_limited",
+            target_type="assistant",
+            outcome="blocked",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=429, detail="Assistant request limit exceeded.")
+
+    history = [turn.model_dump() for turn in item.history]
+    try:
+        result = await run_assistant(
+            item.message,
+            history,
+            role=user["role"],
+            scopes=scopes,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (RuntimeError, httpx.HTTPError, SQLAlchemyError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="The assistant could not complete that defensive lookup.",
+        ) from exc
+
+    store.record_event(
+        actor_user_id=user["id"],
+        action="assistant.command",
+        target_type="assistant",
+        target_id=str(result.get("action", "chat"))[:100],
+        outcome="success" if result.get("executed") else "pending",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return {
+        **result,
+        "role": user["role"],
+        "request_id": _request_id(request),
+    }
+
+
+@app.post("/api/chat/command")
+async def assistant_chat_command(
+    item: AssistantChatIn,
+    request: Request,
+    user: Annotated[dict, Depends(require_user)],
+) -> dict:
+    # Session users may read the same information available to their RBAC role.
+    scopes = {"intel:read", "malware:metadata:read"}
+    return await _assistant_command_response(item, request, user, scopes)
+
+
 def require_api_scope(required_scope: str):
     def dependency(request: Request) -> dict:
         authorization = request.headers.get("authorization", "")
@@ -614,6 +684,20 @@ async def api_v1_malware_metadata(
     return get_store().list(limit)
 
 
+@app.post("/api/v1/assistant/chat")
+async def api_v1_assistant_chat(
+    item: AssistantChatIn,
+    request: Request,
+    principal: Annotated[dict, Depends(require_api_scope("ai:chat"))],
+) -> dict:
+    return await _assistant_command_response(
+        item,
+        request,
+        principal,
+        set(principal["api_key_scopes"]),
+    )
+
+
 @app.get("/api/v1/openapi.json")
 async def api_v1_openapi(request: Request) -> dict:
     bearer_security = {"NanouBearer": []}
@@ -626,7 +710,8 @@ async def api_v1_openapi(request: Request) -> dict:
                 "Read-only API for authorized threat-intelligence and malware-metadata "
                 "integrations. Use an expiring Developer API key in the HTTP Authorization "
                 "Bearer header. No administrative, write, binary-upload or inference endpoints "
-                "are exposed by this external API."
+                "are exposed by this external API. The optional assistant chat uses a "
+                "strict defensive read-only tool allowlist."
             ),
         },
         "servers": [{"url": str(request.base_url).rstrip("/")}],
@@ -645,6 +730,41 @@ async def api_v1_openapi(request: Request) -> dict:
                 "CveRecord": {"type": "object", "additionalProperties": True},
                 "KevCatalog": {"type": "object", "additionalProperties": True},
                 "MalwareMetadata": {"type": "object", "additionalProperties": True},
+                "AssistantChatTurn": {
+                    "type": "object",
+                    "properties": {
+                        "role": {"type": "string", "enum": ["user", "assistant"]},
+                        "content": {"type": "string", "minLength": 1, "maxLength": 1200},
+                    },
+                    "required": ["role", "content"],
+                    "additionalProperties": False,
+                },
+                "AssistantChatRequest": {
+                    "type": "object",
+                    "properties": {
+                        "message": {"type": "string", "minLength": 1, "maxLength": 1000},
+                        "history": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/AssistantChatTurn"},
+                            "maxItems": 8,
+                        },
+                    },
+                    "required": ["message"],
+                    "additionalProperties": False,
+                },
+                "AssistantChatResponse": {
+                    "type": "object",
+                    "properties": {
+                        "reply": {"type": "string"},
+                        "action": {"type": "string"},
+                        "executed": {"type": "boolean"},
+                        "mode": {"type": "string"},
+                        "role": {"type": "string"},
+                        "request_id": {"type": "string"},
+                    },
+                    "required": ["reply", "action", "executed", "mode", "role", "request_id"],
+                    "additionalProperties": True,
+                },
             },
         },
         "paths": {
@@ -720,6 +840,38 @@ async def api_v1_openapi(request: Request) -> dict:
                                 }
                             },
                         }
+                    },
+                }
+            },
+            "/api/v1/assistant/chat": {
+                "post": {
+                    "operationId": "runDefensiveAssistantCommand",
+                    "summary": "Interpret a defensive command and execute only allowlisted read-only tools",
+                    "description": (
+                        "Requires a Developer API key with ai:chat and the additional read scope "
+                        "for each requested data source. Does not expose shell or write actions."
+                    ),
+                    "security": [bearer_security],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/AssistantChatRequest"}
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Assistant reply and read-only tool results",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AssistantChatResponse"}
+                                }
+                            },
+                        },
+                        "401": {"description": "Missing, expired or revoked Developer API key"},
+                        "403": {"description": "The API key lacks the assistant or data scope"},
+                        "429": {"description": "Assistant or API key rate limit exceeded"},
                     },
                 }
             },
