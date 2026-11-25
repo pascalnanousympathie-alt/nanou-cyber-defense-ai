@@ -340,7 +340,6 @@ def test_viewer_role_is_read_only_and_admin_audit_is_restricted(monkeypatch, tmp
         assert denied_feature_prepare.status_code == 403
 
 
-
 def test_developer_api_keys_are_hashed_scoped_rate_limited_and_revocable(tmp_path) -> None:
     database = SecurityDatabase(None, tmp_path)
     store = AuthStore(database)
