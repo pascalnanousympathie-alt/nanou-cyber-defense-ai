@@ -16,6 +16,7 @@ from nanou_cyber_ai.malware.inference import (
 from nanou_cyber_ai.models import MalwareInferenceIn
 from nanou_cyber_ai.settings import settings
 
+
 class FakeClassifier:
     classes_ = [0, 1]
     n_features_in_ = 2568
@@ -23,6 +24,7 @@ class FakeClassifier:
     def predict_proba(self, rows):
         assert len(rows) == 1
         return [[0.15, 0.85]]
+
 
 def test_ember_feature_schema_accepts_exact_numeric_vector() -> None:
     request = MalwareInferenceIn(
@@ -32,12 +34,14 @@ def test_ember_feature_schema_accepts_exact_numeric_vector() -> None:
     assert len(request.features) == 2568
     assert request.schema_version == 1
 
+
 def test_lamda_feature_schema_preserves_signed_int8_values() -> None:
     request = MalwareInferenceIn(
         dataset_id="lamda-apk-2022-train-2023-test",
         features=[-128, -1, 0, 127] + [1] * 4557,
     )
     assert request.features[:4] == [-128.0, -1.0, 0.0, 127.0]
+
 
 @pytest.mark.parametrize(
     "payload",
@@ -57,9 +61,11 @@ def test_inference_request_rejects_wrong_schema_or_unsafe_values(payload) -> Non
     with pytest.raises(ValidationError):
         MalwareInferenceIn.model_validate(payload)
 
+
 def test_unsupported_dataset_is_rejected() -> None:
     with pytest.raises(ValueError, match="Unsupported malware model dataset"):
         expected_feature_names("unknown-dataset")
+
 
 def test_model_artifact_hash_is_checked_before_deserialization(tmp_path) -> None:
     artifact = tmp_path / "model.joblib"
@@ -70,6 +76,7 @@ def test_model_artifact_hash_is_checked_before_deserialization(tmp_path) -> None
             "0" * 64,
             "ember2024-apk",
         )
+
 
 def test_classifier_uses_explicit_threshold_and_returns_provenance() -> None:
     model = LoadedMalwareModel(
@@ -84,6 +91,7 @@ def test_classifier_uses_explicit_threshold_and_returns_provenance() -> None:
     assert result["decision_threshold"] == 0.8
     assert result["model_sha256"] == "a" * 64
 
+
 def test_inference_endpoint_requires_bearer_token_and_verified_model(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "metadata_api_token", SecretStr("test-only-token"))
     monkeypatch.setattr(settings, "malware_model_path", tmp_path / "model.joblib")
@@ -97,6 +105,7 @@ def test_inference_endpoint_requires_bearer_token_and_verified_model(monkeypatch
         )
 
     assert denied.status_code in (401, 403)
+
 
 def test_inference_endpoint_runs_only_after_authenticated_model_load(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "metadata_api_token", SecretStr("test-only-token"))
@@ -123,6 +132,7 @@ def test_inference_endpoint_runs_only_after_authenticated_model_load(monkeypatch
     assert response.json()["feature_count"] == 2568
     assert response.json()["model_sha256"] == "a" * 64
 
+
 def test_inference_status_reports_no_model_when_unconfigured(monkeypatch) -> None:
     monkeypatch.setattr(settings, "malware_model_path", None)
     monkeypatch.setattr(settings, "malware_model_sha256", None)
@@ -133,6 +143,7 @@ def test_inference_status_reports_no_model_when_unconfigured(monkeypatch) -> Non
 
     assert response.status_code == 200
     assert response.json()["available"] is False
+
 
 def test_verified_loader_checks_digest_and_exact_feature_names(monkeypatch, tmp_path) -> None:
     model_file = tmp_path / "trusted-model.joblib"
@@ -155,6 +166,7 @@ def test_verified_loader_checks_digest_and_exact_feature_names(monkeypatch, tmp_
     )
     assert loaded.sha256 == digest
     assert len(loaded.feature_names) == 2568
+
 
 def test_verified_loader_rejects_wrong_model_schema(monkeypatch, tmp_path) -> None:
     model_file = tmp_path / "wrong-schema.joblib"

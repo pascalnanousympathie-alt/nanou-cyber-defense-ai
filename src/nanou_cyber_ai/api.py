@@ -31,6 +31,7 @@ _WEB_DIR = Path(__file__).resolve().parent / "web"
 
 app.mount("/assets", StaticFiles(directory=_WEB_DIR / "assets"), name="web-assets")
 
+
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -47,8 +48,10 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Cache-Control"] = "no-store"
     return response
 
+
 def get_store() -> MalwareMetadataStore:
     return MalwareMetadataStore(settings.data_dir)
+
 
 def require_metadata_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
@@ -66,13 +69,16 @@ def require_metadata_token(
     if credentials is None or not secrets.compare_digest(credentials.credentials, expected):
         raise HTTPException(status_code=401, detail="Valid bearer token required.")
 
+
 @app.get("/", include_in_schema=False)
 async def web_platform() -> FileResponse:
     return FileResponse(_WEB_DIR / "index.html")
 
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "nanou-cyber-defense-ai"}
+
 
 @app.get("/api/mcp/tools")
 async def mcp_tools() -> list[dict[str, str]]:
@@ -86,6 +92,7 @@ async def mcp_tools() -> list[dict[str, str]]:
         for tool in list_tools()
     ]
 
+
 @app.get("/api/kev")
 async def kev_catalog() -> dict:
     try:
@@ -93,6 +100,7 @@ async def kev_catalog() -> dict:
             return await fetch_kev_catalog(client)
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="CISA KEV feed unavailable or invalid") from exc
+
 
 @app.get("/api/cve/{cve_id}")
 async def cve_detail(cve_id: str) -> dict:
@@ -103,6 +111,7 @@ async def cve_detail(cve_id: str) -> dict:
         raise HTTPException(status_code=422, detail="Invalid CVE identifier") from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail="NVD API unavailable") from exc
+
 
 def load_configured_malware_model():
     if (
@@ -116,6 +125,7 @@ def load_configured_malware_model():
         settings.malware_model_sha256,
         settings.malware_model_dataset_id,
     )
+
 
 @app.get("/api/malware/inference/status")
 async def malware_inference_status() -> dict:
@@ -139,6 +149,7 @@ async def malware_inference_status() -> dict:
         "schema_version": 1,
         "decision_threshold": settings.malware_model_threshold,
     }
+
 
 @app.post(
     "/api/malware/inference",
@@ -168,6 +179,7 @@ async def malware_inference(item: MalwareInferenceIn) -> MalwareInferenceResult:
         raise HTTPException(status_code=503, detail="Malware model inference failed.") from exc
     return MalwareInferenceResult.model_validate(result)
 
+
 @app.get(
     "/api/malware/metadata",
     response_model=list[MalwareMetadata],
@@ -175,6 +187,7 @@ async def malware_inference(item: MalwareInferenceIn) -> MalwareInferenceResult:
 )
 async def list_malware_metadata(limit: int = Query(default=100, ge=1, le=500)):
     return get_store().list(limit)
+
 
 @app.post(
     "/api/malware/metadata",
