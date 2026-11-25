@@ -100,6 +100,7 @@ def test_raw_jsonl_export_rejects_conflicting_duplicate_hashes(tmp_path):
             extractor=FakeExtractor(),
         )
 
+
 def test_official_thrember_feature_extractor_is_importable():
     pytest.importorskip("thrember")
     from thrember import PEFeatureExtractor
