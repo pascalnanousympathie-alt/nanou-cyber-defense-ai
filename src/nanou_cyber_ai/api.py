@@ -86,11 +86,11 @@ def _ip_digest(request: Request) -> str | None:
 
 
 def _rate_fingerprints(request: Request, email: str, action: str) -> tuple[str, str | None]:
-    email_payload = f"{action}:{email}".encode("utf-8")
+    email_payload = f"{action}:{email}".encode()
     email_digest = hashlib.sha256(email_payload).hexdigest()
     ip_digest = _ip_digest(request)
     if ip_digest:
-        ip_payload = f"{action}:{ip_digest}".encode("utf-8")
+        ip_payload = f"{action}:{ip_digest}".encode()
         ip_digest = hashlib.sha256(ip_payload).hexdigest()
     return email_digest, ip_digest
 
@@ -167,7 +167,10 @@ def require_user(request: Request) -> dict:
 def require_roles(*allowed_roles: str):
     def dependency(user: Annotated[dict, Depends(require_user)]) -> dict:
         if user["role"] not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Your account role cannot perform this action.")
+            raise HTTPException(
+                status_code=403,
+                detail="Your account role cannot perform this action.",
+            )
         return user
 
     return dependency
@@ -538,7 +541,10 @@ async def prepare_features(
     raw_content = bytearray()
     async for chunk in request.stream():
         if len(raw_content) + len(chunk) > 1_048_576:
-            raise HTTPException(status_code=413, detail="Feature CSV exceeds the 1 MiB upload limit.")
+            raise HTTPException(
+                status_code=413,
+                detail="Feature CSV exceeds the 1 MiB upload limit.",
+            )
         raw_content.extend(chunk)
     try:
         content = bytes(raw_content).decode("utf-8")
