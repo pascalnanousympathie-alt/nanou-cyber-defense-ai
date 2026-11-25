@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
 from nanou_cyber_ai.assistant.runtime import run_assistant
+from nanou_cyber_ai.simulation import run_offline_simulation, simulation_configuration
 from nanou_cyber_ai.connectors.kev import fetch_kev_catalog
 from nanou_cyber_ai.connectors.nvd import fetch_cve
 from nanou_cyber_ai.malware.feature_csv import prepare_feature_csv
@@ -25,6 +26,7 @@ from nanou_cyber_ai.mcp.registry import list_tools
 from nanou_cyber_ai.models import (
     AdminUserUpdateIn,
     AssistantChatIn,
+    AttackSimulationIn,
     AuthBootstrapIn,
     AuthLoginIn,
     AuthRegisterIn,
@@ -576,6 +578,93 @@ async def _assistant_command_response(
         "role": user["role"],
         "request_id": _request_id(request),
     }
+
+
+def _attack_simulation_response(
+    item: AttackSimulationIn,
+    request: Request,
+    user: dict,
+) -> dict:
+    store = get_auth_store()
+    request_id = _request_id(request)
+    fingerprint = hashlib.sha256(f"attack-simulation:{user['id']}".encode()).hexdigest()
+    if not store.allow_attempt(
+        fingerprint,
+        maximum=settings.simulation_requests_per_hour,
+        window_seconds=3600,
+    ):
+        store.record_event(
+            actor_user_id=user["id"],
+            action="attack_simulation.rate_limited",
+            target_type="simulation_scope",
+            target_id=item.target_id,
+            outcome="blocked",
+            request_id=request_id,
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=429, detail="Attack simulation hourly limit exceeded.")
+
+    try:
+        result = run_offline_simulation(
+            item,
+            configured_targets=settings.simulation_allowed_targets,
+        )
+    except PermissionError as exc:
+        store.record_event(
+            actor_user_id=user["id"],
+            action="attack_simulation.run",
+            target_type="simulation_scope",
+            target_id=item.target_id,
+            outcome="blocked",
+            request_id=request_id,
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=403, detail=str(exc)) from None
+    except ValueError as exc:
+        store.record_event(
+            actor_user_id=user["id"],
+            action="attack_simulation.run",
+            target_type="simulation_scope",
+            target_id=item.target_id,
+            outcome="blocked",
+            request_id=request_id,
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    store.record_event(
+        actor_user_id=user["id"],
+        action="attack_simulation.run",
+        target_type="simulation_scope",
+        target_id=item.target_id,
+        outcome="simulated",
+        request_id=request_id,
+        ip_digest=_ip_digest(request),
+    )
+    return {
+        **result,
+        "role": user["role"],
+        "request_id": request_id,
+    }
+
+
+@app.get("/api/simulations/config")
+async def attack_simulation_config(
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> dict:
+    return simulation_configuration(
+        settings.simulation_allowed_targets,
+        max_runs_per_hour=settings.simulation_requests_per_hour,
+    )
+
+
+@app.post("/api/simulations/run")
+async def attack_simulation_run(
+    item: AttackSimulationIn,
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> dict:
+    return _attack_simulation_response(item, request, user)
 
 
 @app.post("/api/chat/command")
