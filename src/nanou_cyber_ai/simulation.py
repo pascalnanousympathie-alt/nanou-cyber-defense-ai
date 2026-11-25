@@ -25,10 +25,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "technique_id": "T1595.002",
                 "technique": "Active Scanning: Vulnerability Scanning",
                 "severity": "low",
-                "signal": (
-                    "SIMULATED: repeated discovery requests across a small "
-                    "asset inventory"
-                ),
+                "signal": ("SIMULATED: repeated discovery requests across a small asset inventory"),
                 "detection": (
                     "Correlate repeated discovery indicators across one source "
                     "and a short time window."
@@ -51,8 +48,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     "the approved maintenance window."
                 ),
                 "recommendation": (
-                    "Document approved discovery jobs and review unexpected "
-                    "source identities."
+                    "Document approved discovery jobs and review unexpected source identities."
                 ),
             },
             {
@@ -62,8 +58,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "signal": "SIMULATED: broad asset-enumeration pattern in synthetic telemetry",
                 "detection": "Baseline normal inventory activity and flag material deviations.",
                 "recommendation": (
-                    "Keep the network asset inventory current and verify "
-                    "monitoring coverage."
+                    "Keep the network asset inventory current and verify monitoring coverage."
                 ),
             },
         ],
@@ -71,8 +66,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
     "web_security": {
         "label": "Web security signals",
         "description": (
-            "Synthetic web-application security alerts; no request is sent "
-            "to a website."
+            "Synthetic web-application security alerts; no request is sent to a website."
         ),
         "scenarios": [
             {
@@ -88,17 +82,14 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     "and application error spikes."
                 ),
                 "recommendation": (
-                    "Review the affected route, patch status, WAF coverage, "
-                    "and application logs."
+                    "Review the affected route, patch status, WAF coverage, and application logs."
                 ),
             },
             {
                 "technique_id": "T1595.002",
                 "technique": "Active Scanning: Vulnerability Scanning",
                 "severity": "low",
-                "signal": (
-                    "SIMULATED: unusual web route enumeration pattern"
-                ),
+                "signal": ("SIMULATED: unusual web route enumeration pattern"),
                 "detection": (
                     "Flag high-volume route discovery that is inconsistent "
                     "with normal client behavior."
@@ -112,17 +103,13 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "technique_id": "T1190",
                 "technique": "Exploit Public-Facing Application",
                 "severity": "info",
-                "signal": (
-                    "SIMULATED: application-layer defensive control generated "
-                    "a test alert"
-                ),
+                "signal": ("SIMULATED: application-layer defensive control generated a test alert"),
                 "detection": (
                     "Verify that application and edge security alerts share "
                     "a trace or correlation ID."
                 ),
                 "recommendation": (
-                    "Preserve request metadata safely and test the incident "
-                    "escalation workflow."
+                    "Preserve request metadata safely and test the incident escalation workflow."
                 ),
             },
         ],
@@ -136,16 +123,14 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "technique": "Valid Accounts",
                 "severity": "medium",
                 "signal": (
-                    "SIMULATED: an API identity attempted an operation "
-                    "outside its assigned scope"
+                    "SIMULATED: an API identity attempted an operation outside its assigned scope"
                 ),
                 "detection": (
                     "Alert on repeated authorization denials grouped by "
                     "principal, route, and time window."
                 ),
                 "recommendation": (
-                    "Review least-privilege scopes, token ownership, and API "
-                    "authorization tests."
+                    "Review least-privilege scopes, token ownership, and API authorization tests."
                 ),
             },
             {
@@ -158,8 +143,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     "bodies, credentials, or tokens."
                 ),
                 "recommendation": (
-                    "Keep strict schemas, reject unknown fields, and cap "
-                    "request size."
+                    "Keep strict schemas, reject unknown fields, and cap request size."
                 ),
             },
             {
@@ -178,8 +162,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
     "authentication": {
         "label": "Authentication signals",
         "description": (
-            "Synthetic identity-security alerts; no login attempts or "
-            "credential checks occur."
+            "Synthetic identity-security alerts; no login attempts or credential checks occur."
         ),
         "scenarios": [
             {
@@ -195,8 +178,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                     "reputation without retaining passwords."
                 ),
                 "recommendation": (
-                    "Review MFA coverage, password policy, and identity-provider "
-                    "alert routing."
+                    "Review MFA coverage, password policy, and identity-provider alert routing."
                 ),
             },
             {
@@ -206,8 +188,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "signal": "SIMULATED: a sign-in succeeded from an unusual context",
                 "detection": "Evaluate risk-based sign-in alerts and session anomaly signals.",
                 "recommendation": (
-                    "Review session lifetime, device trust, MFA, and account "
-                    "recovery controls."
+                    "Review session lifetime, device trust, MFA, and account recovery controls."
                 ),
             },
             {
@@ -216,8 +197,7 @@ _PROFILE_CATALOG: dict[str, dict[str, Any]] = {
                 "severity": "info",
                 "signal": "SIMULATED: identity rate-limit control emitted a training alert",
                 "detection": (
-                    "Confirm that authentication throttling and lockout "
-                    "telemetry reaches the SOC."
+                    "Confirm that authentication throttling and lockout telemetry reaches the SOC."
                 ),
                 "recommendation": (
                     "Use progressive throttling and safe account recovery; "
@@ -246,8 +226,10 @@ def simulation_configuration(
 ) -> dict[str, Any]:
     return {
         "mode": "offline_synthetic_only",
-        "targets": [{"id": target_id, "label": target_id.replace("-", " ").title()}
-                    for target_id in allowed_target_ids(configured_targets)],
+        "targets": [
+            {"id": target_id, "label": target_id.replace("-", " ").title()}
+            for target_id in allowed_target_ids(configured_targets)
+        ],
         "profiles": [
             {"id": profile_id, "label": profile["label"], "description": profile["description"]}
             for profile_id, profile in _PROFILE_CATALOG.items()
