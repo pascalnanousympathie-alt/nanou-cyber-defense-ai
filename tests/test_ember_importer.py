@@ -1,7 +1,14 @@
 import sys
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from types import SimpleNamespace
 
-from scripts import import_ember2024_archives as importer
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "import_ember2024_archives.py"
+SCRIPT_SPEC = spec_from_file_location("import_ember2024_archives", SCRIPT_PATH)
+if SCRIPT_SPEC is None or SCRIPT_SPEC.loader is None:
+    raise RuntimeError("Could not load the EMBER2024 importer script.")
+importer = module_from_spec(SCRIPT_SPEC)
+SCRIPT_SPEC.loader.exec_module(importer)
 
 
 def test_importer_pins_dataset_revision_and_safe_extracts(tmp_path, monkeypatch):
