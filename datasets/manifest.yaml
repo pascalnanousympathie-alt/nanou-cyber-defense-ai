@@ -1,0 +1,34 @@
+datasets:
+  - id: ember2024-static-features
+    provider: FutureComputing4AI
+    kind: pre_extracted_multiformat_features
+    includes_executable_samples: false
+    upstream_repository: https://github.com/FutureComputing4AI/EMBER2024
+    paper: https://arxiv.org/abs/2506.05074
+    formats: [Win32, Win64, dotnet, APK, ELF, PDF]
+    approximate_records: 3200000
+    collection_window: "2023-09-24 through 2024-12-14"
+    notes: "Feature data hosted on Hugging Face; verify license and terms upstream before reuse."
+
+  - id: ember-2018-static-features
+    provider: Elastic / Endgame
+    kind: pre_extracted_static_features
+    includes_executable_samples: false
+    url: https://ember.elastic.co/ember_dataset_2018_2.tar.bz2
+    sha256: b6052eb8d350a49a8d5a5396fbe7d16cf42848b86ff969b77464434cf2997812
+    upstream_repository: https://github.com/elastic/ember
+    paper: https://arxiv.org/abs/1804.04637
+    notes: "Legacy PE feature benchmark; not a current-threat feed."
+
+  - id: cisa-kev
+    provider: CISA
+    kind: exploited-vulnerability-catalog
+    url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+    license: CC0-1.0
+    notes: "Use the source catalog's current version and date."
+
+  - id: nvd-cve-api-2
+    provider: NIST NVD
+    kind: vulnerability-intelligence-api
+    url: https://services.nvd.nist.gov/rest/json/cves/2.0
+    notes: "Respect current API rate limits; keep any API key in a secret store."
