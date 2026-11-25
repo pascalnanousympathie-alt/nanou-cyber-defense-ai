@@ -56,6 +56,7 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
     assert 'href="#metadata"' in response.text
     assert 'href="#tools"' in response.text
     assert 'class="theme-pill"' in response.text
+    assert '<meta name="theme-color" content="#050505">' in response.text
 
 
 def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None:
@@ -110,3 +111,34 @@ def test_role_workspace_styles_remain_responsive_in_black_theme() -> None:
     assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in response.text
     assert "@media (max-width: 760px)" in response.text
     assert ".nav-group[hidden]" in response.text
+
+
+
+def test_admin_workspace_has_account_and_audit_filters() -> None:
+    with TestClient(app) as client:
+        home = client.get("/")
+        script = client.get("/assets/app.js")
+        stylesheet = client.get("/assets/app.css")
+
+    assert home.status_code == 200
+    assert 'id="admin-total-users"' in home.text
+    assert 'id="admin-pending-users"' in home.text
+    assert 'id="admin-user-search"' in home.text
+    assert 'id="admin-user-filter"' in home.text
+    assert 'id="audit-search"' in home.text
+    assert 'id="audit-outcome-filter"' in home.text
+
+    assert script.status_code == 200
+    assert "function adminUserState(item)" in script.text
+    assert "function formatAuditDate(value)" in script.text
+    assert "function auditOutcomeLabel(value)" in script.text
+    assert 'apiRequest("/api/admin/audit?limit=100")' in script.text
+    assert 'addEventListener("input", () => renderAdminUsers(adminUsersCache))' in script.text
+    assert 'addEventListener("input", () => renderAudit(adminAuditCache))' in script.text
+
+    assert stylesheet.status_code == 200
+    assert ".admin-summary" in stylesheet.text
+    assert ".admin-toolbar" in stylesheet.text
+    assert ".audit-toolbar" in stylesheet.text
+    assert ".audit-outcome" in stylesheet.text
+    assert "@media (max-width: 760px)" in stylesheet.text
