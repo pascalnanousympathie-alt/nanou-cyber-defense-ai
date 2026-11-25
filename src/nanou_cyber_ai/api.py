@@ -636,7 +636,9 @@ async def api_v1_openapi(request: Request) -> dict:
                     "type": "http",
                     "scheme": "bearer",
                     "bearerFormat": "ncd_live_…",
-                    "description": "Create a scoped key in Developer Center. Never put it in a URL.",
+                    "description": (
+                        "Create a scoped key in Developer Center. Never put it in a URL."
+                    ),
                 }
             },
             "schemas": {
@@ -698,7 +700,12 @@ async def api_v1_openapi(request: Request) -> dict:
                             "name": "limit",
                             "in": "query",
                             "required": False,
-                            "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 100},
+                            "schema": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 100,
+                                "default": 100,
+                            },
                         }
                     ],
                     "responses": {
