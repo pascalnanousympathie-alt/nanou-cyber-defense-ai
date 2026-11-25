@@ -211,7 +211,16 @@ async def secure_request_middleware(request: Request, call_next):
         except ValueError:
             rejection = Response("Invalid content length.", status_code=400)
 
-    if rejection is None and request.method not in _SAFE_METHODS and not _csrf_valid(request):
+    bearer_api_request = (
+        request.url.path.startswith("/api/v1/")
+        and request.headers.get("authorization", "").lower().startswith("bearer ")
+    )
+    if (
+        rejection is None
+        and request.method not in _SAFE_METHODS
+        and not bearer_api_request
+        and not _csrf_valid(request)
+    ):
         rejection = Response(
             '{"detail":"CSRF validation failed. Refresh the page and try again."}',
             status_code=403,
