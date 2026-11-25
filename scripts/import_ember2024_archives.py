@@ -33,11 +33,10 @@ def main() -> int:
             'Install the optional downloader dependency: pip install -e ".[ember-download]"'
         ) from exc
 
-    archive_name = (
-        "challenge.zip"
-        if args.subset == "challenge"
-        else f"{args.file_type}_{args.subset}.zip"
-    )
+    if args.subset == "challenge":
+        archive_name = "challenge.zip"
+    else:
+        archive_name = f"{args.file_type}_{args.subset}.zip"
     archive_path = Path(
         hf_hub_download(
             repo_id=REPOSITORY_ID,

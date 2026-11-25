@@ -53,9 +53,7 @@ def test_safe_extract_rejects_size_limit_and_overwrite(tmp_path):
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
         zipped.writestr("APK_test.jsonl", "x" * 200)
     with pytest.raises(ValueError, match="uncompressed-size"):
-        safe_extract_ember_archive(
-            archive, tmp_path / "limited", max_uncompressed_bytes=100
-        )
+        safe_extract_ember_archive(archive, tmp_path / "limited", max_uncompressed_bytes=100)
 
     output = tmp_path / "existing"
     output.mkdir()

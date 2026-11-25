@@ -30,9 +30,7 @@ def test_export_joins_hashes_labels_and_features_and_skips_unlabeled(tmp_path):
     _make_dataset(source, [1, -1, 0], metadata, [[1.5, 2.5], [3.5, 4.5], [5.5, 6.5]])
     output = tmp_path / "export" / "train.csv"
 
-    report = export_ember_vectorized_subset(
-        source, output, subset="train", max_source_rows=10
-    )
+    report = export_ember_vectorized_subset(source, output, subset="train", max_source_rows=10)
 
     with output.open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
@@ -76,9 +74,7 @@ def test_export_obeys_source_row_limit(tmp_path):
         [[1.0], [2.0], [3.0]],
     )
     output = tmp_path / "limited.csv"
-    report = export_ember_vectorized_subset(
-        source, output, subset="train", max_source_rows=2
-    )
+    report = export_ember_vectorized_subset(source, output, subset="train", max_source_rows=2)
     assert report["source_rows_scanned"] == 2
     assert report["labeled_rows_exported"] == 2
     with output.open(newline="", encoding="utf-8") as stream:
@@ -91,11 +87,13 @@ def test_export_rejects_missing_metadata_and_feature_dimension_limit(tmp_path):
     (source / "X_train.dat").write_bytes(struct.pack("<ff", 1.0, 2.0))
     (source / "y_train.dat").write_bytes(struct.pack("<i", 1))
     with pytest.raises(ValueError, match="JSONL"):
-        export_ember_vectorized_subset(source, tmp_path / "out.csv", subset="train",
-                                       max_source_rows=1)
+        export_ember_vectorized_subset(
+            source, tmp_path / "out.csv", subset="train", max_source_rows=1
+        )
     (source / "APK_train.jsonl").write_text(
         json.dumps({"sha256": "a" * 64, "label": 1}) + "\n", encoding="utf-8"
     )
     with pytest.raises(ValueError, match="dimension"):
-        export_ember_vectorized_subset(source, tmp_path / "out.csv", subset="train",
-                                       max_source_rows=1, max_features=1)
+        export_ember_vectorized_subset(
+            source, tmp_path / "out.csv", subset="train", max_source_rows=1, max_features=1
+        )
