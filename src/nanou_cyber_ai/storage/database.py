@@ -55,6 +55,25 @@ sessions = Table(
 Index("ix_auth_sessions_user", sessions.c.user_id)
 Index("ix_auth_sessions_expiry", sessions.c.expires_at)
 
+api_keys = Table(
+    "api_keys",
+    metadata,
+    Column("id", String(32), primary_key=True),
+    Column("owner_user_id", String(32), ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("name", String(80), nullable=False),
+    Column("token_prefix", String(24), nullable=False),
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("scopes", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("last_used_at", DateTime(timezone=True)),
+    Column("revoked_at", DateTime(timezone=True)),
+    Column("rate_window_started_at", DateTime(timezone=True)),
+    Column("request_count", Integer, nullable=False, server_default="0"),
+)
+Index("ix_api_keys_owner", api_keys.c.owner_user_id)
+Index("ix_api_keys_expiry", api_keys.c.expires_at)
+
 audit_events = Table(
     "audit_events",
     metadata,
