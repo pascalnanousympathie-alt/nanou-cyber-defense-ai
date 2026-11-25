@@ -27,9 +27,7 @@ def _bootstrap_admin(client: TestClient) -> str:
 
 
 def test_allowed_targets_accept_only_opaque_lab_ids() -> None:
-    configured = (
-        "local-lab, Staging_Web, staging-web, https://example.test, 192.0.2.1"
-    )
+    configured = "local-lab, Staging_Web, staging-web, https://example.test, 192.0.2.1"
     assert allowed_target_ids(configured) == ["local-lab", "staging-web"]
 
 
@@ -169,7 +167,7 @@ def test_simulation_ui_is_scoped_and_uses_local_assets() -> None:
     assert 'id="simulation-form"' in home.text
     assert 'data-role-visibility="admin,analyst"' in home.text
     assert script.status_code == 200
-    assert "apiRequest(\"/api/simulations/run\"" in script.text
+    assert 'apiRequest("/api/simulations/run"' in script.text
     assert "localStorage" not in script.text
     assert "textContent" in script.text
     assert stylesheet.status_code == 200
