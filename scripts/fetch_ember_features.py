@@ -26,7 +26,10 @@ def main() -> int:
         request = urllib.request.Request(
             URL, headers={"User-Agent": "NanouCyberDefenseAI/0.1"}
         )
-        with urllib.request.urlopen(request, timeout=30) as response, temporary.open("wb") as output:
+        with (
+            urllib.request.urlopen(request, timeout=30) as response,
+            temporary.open("wb") as output,
+        ):
             while chunk := response.read(1024 * 1024):
                 total += len(chunk)
                 if total > MAX_BYTES:

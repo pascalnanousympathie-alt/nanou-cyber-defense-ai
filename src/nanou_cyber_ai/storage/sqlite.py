@@ -1,5 +1,5 @@
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 from nanou_cyber_ai.models import MalwareMetadata, MalwareMetadataIn
 

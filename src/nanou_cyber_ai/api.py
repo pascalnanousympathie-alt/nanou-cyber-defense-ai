@@ -1,4 +1,5 @@
 import secrets
+from typing import Annotated
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -24,7 +25,7 @@ def get_store() -> MalwareMetadataStore:
 
 
 def require_metadata_token(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> None:
     expected = (
         settings.metadata_api_token.get_secret_value()
@@ -48,8 +49,12 @@ async def health() -> dict[str, str]:
 @app.get("/api/mcp/tools")
 async def mcp_tools() -> list[dict[str, str]]:
     return [
-        {"name": tool.name, "description": tool.description,
-         "access": tool.access, "required_scope": tool.required_scope}
+        {
+            "name": tool.name,
+            "description": tool.description,
+            "access": tool.access,
+            "required_scope": tool.required_scope,
+        }
         for tool in list_tools()
     ]
 
@@ -60,7 +65,9 @@ async def kev_catalog() -> dict:
         async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
             return await fetch_kev_catalog(client)
     except (httpx.HTTPError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail="CISA KEV feed unavailable or invalid") from exc
+        raise HTTPException(
+            status_code=502, detail="CISA KEV feed unavailable or invalid"
+        ) from exc
 
 
 @app.get("/api/cve/{cve_id}")
