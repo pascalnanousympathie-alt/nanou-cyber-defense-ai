@@ -43,9 +43,7 @@ def test_assistant_tool_allowlist_respects_role_and_scopes() -> None:
         for tool in _tools_for_access({"intel:read", "malware:metadata:read"}, "analyst")
     }
     assert "get_malware_model_status" in analyst_tools
-    analyst_intel_only = {
-        tool["name"] for tool in _tools_for_access({"intel:read"}, "analyst")
-    }
+    analyst_intel_only = {tool["name"] for tool in _tools_for_access({"intel:read"}, "analyst")}
     assert "get_malware_model_status" not in analyst_intel_only
 
 
