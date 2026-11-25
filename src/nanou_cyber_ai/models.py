@@ -141,6 +141,35 @@ class AdminUserUpdateIn(BaseModel):
     is_active: bool
 
 
+class DeveloperApiKeyCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=3, max_length=80)
+    scopes: list[Literal["intel:read", "malware:metadata:read"]] = Field(
+        min_length=1,
+        max_length=2,
+    )
+    expires_in_days: int = Field(default=30, ge=1, le=90)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if len(normalized) < 3:
+            raise ValueError("API key name must contain at least three characters.")
+        return normalized
+
+    @field_validator("scopes")
+    @classmethod
+    def unique_scopes(
+        cls,
+        value: list[Literal["intel:read", "malware:metadata:read"]],
+    ) -> list[Literal["intel:read", "malware:metadata:read"]]:
+        if len(set(value)) != len(value):
+            raise ValueError("Duplicate API key scopes are not allowed.")
+        return value
+
+
 class MalwareFeatureDatasetId(StrEnum):
     EMBER = "ember2024-apk"
     LAMDA = "lamda-apk-2022-train-2023-test"
