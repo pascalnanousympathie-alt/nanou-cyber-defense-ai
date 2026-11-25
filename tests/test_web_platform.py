@@ -141,3 +141,40 @@ def test_admin_workspace_has_account_and_audit_filters() -> None:
     assert ".audit-toolbar" in stylesheet.text
     assert ".audit-outcome" in stylesheet.text
     assert "@media (max-width: 760px)" in stylesheet.text
+
+
+def test_developer_center_assets_and_read_only_integration_contract() -> None:
+    with TestClient(app) as client:
+        home = client.get("/")
+        script = client.get("/assets/developer.js")
+        stylesheet = client.get("/assets/developer.css")
+        schema = client.get("/api/v1/openapi.json")
+
+    assert home.status_code == 200
+    assert 'href="/assets/developer.css"' in home.text
+    assert 'src="/assets/developer.js"' in home.text
+    assert 'id="developer"' in home.text
+    assert 'id="developer-key-form"' in home.text
+    assert 'id="developer-key-once"' in home.text
+
+    assert script.status_code == 200
+    assert "function createDeveloperKey(event)" in script.text
+    assert "function revokeDeveloperKey(keyId, button)" in script.text
+    assert "navigator.clipboard.writeText" in script.text
+    assert "localStorage" not in script.text
+
+    assert stylesheet.status_code == 200
+    assert ".developer-panel" in stylesheet.text
+    assert ".developer-key-status" in stylesheet.text
+    assert "@media(max-width:760px)" in stylesheet.text
+
+    assert schema.status_code == 200
+    document = schema.json()
+    assert document["openapi"] == "3.1.0"
+    assert "NanouBearer" in document["components"]["securitySchemes"]
+    assert set(document["paths"]) == {
+        "/api/v1/kev",
+        "/api/v1/cve/{cve_id}",
+        "/api/v1/malware/metadata",
+    }
+    assert all("security" in operation for path_item in document["paths"].values() for operation in path_item.values())
