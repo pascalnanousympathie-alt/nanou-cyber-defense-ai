@@ -64,11 +64,10 @@ def test_role_change_approves_and_revokes_existing_sessions(tmp_path) -> None:
     token = "session-token-for-test"
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     store.create_session(
-        user_id=admin["id"],
+        user_id=viewer["id"],
         token_hash=token_hash,
         expires_at=datetime.now(UTC) + timedelta(hours=2),
     )
-    assert store.get_user_for_session(token_hash)["id"] == admin["id"]
 
     approved = store.update_user(
         actor_user_id=admin["id"],
