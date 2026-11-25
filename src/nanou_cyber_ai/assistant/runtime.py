@@ -74,9 +74,7 @@ _TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         ),
         "parameters": {
             "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "minimum": 1, "maximum": 20}
-            },
+            "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}},
             "required": ["limit"],
             "additionalProperties": False,
         },
@@ -165,9 +163,7 @@ async def _lookup_cve(cve_id: str) -> dict[str, Any]:
     vulnerabilities = nvd_result.get("vulnerabilities", [])
     cve = vulnerabilities[0].get("cve", {}) if vulnerabilities else {}
     descriptions = [
-        item.get("value", "")
-        for item in cve.get("descriptions", [])
-        if item.get("lang") == "en"
+        item.get("value", "") for item in cve.get("descriptions", []) if item.get("lang") == "en"
     ]
     metrics = cve.get("metrics", {})
     cvss = None
@@ -178,8 +174,7 @@ async def _lookup_cve(cve_id: str) -> dict[str, Any]:
             cvss = {
                 "version": cvss_data.get("version"),
                 "score": cvss_data.get("baseScore"),
-                "severity": cvss_data.get("baseSeverity")
-                or entries[0].get("baseSeverity"),
+                "severity": cvss_data.get("baseSeverity") or entries[0].get("baseSeverity"),
             }
             break
 
@@ -328,9 +323,7 @@ async def execute_tool(
     scopes: set[str],
 ) -> dict[str, Any]:
     """Execute exactly one validated, allowlisted, read-only assistant tool."""
-    allowed_names = {
-        item["name"] for item in _tools_for_access(scopes, role)
-    }
+    allowed_names = {item["name"] for item in _tools_for_access(scopes, role)}
     if name not in allowed_names:
         raise PermissionError("Tsy manana fahazoan-dalana amin'io asa io ianao.")
     if not isinstance(arguments, dict):
@@ -414,7 +407,8 @@ def _local_reply(action: str, result: dict[str, Any]) -> str:
         return f"Metadata voavaky: {result.get('count', 0)} records."
     if action == "get_malware_model_status":
         return (
-            "Misy modely voamarina." if result.get("available")
+            "Misy modely voamarina."
+            if result.get("available")
             else f"Tsy mbola vonona ny modely: {result.get('reason')}"
         )
     if action == "list_defensive_tools":
@@ -487,8 +481,7 @@ async def _ask_model(
         model_response = response.json()
 
     calls = [
-        item for item in model_response.get("output", [])
-        if item.get("type") == "function_call"
+        item for item in model_response.get("output", []) if item.get("type") == "function_call"
     ]
     if not calls:
         text = _tool_result_text(model_response)
@@ -514,9 +507,7 @@ async def _ask_model(
         results.append({"action": name, "data": result})
 
     # Keep provider responses non-persistent and avoid a second model call.
-    final_text = " ".join(
-        _local_reply(item["action"], item["data"]) for item in results
-    )
+    final_text = " ".join(_local_reply(item["action"], item["data"]) for item in results)
     return {
         "reply": final_text,
         "action": ", ".join(item["action"] for item in results),
