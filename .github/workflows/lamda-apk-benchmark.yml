@@ -1,0 +1,283 @@
+name: LAMDA APK cross-dataset benchmark
+
+run-name: LAMDA APK benchmark (10k train / 12k test / seed ${{ inputs.sampling_seed }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      sampling_seed:
+        description: Deterministic stratified sampling seed
+        required: true
+        default: "42"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  lamda-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATASET_REVISION: d3631db3908c4bee8f9f0748f5579a9b968ec1e1
+      TRAIN_PARQUET_SHA256: f41b5c4f051dd5dced9adc322b221ac4fab5fa16202b07c168a80ca3d3a1662b
+      TEST_PARQUET_SHA256: 58f4f6356d1f88fcaeb5fa04c67a1260b4cbe736c18961dc3e51b6cd121598c2
+      SEED_INPUT: ${{ inputs.sampling_seed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Validate sampling seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          seed_raw = os.environ["SEED_INPUT"]
+          if not seed_raw.isascii() or not seed_raw.isdigit():
+              raise SystemExit("sampling_seed must be a non-negative integer.")
+          seed = int(seed_raw)
+          if seed > 2147483647:
+              raise SystemExit("sampling_seed must be between 0 and 2147483647.")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"SAMPLING_SEED={seed}\n")
+          PY
+
+      - name: Install ML and Parquet dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[ml,lamda]"
+
+      - name: Download only pinned LAMDA Parquet splits
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_DIR="${RUNNER_TEMP}/lamda-source"
+          mkdir -p "$SOURCE_DIR"
+          curl --fail --location --retry 3 --retry-all-errors --max-time 300 \
+            "https://huggingface.co/datasets/IQSeC-Lab/LAMDA/resolve/${DATASET_REVISION}/Baseline/2022/2022_train.parquet?download=true" \
+            --output "$SOURCE_DIR/2022_train.parquet"
+          curl --fail --location --retry 3 --retry-all-errors --max-time 300 \
+            "https://huggingface.co/datasets/IQSeC-Lab/LAMDA/resolve/${DATASET_REVISION}/Baseline/2023/2023_test.parquet?download=true" \
+            --output "$SOURCE_DIR/2023_test.parquet"
+          test "$(stat -c '%s' "$SOURCE_DIR/2022_train.parquet")" -eq 16479514
+          test "$(stat -c '%s' "$SOURCE_DIR/2023_test.parquet")" -eq 5069927
+          printf '%s  %s\n' "$TRAIN_PARQUET_SHA256" "$SOURCE_DIR/2022_train.parquet" | sha256sum --check
+          printf '%s  %s\n' "$TEST_PARQUET_SHA256" "$SOURCE_DIR/2023_test.parquet" | sha256sum --check
+          file "$SOURCE_DIR"/*.parquet
+
+      - name: Validate, de-duplicate and prepare bounded feature CSVs
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_DIR="${RUNNER_TEMP}/lamda-source"
+          WORK_DIR="${RUNNER_TEMP}/lamda-work"
+          RESULTS_DIR="${RUNNER_TEMP}/lamda-results"
+          mkdir -p "$WORK_DIR" "$RESULTS_DIR"
+          python scripts/prepare_lamda_parquet.py \
+            --train-parquet "$SOURCE_DIR/2022_train.parquet" \
+            --test-parquet "$SOURCE_DIR/2023_test.parquet" \
+            --train-csv "$WORK_DIR/train.csv" \
+            --test-csv "$WORK_DIR/test.csv" \
+            --report-json "$RESULTS_DIR/preparation-report.json" \
+            --max-train-rows 10000 \
+            --max-test-rows 12000 \
+            --sampling-seed "$SAMPLING_SEED"
+
+      - name: Train and evaluate the separate LAMDA model
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK_DIR="${RUNNER_TEMP}/lamda-work"
+          RESULTS_DIR="${RUNNER_TEMP}/lamda-results"
+          python scripts/train_static_malware_detector.py \
+            --train-csv "$WORK_DIR/train.csv" \
+            --test-csv "$WORK_DIR/test.csv" \
+            --dataset-id lamda-apk-2022-train-2023-test \
+            --output-dir "$RESULTS_DIR/model" \
+            --max-train-rows 10000 \
+            --max-test-rows 12000 \
+            --max-features 5000 \
+            --split-policy "LAMDA temporal holdout: stratified deterministic sample from 2022_train (10,000 rows); test on the 2023_test split (up to 12,000 rows). The sampling seed is recorded in the preparation report."
+
+      - name: Reload model and validate held-out LAMDA inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK_DIR="${RUNNER_TEMP}/lamda-work"
+          RESULTS_DIR="${RUNNER_TEMP}/lamda-results"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          import joblib
+          import numpy as np
+
+          from nanou_cyber_ai.malware.features import load_feature_csv_compact
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "lamda-results"
+          test_csv = Path(os.environ["RUNNER_TEMP"]) / "lamda-work" / "test.csv"
+          model_path = root / "model" / "static-malware-detector-v1.joblib"
+          report_path = root / "model" / "static-malware-detector-v1.metrics.json"
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          preparation = json.loads(
+              (root / "preparation-report.json").read_text(encoding="utf-8")
+          )
+          dataset = load_feature_csv_compact(test_csv, max_rows=12000, max_features=5000)
+          if dataset.feature_names != tuple(f"feat_{index}" for index in range(4561)):
+              raise SystemExit("Reloaded LAMDA feature schema does not match feat_0..feat_4560.")
+          bundle = joblib.load(model_path)
+          if report["train_rows"] != preparation["train_sample"]["rows"]:
+              raise SystemExit("Training report row count does not match the prepared sample.")
+          if dataset.row_count != preparation["test_sample"]["rows"]:
+              raise SystemExit("Inference test row count does not match the prepared sample.")
+          if bundle.get("dataset_id") != "lamda-apk-2022-train-2023-test":
+              raise SystemExit("Model dataset identity mismatch.")
+          if tuple(bundle.get("feature_names", ())) != dataset.feature_names:
+              raise SystemExit("Model feature schema mismatch.")
+          features = np.frombuffer(dataset.features, dtype=np.float32).reshape(
+              dataset.row_count, len(dataset.feature_names)
+          )
+          probabilities = bundle["model"].predict_proba(features[:16])[:, 1]
+          if len(probabilities) != 16 or not np.isfinite(probabilities).all():
+              raise SystemExit("Held-out inference returned invalid probabilities.")
+          validation = {
+              "status": "pass",
+              "inference_rows": 16,
+              "test_rows": dataset.row_count,
+              "feature_count": len(dataset.feature_names),
+              "predicted_benign": int((probabilities < 0.5).sum()),
+              "predicted_malicious": int((probabilities >= 0.5).sum()),
+              "probability_min": float(probabilities.min()),
+              "probability_max": float(probabilities.max()),
+              "model_bytes": model_path.stat().st_size,
+              "model_sha256": hashlib.sha256(model_path.read_bytes()).hexdigest(),
+              "threshold_points": len(report["threshold_analysis"]["operating_points"]),
+          }
+          (root / "model-validation.json").write_text(
+              json.dumps(validation, indent=2) + "\n", encoding="utf-8"
+          )
+          threshold_analysis = dict(report["threshold_analysis"])
+          threshold_analysis.update(
+              {
+                  "dataset_id": report["dataset_id"],
+                  "sampling_seed": int(os.environ["SAMPLING_SEED"]),
+                  "train_rows": report["train_rows"],
+                  "test_rows": report["test_rows"],
+              }
+          )
+          if len(threshold_analysis["operating_points"]) != 9:
+              raise SystemExit("Expected nine threshold operating points.")
+          expected_benign = preparation["test_sample"]["label_counts"]["0"]
+          expected_malicious = preparation["test_sample"]["label_counts"]["1"]
+          for point in threshold_analysis["operating_points"]:
+              tp = point["true_positive"]
+              fp = point["false_positive"]
+              tn = point["true_negative"]
+              fn = point["false_negative"]
+              if tp + fp + tn + fn != dataset.row_count:
+                  raise SystemExit("Threshold confusion counts do not sum to test rows.")
+              if tp + fn != expected_malicious:
+                  raise SystemExit("Threshold positive-class counts do not match test labels.")
+              if fp + tn != expected_benign:
+                  raise SystemExit("Threshold negative-class counts do not match test labels.")
+          (root / "threshold-analysis.json").write_text(
+              json.dumps(threshold_analysis, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(validation, indent=2))
+          PY
+
+      - name: Remove temporary Parquet and feature CSV data
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f "${RUNNER_TEMP}/lamda-source/2022_train.parquet"
+          rm -f "${RUNNER_TEMP}/lamda-source/2023_test.parquet"
+          rm -f "${RUNNER_TEMP}/lamda-work/train.csv"
+          rm -f "${RUNNER_TEMP}/lamda-work/test.csv"
+
+      - name: Write dataset and model provenance manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESULTS_DIR="${RUNNER_TEMP}/lamda-results"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "lamda-results"
+          preparation = json.loads((root / "preparation-report.json").read_text(encoding="utf-8"))
+          model_report = json.loads(
+              (root / "model" / "static-malware-detector-v1.metrics.json").read_text(encoding="utf-8")
+          )
+          validation = json.loads((root / "model-validation.json").read_text(encoding="utf-8"))
+          preparation["train_sample"].pop("csv", None)
+          preparation["test_sample"].pop("csv", None)
+          (root / "preparation-report.json").write_text(
+              json.dumps(preparation, indent=2) + "\n", encoding="utf-8"
+          )
+          manifest = {
+              "dataset": {
+                  "repository": "IQSeC-Lab/LAMDA",
+                  "revision": os.environ["DATASET_REVISION"],
+                  "license": "MIT (as declared by the upstream Hugging Face dataset card)",
+                  "source_apks": "AndroZoo",
+                  "label_provenance": "VirusTotal vendor detections >=4; family labels via AVClass2",
+                  "training_file": "Baseline/2022/2022_train.parquet",
+                  "test_file": "Baseline/2023/2023_test.parquet",
+                  "training_file_sha256": preparation["source_train"]["sha256"],
+                  "test_file_sha256": preparation["source_test"]["sha256"],
+              },
+              "task": "Temporal LAMDA APK benchmark: train on 2022_train, test on 2023_test",
+              "feature_schema": {
+                  "count": preparation["feature_count"],
+                  "columns": "feat_0..feat_4560",
+                  "type": "int8 bag-of-words features (source values preserved)",
+                  "excluded_metadata": preparation["metadata_columns_excluded"],
+              },
+              "preparation": preparation,
+              "model": {
+                  "type": "HistGradientBoostingClassifier",
+                  "dataset_id": model_report["dataset_id"],
+                  "train_rows": model_report["train_rows"],
+                  "test_rows": model_report["test_rows"],
+                  "feature_count": model_report["feature_count"],
+                  "metrics": model_report["metrics"],
+                  "sha256": validation["model_sha256"],
+              },
+              "validation": validation,
+              "limitations": [
+                  "This is a separately trained LAMDA model; the EMBER2024 model cannot consume this 4,561-column schema.",
+                  "LAMDA is sourced from AndroZoo and labeled using VirusTotal/AVClass2; provenance is not fully independent from all other APK corpora.",
+                  "Cross-dataset APK hash overlap with EMBER2024 was not verified because the earlier EMBER artifact did not retain its complete sample hash list.",
+                  "Training uses a deterministic bounded 10,000-row stratified sample; the test uses up to 12,000 rows from the upstream 2023 test split.",
+                  "Metrics are research results, not proof of production readiness or live malware coverage.",
+                  "No APK executable was downloaded or executed by this workflow.",
+              ],
+          }
+          manifest_path = root / "manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          forbidden = {".apk", ".jsonl", ".csv", ".parquet", ".npz", ".dat"}
+          bad = [str(path) for path in root.rglob("*") if path.is_file() and path.suffix.lower() in forbidden]
+          if bad:
+              raise SystemExit(f"Dataset/raw files must not enter the artifact: {bad}")
+          print(json.dumps({"manifest": str(manifest_path), "artifact_files": sorted(
+              str(path.relative_to(root)) for path in root.rglob("*") if path.is_file()
+          )}, indent=2))
+          PY
+
+      - name: Upload LAMDA model, metrics and provenance only
+        uses: actions/upload-artifact@v4
+        with:
+          name: lamda-apk-cross-dataset-${{ inputs.sampling_seed }}
+          path: ${{ runner.temp }}/lamda-results/
+          if-no-files-found: error
+          retention-days: 14
