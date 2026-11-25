@@ -26,6 +26,7 @@ from nanou_cyber_ai.models import (
     AuthBootstrapIn,
     AuthLoginIn,
     AuthRegisterIn,
+    DeveloperApiKeyCreateIn,
     MalwareInferenceIn,
     MalwareInferenceResult,
     MalwareMetadata,
@@ -227,7 +228,7 @@ async def secure_request_middleware(request: Request, call_next):
     )
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    if request.url.path == "/" or request.url.path.startswith("/api/auth"):
+    if request.url.path == "/" or request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -457,6 +458,96 @@ async def admin_audit_events(
     return get_auth_store().list_audit_events(limit)
 
 
+@app.get("/api/developer/keys")
+async def list_developer_api_keys(
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> list[dict]:
+    return get_auth_store().list_api_keys(user["id"])
+
+
+@app.post("/api/developer/keys")
+async def create_developer_api_key(
+    item: DeveloperApiKeyCreateIn,
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> dict:
+    raw_token = f"ncd_live_{secrets.token_urlsafe(32)}"
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    try:
+        key = get_auth_store().create_api_key(
+            owner_user_id=user["id"],
+            name=item.name,
+            token_prefix=raw_token[:20],
+            token_hash=token_hash,
+            scopes=item.scopes,
+            expires_at=datetime.now(UTC) + timedelta(days=item.expires_in_days),
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        "key": key,
+        "token": raw_token,
+        "shown_once": True,
+        "warning": "Copy this token now. It cannot be retrieved again.",
+    }
+
+
+@app.delete("/api/developer/keys/{key_id}")
+async def revoke_developer_api_key(
+    key_id: str,
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin", "analyst"))],
+) -> dict:
+    key = get_auth_store().revoke_api_key(
+        owner_user_id=user["id"],
+        key_id=key_id,
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    if key is None:
+        raise HTTPException(status_code=404, detail="API key not found.")
+    return {"revoked": True, "key": key}
+
+
+def require_api_scope(required_scope: str):
+    def dependency(request: Request) -> dict:
+        authorization = request.headers.get("authorization", "")
+        scheme, separator, raw_token = authorization.partition(" ")
+        if (
+            scheme.lower() != "bearer"
+            or not separator
+            or not raw_token.startswith("ncd_live_")
+            or len(raw_token) > 128
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="A valid Nanou Developer API Bearer token is required.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        store = get_auth_store()
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        principal = store.get_api_key_principal(token_hash)
+        if principal is None:
+            raise HTTPException(
+                status_code=401,
+                detail="API token is invalid, expired, revoked, or its owner is inactive.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if required_scope not in principal["api_key_scopes"]:
+            raise HTTPException(status_code=403, detail="API token lacks the required scope.")
+        if not store.consume_api_key_request(
+            principal["api_key_id"],
+            maximum=settings.api_key_requests_per_minute,
+            window_seconds=60,
+        ):
+            raise HTTPException(status_code=429, detail="API key request limit exceeded.")
+        return principal
+
+    return dependency
+
+
 @app.get("/api/mcp/tools")
 async def mcp_tools() -> list[dict[str, str]]:
     return [
@@ -488,6 +579,145 @@ async def cve_detail(cve_id: str) -> dict:
         raise HTTPException(status_code=422, detail="Invalid CVE identifier") from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail="NVD API unavailable") from exc
+
+
+@app.get("/api/v1/kev")
+async def api_v1_kev_catalog(
+    _principal: Annotated[dict, Depends(require_api_scope("intel:read"))],
+) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+            return await fetch_kev_catalog(client)
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="CISA KEV feed unavailable or invalid") from exc
+
+
+@app.get("/api/v1/cve/{cve_id}")
+async def api_v1_cve_detail(
+    cve_id: str,
+    _principal: Annotated[dict, Depends(require_api_scope("intel:read"))],
+) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+            return await fetch_cve(cve_id, client)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid CVE identifier") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="NVD API unavailable") from exc
+
+
+@app.get("/api/v1/malware/metadata", response_model=list[MalwareMetadata])
+async def api_v1_malware_metadata(
+    _principal: Annotated[dict, Depends(require_api_scope("malware:metadata:read"))],
+    limit: int = Query(default=100, ge=1, le=100),
+) -> list[MalwareMetadata]:
+    return get_store().list(limit)
+
+
+@app.get("/api/v1/openapi.json")
+async def api_v1_openapi(request: Request) -> dict:
+    bearer_security = {"NanouBearer": []}
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "Nanou Cyber Defense API",
+            "version": "1.0.0",
+            "description": (
+                "Read-only API for authorized threat-intelligence and malware-metadata "
+                "integrations. Use an expiring Developer API key in the HTTP Authorization "
+                "Bearer header. No administrative, write, binary-upload or inference endpoints "
+                "are exposed by this external API."
+            ),
+        },
+        "servers": [{"url": str(request.base_url).rstrip("/")}],
+        "components": {
+            "securitySchemes": {
+                "NanouBearer": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "ncd_live_…",
+                    "description": "Create a scoped key in Developer Center. Never put it in a URL.",
+                }
+            },
+            "schemas": {
+                "CveRecord": {"type": "object", "additionalProperties": True},
+                "KevCatalog": {"type": "object", "additionalProperties": True},
+                "MalwareMetadata": {"type": "object", "additionalProperties": True},
+            },
+        },
+        "paths": {
+            "/api/v1/kev": {
+                "get": {
+                    "operationId": "listCisaKev",
+                    "summary": "Read the CISA Known Exploited Vulnerabilities catalog",
+                    "security": [bearer_security],
+                    "responses": {
+                        "200": {
+                            "description": "Current CISA KEV catalog",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/KevCatalog"}
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/api/v1/cve/{cve_id}": {
+                "get": {
+                    "operationId": "getNvdCve",
+                    "summary": "Read one CVE record from NVD",
+                    "security": [bearer_security],
+                    "parameters": [
+                        {
+                            "name": "cve_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string", "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "NVD vulnerability record",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/CveRecord"}
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/api/v1/malware/metadata": {
+                "get": {
+                    "operationId": "listMalwareMetadata",
+                    "summary": "Read stored malware hashes, labels and metadata",
+                    "security": [bearer_security],
+                    "parameters": [
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "required": False,
+                            "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 100},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Stored malware metadata",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/MalwareMetadata"},
+                                    }
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+        },
+    }
 
 
 def load_configured_malware_model():
