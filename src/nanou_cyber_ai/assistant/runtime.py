@@ -532,7 +532,7 @@ async def run_assistant(
     if settings.ai_api_key is not None and settings.ai_api_key.get_secret_value():
         try:
             return await _ask_model(message, history, role=role, scopes=scopes)
-        except (httpx.HTTPError, ValueError, RuntimeError, json.JSONDecodeError):
+        except httpx.HTTPError:
             # A configured provider outage never enables a broader tool set.
             fallback = await run_local_command(message, role=role, scopes=scopes)
             fallback["mode"] = "local_fallback"
