@@ -7,7 +7,7 @@
   <meta name="description" content="Nanou Cyber Defense AI — sehatra web ho an'ny fiarovana nomerika sy threat intelligence.">
   <title>Nanou Cyber Defense AI</title>
   <link rel="stylesheet" href="/assets/app.css">
-  <link rel="stylesheet" href="/assets/developer.css">
+  <link rel="stylesheet" href="/assets/developer.css">\n  <link rel="stylesheet" href="/assets/assistant.css">
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
@@ -31,6 +31,10 @@
           <span class="nav-group-label">Accès &amp; gouvernance</span>
           <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty sy rôles</a>
           <a class="nav-link" href="#account" data-role-visibility="admin"><span aria-hidden="true">⚙</span> Fitantanana sy audit</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">AI AUTOMATION</span>
+          <a class="nav-link" href="#assistant-chat" data-role-visibility="authenticated"><span aria-hidden="true">✧</span> AI Chat / Commands</a>
         </div>
         <div class="nav-group">
           <span class="nav-group-label">Threat intelligence</span>
@@ -206,6 +210,50 @@
         <p id="role-workspace-guidance" class="role-workspace-guidance"></p>
       </section>
 
+      <section class="section-heading" id="assistant-chat" data-role-visibility="authenticated">
+        <div><p class="eyebrow">DEFENSIVE AI OPERATIONS</p><h2>AI Chat Command Center</h2></div>
+        <span class="section-tag">Guarded tool execution</span>
+      </section>
+      <section class="panel assistant-panel" data-role-visibility="authenticated">
+        <div class="assistant-heading">
+          <div class="assistant-avatar" aria-hidden="true">N</div>
+          <div class="assistant-title">
+            <h3>Nanou Assistant</h3>
+            <p>Manatanteraka baiko fiarovana voafetra avy hatrany.</p>
+          </div>
+          <span id="assistant-mode" class="assistant-mode">Local command mode</span>
+        </div>
+        <div class="assistant-policy">
+          <strong>Fitaovana azo tanterahina</strong>
+          <span>CVE/NVD · CISA KEV · Malware metadata · Model status · MCP tools · Service status</span>
+          <small>Read-only ny asa mandeha ho azy. Tsy misy shell, malware execution, exploit, account management na fanovana production.</small>
+        </div>
+        <div class="assistant-shortcuts" aria-label="Baiko haingana">
+          <button type="button" data-assistant-command="Jereo CVE-2024-3094">Jereo CVE</button>
+          <button type="button" data-assistant-command="Jereo CISA KEV">CISA KEV</button>
+          <button type="button" data-assistant-command="Jereo malware metadata">Metadata</button>
+          <button type="button" data-assistant-command="Jereo modely">Model status</button>
+          <button type="button" data-assistant-command="MCP tools">MCP tools</button>
+          <button type="button" data-assistant-command="Jereo service status">Service status</button>
+        </div>
+        <div id="assistant-chat-log" class="assistant-chat-log" role="log" aria-live="polite" aria-relevant="additions">
+          <article class="assistant-message assistant">
+            <span class="assistant-message-label">Nanou Assistant</span>
+            <p>Salama. Soraty tsotra ny baiko. Ohatra: <strong>Jereo CVE-2024-3094</strong> na <strong>Jereo CISA KEV</strong>. Hataoko avy hatrany ny fikarohana azo atao.</p>
+          </article>
+        </div>
+        <form id="assistant-chat-form" class="assistant-chat-form">
+          <label class="sr-only" for="assistant-chat-input">Baiko na fanontaniana</label>
+          <input id="assistant-chat-input" name="message" maxlength="1000" autocomplete="off" placeholder="Soraty eto ny baiko… ohatra: jereo CVE-2024-3094" required>
+          <button class="button button-primary" id="assistant-chat-send" type="submit">Alefaso <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="assistant-footer">
+          <span id="assistant-status" role="status" aria-live="polite">Voaaro amin'ny session sy RBAC ny baiko.</span>
+          <button id="assistant-clear" class="text-button" type="button">Diovy ny resaka</button>
+        </div>
+        <p class="data-note">Tsy mitahiry ny chat history ao amin'ny navigateur na database ity pejy ity. Raha voa-configurer ny AI provider, ny hafatra sy ny valin'ny fitaovana ilaina dia alefa amin'ilay provider; aza mandefa secrets na angona saro-pady.</p>
+      </section>
+
       <section class="section-heading" id="vulnerabilities">
         <div><p class="eyebrow">VULNERABILITY INTELLIGENCE</p><h2>Fikarohana CVE</h2></div>
         <span class="section-tag">NVD · Read-only</span>
@@ -379,6 +427,6 @@
       </footer>
     </main>
   </div>
-  <script src="/assets/developer.js" defer></script>
+  <script src="/assets/developer.js" defer></script>\n  <script src="/assets/assistant.js" defer></script>
 </body>
 </html>
