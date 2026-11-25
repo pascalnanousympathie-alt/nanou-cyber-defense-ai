@@ -441,12 +441,16 @@ class AuthStore:
     ) -> dict[str, Any] | None:
         now = datetime.now(UTC)
         with self.database.engine.begin() as connection:
-            row = connection.execute(
-                select(api_keys).where(
-                    api_keys.c.id == key_id,
-                    api_keys.c.owner_user_id == owner_user_id,
+            row = (
+                connection.execute(
+                    select(api_keys).where(
+                        api_keys.c.id == key_id,
+                        api_keys.c.owner_user_id == owner_user_id,
+                    )
                 )
-            ).mappings().first()
+                .mappings()
+                .first()
+            )
             if row is None:
                 return None
             if row["revoked_at"] is None:
@@ -465,9 +469,9 @@ class AuthStore:
                     request_id=request_id,
                     ip_digest=ip_digest,
                 )
-            updated = connection.execute(
-                select(api_keys).where(api_keys.c.id == key_id)
-            ).mappings().one()
+            updated = (
+                connection.execute(select(api_keys).where(api_keys.c.id == key_id)).mappings().one()
+            )
         return public_api_key(updated)
 
     def get_api_key_principal(self, token_hash: str) -> dict[str, Any] | None:
