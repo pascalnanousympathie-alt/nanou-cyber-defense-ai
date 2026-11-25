@@ -38,3 +38,33 @@ def test_admin_bootstrap_form_has_private_token_field() -> None:
     assert response.status_code == 200
     assert 'id="bootstrap-token"' in response.text
     assert 'id="bootstrap-password"' in response.text
+
+
+def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert '<html lang="mg" data-theme="dark">' in response.text
+    assert 'aria-label="Navigation principale"' in response.text
+    assert 'class="nav-group-label">Threat intelligence</span>' in response.text
+    assert 'class="nav-group-label">Malware laboratory</span>' in response.text
+    assert 'class="nav-group-label">Accès &amp; gouvernance</span>' in response.text
+    assert 'href="#vulnerabilities"' in response.text
+    assert 'href="#kev"' in response.text
+    assert 'href="#malware-model"' in response.text
+    assert 'href="#metadata"' in response.text
+    assert 'href="#tools"' in response.text
+    assert 'class="theme-pill"' in response.text
+
+
+def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None:
+    with TestClient(app) as client:
+        response = client.get("/assets/app.css")
+
+    assert response.status_code == 200
+    assert "--bg: #070d18" in response.text
+    assert ".nav-group-label" in response.text
+    assert ".theme-pill" in response.text
+    assert "@media (max-width: 760px)" in response.text
+    assert "@media (prefers-reduced-motion: reduce)" in response.text
