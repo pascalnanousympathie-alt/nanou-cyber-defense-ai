@@ -1,5 +1,6 @@
-import httpx
 import re
+
+import httpx
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 _CVE_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
