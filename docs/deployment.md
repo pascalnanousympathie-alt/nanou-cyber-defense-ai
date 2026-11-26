@@ -143,3 +143,34 @@ A Vercel Git Preview for branch `fix/admin-password-rotation` is **READY**:
 
 Vercel returned HTTP 402 resource `api-deployments-free-per-day` when a forced API deployment was requested (more than 100 deployments and retry-after 86,400 seconds). The Git-linked Preview above was automatically built and is READY; a read-only lookup for the exact current head `9043951` returned zero deployments. No CLI bypass, plan upgrade or paid quota change was used. The current READY Preview is suitable for testing the unchanged application source, but it is not an exact build of the latest docs/tests HEAD.
 
+
+
+## 2026-11-26 follow-up — verified Production restore and runtime-role preparation
+
+This section supersedes the earlier statements above that no Production snapshot or runtime login role exists. The Production application deployment itself has NOT been changed.
+
+### Backup and restore drill
+
+- Created Neon manual snapshot prod-pre-hardening-2026-11-26 from Production default branch br-damp-fog-bi0lzjf4.
+- Restored it into a separate branch prod-restore-drill-20261126 (br-little-sound-bipv6bjm) in the same Production Neon project, with finalize=false. The Production main branch and its compute were not replaced or restarted.
+- Compared source and restored branch: all 60 public schema columns match; row counts match for the populated application tables (audit_events=2, auth_attempts=4, platform_state=1; other application tables are empty). This proves branch snapshot/restore fidelity for the captured state. It does not prove external off-provider disaster recovery or an independent export archive.
+- A restore-only login role nanou_runtime_restore_probe passed PostgreSQL capability checks and INSERT→UPDATE→DELETE smoke against the restored copy. It has login, DML and sequence USAGE/SELECT; no superuser, CREATEROLE, CREATEDB, BYPASSRLS, database/schema CREATE or TRUNCATE. The probe row was deleted; zero leftovers.
+
+### Production least-privilege runtime role prepared
+
+- Created Production PostgreSQL login role nanou_runtime on main, without changing the existing nanou_app role or its ownership/privileges.
+- Direct role checks passed: login=true, superuser=false, CREATEROLE=false, CREATEDB=false, BYPASSRLS=false, database CONNECT=true, database CREATE=false, public schema USAGE=true, public schema CREATE=false; SELECT/INSERT/UPDATE/DELETE on the nine app tables; no TRUNCATE; sequence USAGE/SELECT.
+- Stored its connection string only in Vercel's sensitive Production NANOU_RUNTIME_DATABASE_URL variable. The legacy NANOU_DATABASE_URL remains unchanged for rollback. No secret value was displayed or written to Git.
+- The current Production deployment is commit db4fa6a7c059467b8728468425d63ce78414ef5d; its settings code does not yet support NANOU_RUNTIME_DATABASE_URL. Therefore the new role/variable is prepared but NOT active in the running Production deployment. Do not deploy or switch credentials until the reviewed candidate is promoted with a controlled rollback.
+
+### Preview runtime credential prepared
+
+- Stored the dedicated nanou_preview_runtime connection string in the existing sensitive Preview NANOU_RUNTIME_DATABASE_URL variable. It points only to the dedicated Preview Neon project/branch; Production and Preview credentials remain separate.
+- Existing Vercel deployment instances may require a new Git-linked Preview deployment before the updated environment value is consumed. No deployment quota bypass or new deployment request was made.
+
+### Remaining blockers / constraints
+
+- Neon Free manual snapshot allowance is limited; this is a single manual snapshot/restore drill, not an automatic recurring backup schedule or external offsite copy. Keep the snapshot and restore branch; do not create repeated snapshots or consume additional quota without checking retention/allowance.
+- Neon Free cannot enable the Production default branch protection while the account's protected-branch allowance is exhausted. No other service branch was unprotected and no paid plan was purchased.
+- Production nanou_app still has elevated privileges and remains the live credential until a reviewed, exact-head candidate is deployed and validated. Do not revoke it before a tested cutover/rollback window.
+- Production deployment remains on the old settings implementation; Production is still not approved for promotion/cutover.
