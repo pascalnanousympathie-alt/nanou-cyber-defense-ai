@@ -290,10 +290,11 @@ def test_request_body_limit_rejects_chunked_body_without_content_length() -> Non
         yield b'"}'
 
     with TestClient(app) as client:
+        csrf = client.get("/api/auth/csrf").json()["csrf_token"]
         response = client.post(
             "/api/auth/login",
             content=chunks(),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-CSRF-Token": csrf},
         )
 
     assert response.status_code == 413
