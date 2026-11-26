@@ -3,8 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import inspect
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 from nanou_cyber_ai.storage.bootstrap import bootstrap_schema, main, normalize_postgres_url
 from nanou_cyber_ai.storage.database import SecurityDatabase, metadata
@@ -112,7 +112,10 @@ def test_schema_bootstrap_uses_migration_url_and_is_idempotent() -> None:
     fake_connection = fake_engine.begin.return_value.__enter__.return_value
 
     with (
-        patch("nanou_cyber_ai.storage.bootstrap.create_engine", return_value=fake_engine) as create_engine,
+        patch(
+            "nanou_cyber_ai.storage.bootstrap.create_engine",
+            return_value=fake_engine,
+        ) as create_engine,
         patch("nanou_cyber_ai.storage.bootstrap.metadata.create_all") as create_all,
     ):
         bootstrap_schema("postgresql://migrator:placeholder@db.example.invalid/nanou_test")
