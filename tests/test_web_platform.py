@@ -248,6 +248,7 @@ def test_assistant_chat_assets_and_command_policy_are_present() -> None:
     request_ref = operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
     assert "AssistantChatRequest" in request_ref
 
+
 def test_account_workspace_exposes_safe_password_rotation_form() -> None:
     with TestClient(app) as client:
         home = client.get("/")
