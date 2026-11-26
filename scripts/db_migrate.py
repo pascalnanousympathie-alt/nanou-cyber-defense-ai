@@ -13,7 +13,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from collections.abc import Sequence
 from urllib.parse import urlsplit
 
 import psycopg
