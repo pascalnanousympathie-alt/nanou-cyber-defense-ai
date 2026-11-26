@@ -56,7 +56,9 @@ def test_parse_postgres_uri_rejects_unknown_or_duplicate_query_options() -> None
     with pytest.raises(ValueError, match="Unsupported"):
         parse_postgres_uri("postgres://backup:secret@db.example/nanou?sslrootcert=/tmp/ca.pem")
     with pytest.raises(ValueError, match="Unsupported"):
-        parse_postgres_uri("postgres://backup:secret@db.example/nanou?options=-c%20role%3Dnanou_app")
+        parse_postgres_uri(
+            "postgres://backup:secret@db.example/nanou?options=-c%20role%3Dnanou_app"
+        )
     with pytest.raises(ValueError, match="must not be repeated"):
         parse_postgres_uri(
             "postgres://backup:secret@db.example/nanou?sslmode=require&sslmode=verify-full"
