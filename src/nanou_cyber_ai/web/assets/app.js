@@ -466,6 +466,40 @@ async function submitRegistration(event) {
   }
 }
 
+async function submitPasswordChange(event) {
+  event.preventDefault();
+  const form = byId("password-change-form");
+  const submit = form.querySelector("button[type=submit]");
+  const currentPassword = byId("current-password").value;
+  const newPassword = byId("new-password").value;
+  if (newPassword !== byId("confirm-password").value) {
+    byId("password-change-status").textContent = "Tsy mitovy ny fanamafisana ny tenimiafina vaovao.";
+    return;
+  }
+  if (currentPassword === newPassword) {
+    byId("password-change-status").textContent = "Mila tenimiafina vaovao tsy mitovy amin'ny taloha.";
+    return;
+  }
+  submit.disabled = true;
+  byId("password-change-status").textContent = "Manavao ny tenimiafina…";
+  try {
+    await apiRequest("/api/auth/password", {
+      method: "POST",
+      body: {
+        current_password: currentPassword,
+        new_password: newPassword,
+      },
+    });
+    form.reset();
+    byId("password-change-status").textContent = "Voavao ny tenimiafina. Nesorina ny session taloha rehetra.";
+    await loadAuth();
+  } catch (error) {
+    byId("password-change-status").textContent = error.message || "Tsy nahomby ny fanovana tenimiafina.";
+  } finally {
+    submit.disabled = false;
+  }
+}
+
 async function logoutAccount() {
   try {
     await apiRequest("/api/auth/logout", { method: "POST" });
