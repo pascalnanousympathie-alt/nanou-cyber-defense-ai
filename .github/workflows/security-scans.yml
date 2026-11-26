@@ -40,6 +40,17 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
           GITLEAKS_ENABLE_SUMMARY: "false"
+          GITLEAKS_VERSION: "8.30.1"
+      - name: Scan all fetched Git refs and commit history
+        shell: bash
+        run: |
+          set -euo pipefail
+          gitleaks_bin="$(find /tmp -maxdepth 3 -type f -name gitleaks -perm -u+x -print -quit)"
+          if [ -z "$gitleaks_bin" ]; then
+            echo "::error::Gitleaks binary installed by the official action was not found."
+            exit 1
+          fi
+          "$gitleaks_bin" git --redact --no-banner --no-color --timeout 600 --log-opts="--all --no-merges"
 
   codeql:
     name: CodeQL ${{ matrix.language }}
