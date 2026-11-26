@@ -58,6 +58,21 @@ uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 
 Without `NANOU_DATABASE_URL`, local development uses SQLite at `NANOU_DATA_DIR/malware_metadata.sqlite3`. This fallback is blocked on Vercel/AWS Lambda because their local filesystems are not durable.
 
+## PostgreSQL schema and runtime privileges
+
+The hosted PostgreSQL runtime is schema-verify-only: application startup checks that required `public` tables and columns exist, then initializes the bootstrap-state row with normal DML. It does not execute PostgreSQL DDL. Local SQLite development/tests still create their own schema.
+
+Use a separate operator/migration connection for the initial PostgreSQL schema:
+`NANOU_MIGRATION_DATABASE_URL` must be supplied through a protected one-off operator environment, then run:
+
+```bash
+python -m nanou_cyber_ai.storage.bootstrap
+```
+
+The bootstrap command uses `metadata.create_all(checkfirst)` to create missing initial tables and an idempotent bootstrap-state insert. It does not alter existing columns or constraints, so it is not a replacement for reviewed migrations. Future changes to an existing schema require explicit migration SQL and a restore/rollback plan.
+
+The application runtime's `NANOU_DATABASE_URL` must point to a separate restricted login role with only the required DML privileges and sequence usage. It must not own the database/schema/tables and must not have CREATE, TRUNCATE, CREATEROLE, CREATEDB or BYPASSRLS capability. Test this exact role on a restored copy before changing any hosted environment.
+
 ## PostgreSQL hosting
 
 Set `NANOU_DATABASE_URL` to a dedicated PostgreSQL project. The application requires TLS and uses a small connection pool. Do not reuse a database belonging to LudoMada, Mada Commander, Nanou Browser or another unrelated service.
