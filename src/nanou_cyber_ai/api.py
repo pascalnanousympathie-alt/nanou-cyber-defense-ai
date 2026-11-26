@@ -232,41 +232,60 @@ def _csrf_valid(request: Request) -> bool:
     return True
 
 
-async def _buffer_request_body_with_limit(request: Request) -> Response | None:
-    """Bound streamed bodies before route handlers or JSON parsing can consume them."""
-    content_length = request.headers.get("content-length")
-    if content_length is not None:
-        if not content_length.isascii() or not content_length.isdecimal():
-            return Response("Invalid content length.", status_code=400)
-        if int(content_length) > _MAX_REQUEST_BYTES:
-            return Response("Request body too large.", status_code=413)
+class _RequestBodyTooLarge(Exception):
+    """Raised when a streamed request body exceeds the configured limit."""
 
-    original_receive = request._receive
-    body = bytearray()
-    async for chunk in request.stream():
-        if len(body) + len(chunk) > _MAX_REQUEST_BYTES:
-            return Response("Request body too large.", status_code=413)
-        body.extend(chunk)
 
-    # BaseHTTPMiddleware creates the downstream Request from this receive callable.
-    # Replay the already bounded body once so normal FastAPI parsing remains unchanged.
-    body_bytes = bytes(body)
-    replayed = False
+class RequestBodyLimitMiddleware:
+    """Enforce request size on the ASGI receive stream without consuming it early."""
 
-    async def replay_receive():
-        nonlocal replayed
-        if not replayed:
-            replayed = True
-            return {"type": "http.request", "body": body_bytes, "more_body": False}
-        return await original_receive()
+    def __init__(self, app, *, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
 
-    request._receive = replay_receive
-    return None
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = {name.lower(): value for name, value in scope.get("headers", ())}
+        content_length = headers.get(b"content-length")
+        if content_length is not None:
+            try:
+                raw_length = content_length.decode("ascii")
+                if not raw_length.isdecimal():
+                    raise ValueError
+                if int(raw_length) > self.max_bytes:
+                    await Response("Request body too large.", status_code=413)(
+                        scope, receive, send
+                    )
+                    return
+            except (UnicodeDecodeError, ValueError):
+                await Response("Invalid content length.", status_code=400)(
+                    scope, receive, send
+                )
+                return
+
+        received_bytes = 0
+
+        async def limited_receive():
+            nonlocal received_bytes
+            message = await receive()
+            if message.get("type") == "http.request":
+                received_bytes += len(message.get("body", b""))
+                if received_bytes > self.max_bytes:
+                    raise _RequestBodyTooLarge
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _RequestBodyTooLarge:
+            await Response("Request body too large.", status_code=413)(scope, receive, send)
 
 
 @app.middleware("http")
 async def secure_request_middleware(request: Request, call_next):
-    rejection = await _buffer_request_body_with_limit(request)
+    rejection: Response | None = None
 
     bearer_api_request = request.url.path == "/api/v1/assistant/chat" and request.headers.get(
         "authorization", ""
@@ -298,6 +317,10 @@ async def secure_request_middleware(request: Request, call_next):
     if request.url.path == "/" or request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     return response
+
+
+# Register after BaseHTTPMiddleware so the ASGI receive wrapper is outermost.
+app.add_middleware(RequestBodyLimitMiddleware, max_bytes=_MAX_REQUEST_BYTES)
 
 
 @app.get("/", include_in_schema=False)
