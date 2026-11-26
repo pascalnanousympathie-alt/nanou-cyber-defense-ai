@@ -37,18 +37,14 @@ def parse_postgres_uri(uri: str) -> dict[str, str]:
         or not unquote(parsed.password)
         or not parsed.path.strip("/")
     ):
-        raise ValueError(
-            "Backup database URI must include a username, password and database."
-        )
+        raise ValueError("Backup database URI must include a username, password and database.")
     if parsed.fragment:
         raise ValueError("PostgreSQL connection URI must not contain a fragment.")
 
     query = parse_qs(parsed.query, keep_blank_values=True, strict_parsing=False)
     unsupported = sorted(set(query) - set(_SUPPORTED_OPTIONS))
     if unsupported:
-        raise ValueError(
-            "Unsupported PostgreSQL URI query options: " + ", ".join(unsupported)
-        )
+        raise ValueError("Unsupported PostgreSQL URI query options: " + ", ".join(unsupported))
     if any(len(values) != 1 for values in query.values()):
         raise ValueError("PostgreSQL URI query options must not be repeated.")
 
