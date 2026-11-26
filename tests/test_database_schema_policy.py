@@ -3,8 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.dialects import postgresql
 from sqlalchemy import inspect
+from sqlalchemy.dialects import postgresql
 
 from nanou_cyber_ai.storage.bootstrap import bootstrap_schema, main, normalize_postgres_url
 from nanou_cyber_ai.storage.database import SecurityDatabase, metadata
