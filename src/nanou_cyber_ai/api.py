@@ -256,14 +256,10 @@ class RequestBodyLimitMiddleware:
                 if not raw_length.isdecimal():
                     raise ValueError
                 if int(raw_length) > self.max_bytes:
-                    await Response("Request body too large.", status_code=413)(
-                        scope, receive, send
-                    )
+                    await Response("Request body too large.", status_code=413)(scope, receive, send)
                     return
             except (UnicodeDecodeError, ValueError):
-                await Response("Invalid content length.", status_code=400)(
-                    scope, receive, send
-                )
+                await Response("Invalid content length.", status_code=400)(scope, receive, send)
                 return
 
         received_bytes = 0
