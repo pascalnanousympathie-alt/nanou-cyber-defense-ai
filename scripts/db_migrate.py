@@ -1,7 +1,7 @@
-"""Apply reviewed, versioned PostgreSQL migrations with a dedicated owner role.
+"""Apply reviewed PostgreSQL migrations using a dedicated, least-privilege owner role.
 
-The application runtime must never invoke this module. Production execution is
-intentionally disabled until a separate, explicitly reviewed change enables it.
+This command is separate from the FastAPI runtime. Production execution is
+intentionally disabled; only the pinned isolated Neon Preview database is allowed.
 """
 
 from __future__ import annotations
@@ -14,14 +14,18 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
+from urllib.parse import urlsplit
 
 import psycopg
 
 MIGRATION_DIR = Path(__file__).resolve().parents[1] / "migrations"
 LEDGER_TABLE = "public.nanou_schema_migrations"
 MIGRATION_ROLE = "nanou_migration_owner"
-VERSION_PATTERN = re.compile(r"^(?P<version>[0-9]{4,})_[a-z0-9_]+\.sql$")
+MIGRATION_LOGIN = "nanou_migration_login"
+VERSION_PATTERN = re.compile(r"^(?P<version>[0-9]{4,})_[a-z0-9_]+\\.sql$")
 LOCK_KEY = 741_902_611
+PREVIEW_ALLOWED_HOST = "ep-bitter-sunset-biteo9x5.c-5.ap-southeast-1.aws.neon.tech"
+PREVIEW_ALLOWED_DATABASE = "nanou_preview"
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,8 @@ def load_migrations(directory: Path = MIGRATION_DIR) -> list[Migration]:
     migrations: list[Migration] = []
     seen_versions: set[str] = set()
     for path in sorted(directory.glob("*.sql")):
+        if path.is_symlink():
+            raise MigrationError(f"Migration must not be a symlink: {path.name}")
         match = VERSION_PATTERN.fullmatch(path.name)
         if match is None:
             raise MigrationError(f"Invalid migration filename: {path.name}")
@@ -67,10 +73,34 @@ def validate_target(target: str | None) -> str:
         )
     if target == "production":
         raise MigrationError(
-            "Production migrations are disabled by this runner; use the separately "
-            "approved Production change procedure."
+            "Production migrations are disabled; use the separately approved "
+            "Production change procedure."
         )
     return target
+
+
+def validate_database_target(database_url: str, target: str) -> None:
+    """Pin executable migrations to the known isolated Neon Preview database."""
+    validate_target(target)
+    parsed = urlsplit(database_url)
+    database_name = parsed.path.lstrip("/")
+    if (
+        target != "preview"
+        or parsed.hostname != PREVIEW_ALLOWED_HOST
+        or database_name != PREVIEW_ALLOWED_DATABASE
+    ):
+        raise MigrationError(
+            "Migration execution is restricted to the approved isolated Preview database."
+        )
+
+
+def validate_session_roles(effective_role: str, login_role: str) -> None:
+    """Require the dedicated migration login and its NOLOGIN owner role."""
+    if effective_role != MIGRATION_ROLE or login_role != MIGRATION_LOGIN:
+        raise MigrationError(
+            "Database session must be nanou_migration_login with "
+            "SET ROLE nanou_migration_owner."
+        )
 
 
 def apply_migrations(
@@ -78,18 +108,23 @@ def apply_migrations(
     target: str,
     migrations: Sequence[Migration],
 ) -> list[str]:
-    """Apply all pending migrations atomically under the migration owner role."""
-    validate_target(target)
+    """Apply pending migrations atomically under the migration owner role."""
+    validate_database_target(database_url, target)
     if not database_url.startswith(("postgresql://", "postgres://")):
         raise MigrationError("Migration URL must use PostgreSQL.")
+
     applied: list[str] = []
     with psycopg.connect(database_url, connect_timeout=10) as connection:
         with connection.cursor() as cursor:
-            cursor.execute(f"SET ROLE {MIGRATION_ROLE}")
-            cursor.execute("SELECT current_user, session_user")
-            effective_role, login_role = cursor.fetchone()
-            if effective_role != MIGRATION_ROLE or login_role == MIGRATION_ROLE:
-                raise MigrationError("Database session did not assume the migration owner role.")
+            cursor.execute("SET ROLE nanou_migration_owner")
+            cursor.execute("SELECT current_user, session_user, current_database()")
+            effective_role, login_role, database_name = cursor.fetchone()
+            validate_session_roles(effective_role, login_role)
+            if database_name != PREVIEW_ALLOWED_DATABASE:
+                raise MigrationError(
+                    "Connected database is not the approved isolated Preview database."
+                )
+
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK_KEY,))
             cursor.execute(
                 f"""
@@ -105,6 +140,7 @@ def apply_migrations(
                 f"SELECT version, checksum FROM {LEDGER_TABLE} ORDER BY version"
             )
             existing = dict(cursor.fetchall())
+
             for migration in migrations:
                 previous_checksum = existing.get(migration.version)
                 if previous_checksum is not None:
@@ -113,6 +149,7 @@ def apply_migrations(
                             f"Applied migration checksum changed: {migration.name}"
                         )
                     continue
+
                 cursor.execute(migration.sql)
                 cursor.execute(
                     f"""
@@ -122,6 +159,7 @@ def apply_migrations(
                     (migration.version, migration.name, migration.checksum),
                 )
                 applied.append(migration.name)
+
     return applied
 
 
@@ -140,15 +178,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not migrations:
             print(f"Target: {target}; no SQL migrations found.")
             return 0
+
         for migration in migrations:
             print(f"{migration.version} {migration.name} sha256={migration.checksum}")
+
         if not args.apply:
             print(f"Dry run only; {len(migrations)} migration(s) inspected, none applied.")
             return 0
 
         database_url = os.getenv("NANOU_MIGRATION_DATABASE_URL")
         if not database_url:
-            raise MigrationError("NANOU_MIGRATION_DATABASE_URL is required with --apply.")
+            raise MigrationError(
+                "NANOU_MIGRATION_DATABASE_URL is required with --apply."
+            )
+
         applied = apply_migrations(database_url, target, migrations)
         print(f"Applied {len(applied)} migration(s) to {target}.")
         return 0
