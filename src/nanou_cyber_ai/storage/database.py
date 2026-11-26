@@ -167,13 +167,7 @@ class SecurityDatabase:
     using an explicitly configured migration connection.
     """
 
-    def __init__(
-        self,
-        database_url: str | None,
-        data_dir: Path,
-        *,
-        auto_create_postgres_schema: bool = False,
-    ) -> None:
+    def __init__(self, database_url: str | None, data_dir: Path) -> None:
         if database_url:
             normalized_url = database_url.strip()
             if normalized_url.startswith("postgres://"):
@@ -210,7 +204,7 @@ class SecurityDatabase:
             event.listen(self.engine, "connect", self._enable_sqlite_foreign_keys)
 
         try:
-            if self.mode == "sqlite" or auto_create_postgres_schema:
+            if self.mode == "sqlite":
                 metadata.create_all(self.engine)
             else:
                 self._verify_postgres_schema()
@@ -220,14 +214,31 @@ class SecurityDatabase:
             raise
 
     def _verify_postgres_schema(self) -> None:
-        existing_tables = set(inspect(self.engine).get_table_names(schema="public"))
+        inspector = inspect(self.engine)
+        existing_tables = set(inspector.get_table_names(schema="public"))
         required_tables = {table.name for table in metadata.tables.values()}
         missing_tables = sorted(required_tables - existing_tables)
-        if missing_tables:
-            missing = ", ".join(missing_tables)
+        missing_columns: list[str] = []
+        for table in metadata.tables.values():
+            if table.name not in existing_tables:
+                continue
+            existing_columns = {
+                column["name"] for column in inspector.get_columns(table.name, schema="public")
+            }
+            for column in table.columns:
+                if column.name not in existing_columns:
+                    missing_columns.append(f"{table.name}.{column.name}")
+
+        if missing_tables or missing_columns:
+            details = []
+            if missing_tables:
+                details.append(f"missing tables: {', '.join(missing_tables)}")
+            if missing_columns:
+                details.append(f"missing columns: {', '.join(sorted(missing_columns))}")
             raise RuntimeError(
-                "PostgreSQL schema is incomplete; missing tables: "
-                f"{missing}. Run the reviewed schema bootstrap/migration with "
+                "PostgreSQL schema is incomplete ("
+                + "; ".join(details)
+                + "). Run the reviewed schema bootstrap/migration with "
                 "NANOU_MIGRATION_DATABASE_URL before starting the application."
             )
 
@@ -250,27 +261,10 @@ class SecurityDatabase:
 
 
 @lru_cache(maxsize=8)
-def _cached_database(
-    database_url: str | None,
-    data_dir: str,
-    auto_create_postgres_schema: bool,
-) -> SecurityDatabase:
-    return SecurityDatabase(
-        database_url,
-        Path(data_dir),
-        auto_create_postgres_schema=auto_create_postgres_schema,
-    )
+def _cached_database(database_url: str | None, data_dir: str) -> SecurityDatabase:
+    return SecurityDatabase(database_url, Path(data_dir))
 
 
-def get_database(
-    database_url: str | None,
-    data_dir: Path,
-    *,
-    auto_create_postgres_schema: bool = False,
-) -> SecurityDatabase:
+def get_database(database_url: str | None, data_dir: Path) -> SecurityDatabase:
     """Get a cached engine without retaining a readable copy of a secret in logs."""
-    return _cached_database(
-        database_url,
-        str(data_dir.expanduser()),
-        auto_create_postgres_schema,
-    )
+    return _cached_database(database_url, str(data_dir.expanduser()))
