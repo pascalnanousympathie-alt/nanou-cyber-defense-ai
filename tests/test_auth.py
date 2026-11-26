@@ -433,6 +433,7 @@ def test_user_role_change_revokes_owned_developer_api_keys(tmp_path) -> None:
     assert store.list_api_keys(analyst["id"])[0]["revoked_at"] is not None
     database.close()
 
+
 def test_password_rotation_requires_current_password_and_revokes_prior_sessions(
     monkeypatch, tmp_path
 ) -> None:
