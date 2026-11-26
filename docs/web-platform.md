@@ -50,6 +50,12 @@ uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 
 Without `NANOU_DATABASE_URL`, local development uses SQLite at `NANOU_DATA_DIR/malware_metadata.sqlite3`. This fallback is blocked on Vercel/AWS Lambda because their local filesystems are not durable.
 
+## Security validation
+
+The pull-request CI runs Ruff lint/format, the application pytest suite, the ML smoke suite, and `pip-audit` against installed third-party Python dependencies. The development dependency floor requires `pytest>=9.0.3` to avoid the known temporary-directory permission issue reported for earlier pytest releases. The latest verified candidate run passed 116 tests (4 skipped), 13 ML smoke tests, and the dependency audit with no known vulnerabilities reported.
+
+This dependency audit is not a complete SAST, secrets, container or penetration test. Run those as separate reviewed security checks before public or Production use.
+
 ## PostgreSQL hosting
 
 Set `NANOU_DATABASE_URL` to a dedicated PostgreSQL project. The application requires TLS and uses a small connection pool. Do not reuse a database belonging to LudoMada, Mada Commander, Nanou Browser or another unrelated service.
