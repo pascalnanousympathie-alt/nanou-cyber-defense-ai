@@ -64,15 +64,15 @@ def test_missing_migration_directory_is_empty(tmp_path: Path) -> None:
 
 
 def test_database_session_requires_dedicated_login_and_owner_role() -> None:
-    validate_session_roles("nanou_migration_owner", "nanou_migration_login")
+    validate_session_roles("nanou_preview_migration_owner", "nanou_preview_migration_login")
 
 
 @pytest.mark.parametrize(
     ("effective_role", "login_role"),
     [
-        ("nanou_app", "nanou_app"),
-        ("nanou_migration_owner", "nanou_app"),
-        ("nanou_runtime", "nanou_runtime"),
+        ("nanou_preview_app", "nanou_preview_app"),
+        ("nanou_preview_migration_owner", "nanou_preview_app"),
+        ("nanou_preview_runtime", "nanou_preview_runtime"),
     ],
 )
 def test_database_session_rejects_non_migration_identity(
