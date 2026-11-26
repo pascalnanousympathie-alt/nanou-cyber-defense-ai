@@ -62,6 +62,7 @@ jobs:
 
       - name: Dump Production PostgreSQL with the read-only backup role
         shell: bash
+        # Keep the read-only database secret scoped to this step only.
         env:
           DATABASE_URL: ${{ secrets.NANOU_BACKUP_DATABASE_URL }}
         run: |
