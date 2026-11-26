@@ -13,16 +13,12 @@ def test_runtime_database_url_takes_precedence_over_legacy() -> None:
 
 
 def test_serverless_fails_closed_without_runtime_url_even_if_legacy_exists() -> None:
-    selected = select_database_url(
-        None, "postgresql://legacy.example/db", serverless=True
-    )
+    selected = select_database_url(None, "postgresql://legacy.example/db", serverless=True)
     assert selected is None
 
 
 def test_local_development_can_fall_back_to_legacy_database_url() -> None:
-    selected = select_database_url(
-        None, "postgresql://legacy.example/db", serverless=False
-    )
+    selected = select_database_url(None, "postgresql://legacy.example/db", serverless=False)
     assert selected == "postgresql://legacy.example/db"
 
 
