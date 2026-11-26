@@ -10,8 +10,8 @@ import os
 import sys
 
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import SQLAlchemyError
 
 from nanou_cyber_ai.storage.database import metadata, platform_state
 
@@ -59,7 +59,10 @@ def main() -> int:
     try:
         bootstrap_schema(database_url)
     except (ValueError, OSError, SQLAlchemyError):
-        print("PostgreSQL schema bootstrap failed; check the migration database and permissions.", file=sys.stderr)
+        print(
+            "PostgreSQL schema bootstrap failed; check the migration database and permissions.",
+            file=sys.stderr,
+        )
         return 1
     print("Initial PostgreSQL schema bootstrap completed.")
     return 0
