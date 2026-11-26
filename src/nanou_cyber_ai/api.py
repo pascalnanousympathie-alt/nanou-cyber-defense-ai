@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import os
 import secrets
 import uuid
@@ -104,19 +105,31 @@ def _request_id(request: Request) -> str:
     return uuid.uuid4().hex
 
 
+def _fingerprint(payload: str) -> str:
+    key = settings.audit_hmac_key
+    if key is not None:
+        return hmac.new(
+            key.get_secret_value().encode("utf-8"),
+            payload.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        raise RuntimeError("NANOU_AUDIT_HMAC_KEY is required on serverless hosting.")
+    # Local development/tests may use a non-secret digest; hosted environments fail closed.
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def _ip_digest(request: Request) -> str | None:
     # Use the direct peer address; do not trust arbitrary X-Forwarded-For input.
     peer = request.client.host if request.client else None
-    return hashlib.sha256(peer.encode("utf-8")).hexdigest() if peer else None
+    return _fingerprint(peer) if peer else None
 
 
 def _rate_fingerprints(request: Request, email: str, action: str) -> tuple[str, str | None]:
-    email_payload = f"{action}:{email}".encode()
-    email_digest = hashlib.sha256(email_payload).hexdigest()
+    email_digest = _fingerprint(f"{action}:{email}")
     ip_digest = _ip_digest(request)
     if ip_digest:
-        ip_payload = f"{action}:{ip_digest}".encode()
-        ip_digest = hashlib.sha256(ip_payload).hexdigest()
+        ip_digest = _fingerprint(f"{action}:{ip_digest}")
     return email_digest, ip_digest
 
 
