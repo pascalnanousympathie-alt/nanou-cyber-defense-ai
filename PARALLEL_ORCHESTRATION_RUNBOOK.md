@@ -112,3 +112,48 @@ Production is blocked until:
 - Vercel Preview NANOU_RUNTIME_DATABASE_URL is set to the dedicated nanou_preview_runtime credential on the separate Preview Neon project. Existing deployment may need a fresh Git-linked Preview to consume it. Do not bypass deployment quotas.
 - Do not finalize the restore branch, change Production ownership/grants, revoke nanou_app, deploy, merge, disable SSO, or buy upgrades without explicit approval and a tested rollback. The manual snapshot is not offsite backup or recurring automation; Neon Free protection quota remains unresolved.
 - After the documentation commit, rerun full CI/security on exact PR #3 HEAD; the prior green run is only a baseline, not evidence for the new HEAD.
+
+
+## 11. Latest Production role, backup and Preview evidence (2026-11-26)
+
+### Current verified branch/CI state
+
+- PR #3 remains Draft/Open and unmerged to PR #1; PR #1 remains Draft/Open and unmerged to `main`.
+- Latest fully green application/test HEAD: `30bb422b523e1def24dcb86a16ccdc4122852d34`.
+- CI #45804357131: 132 passed / 4 skipped; Ruff lint/format, ML smoke 13, dependency audit all PASS.
+- Security #45804356605: Gitleaks no leaks; CodeQL Python and JavaScript/TypeScript completed and SARIF uploads finished.
+- Docs-only commits were added after `30bb422`; do not claim those exact later SHAs green until their own runs complete.
+- GitHub main ruleset ID `28156409` is active and requires a PR, strict test/dependency-audit/ML/Gitleaks/CodeQL status checks, blocks non-fast-forward updates and deletion. Neon Free branch-protection quota is therefore not a blocker for source control. This is not database protection.
+
+### Backup/restore
+
+- Production manual snapshot: `snap-shiny-fire-bir6x6kk`, name `prod-pre-hardening-2026-11-26`.
+- Isolated restore drill branch: `br-little-sound-bipv6bjm`, name `prod-restore-drill-20261126`.
+- Source and restored schema/column checks matched (9 application tables / 60 columns) and row counts matched at snapshot time.
+- The restore branch was further used to prove no-login ownership and migration-role semantics. It is a drill copy, not Production.
+- Encrypted backup implementation is in `src/nanou_cyber_ai/backup/crypto.py`; RSA-3072 OAEP-SHA256 wraps a random AES-256-GCM key, data streams in 1 MiB chunks and authenticated decryption removes untrusted partial output.
+- The private recipient key remains local at `~/.local/share/nanou-cyber-defense-ai/backup-keys/production-backup-private.pem` with mode 600. Never commit or print it.
+- Scheduled workflow `.github/workflows/production-backup.yml` needs GitHub Actions secret `NANOU_BACKUP_DATABASE_URL`. This secret has not been provisioned; the workflow is committed but NOT ACTIVE. No automated encrypted artifact/restore proof exists yet.
+
+### Production roles staged
+
+- `nanou_runtime`: login role tested on Production branch, can SELECT/INSERT/UPDATE/DELETE and use sequences; cannot CREATE/TRUNCATE, CREATEROLE, CREATEDB, BYPASSRLS or bypass RLS.
+- `nanou_backup`: read-only login; SELECT on all nine tables and sequence state; no DML or TRUNCATE.
+- `nanou_migration_owner`: NOLOGIN, no CREATEROLE/CREATEDB/BYPASSRLS, public schema CREATE capability and default grants prepared for runtime DML + backup SELECT.
+- `nanou_migration_login`: separate login; no direct schema CREATE or elevated role attributes; membership grants SET ROLE to migration owner for reviewed DDL. Create/drop table smoke test passed.
+- Production database and current tables remain owned by `nanou_app` until deployment cutover. Do not transfer ownership or delete legacy role before current Production app has switched to `NANOU_RUNTIME_DATABASE_URL` and rollback is verified.
+- Vercel Production has staged `NANOU_RUNTIME_DATABASE_URL` and a distinct `NANOU_AUDIT_HMAC_KEY`; legacy `NANOU_DATABASE_URL` is unchanged. Secret values must not be displayed.
+- Preview uses its own Neon project and `nanou_preview_runtime`. After grants were applied by the existing table owner, Preview /ready returned PostgreSQL ready, auth/me was signed out with bootstrap already claimed, and unauthenticated Admin endpoint correctly returned 401.
+
+### Production promotion order
+
+1. Provision `NANOU_BACKUP_DATABASE_URL` through a supported secret-management route and run scheduled/manual backup; decrypt and restore it on an isolated target, verify checksum/schema/rows.
+2. Ensure exact candidate CI/security are green.
+3. Merge PR #3 into PR #1 and PR #1 to main only with explicit owner approval and ruleset checks.
+4. Confirm Vercel Production runs the new code, uses `nanou_runtime`, /ready passes, auth routes work and Admin routes remain protected.
+5. Transfer DB/tables/sequences to `nanou_migration_owner` only after step 4; preserve a reviewed rollback window.
+6. Retire `nanou_app` credentials only after backup/restore, new runtime and rollback acceptance.
+7. Bootstrap Production Admin through the secure path; do not send passwords in chat.
+8. Complete Viewer/Analyst RBAC and operational acceptance.
+
+Never bypass the stopped secret handoff by embedding credentials in shell history, command arguments, repository files, logs or chat. If the supported secret write action remains unavailable, report BLOCKED with the exact missing secret and continue independent work.
