@@ -7,7 +7,10 @@
 3. **Agents** — small, composable defensive agents. The current triage agent prioritizes known-exploited CVEs and CVSS scores.
 4. **Malware feature pipeline** — accepts SHA-256 identifiers, labels, provenance and numeric pre-extracted features. It does not accept or execute binaries.
 5. **MCP registry** — describes available tools and checks capabilities before a caller may use a tool. No arbitrary shell or remote-control tool is registered.
-6. **Storage** — SQLite metadata store under the user's data directory, outside the Git checkout.
+6. **Storage** — SQLAlchemy-backed SQLite for local development and PostgreSQL for hosting; SQLite fallback is blocked on serverless platforms.
+7. **Identity/security** — Argon2id password hashes, opaque HttpOnly sessions stored by hash, CSRF tokens, Admin/Analyst/Viewer RBAC, rate limits and audit events.
+8. **Feature preparation** — strict one-row CSV validation for the exact EMBER/LAMDA feature schemas; no APK or binary execution.
+7. **Web interface** — responsive same-origin dashboard served by FastAPI with local CSS/JavaScript assets; no separate frontend build is required.
 
 ## Trust boundaries
 
@@ -22,4 +25,4 @@
 - M1: dataset import/quality checks for EMBER feature-only data.
 - M2: baseline malware classifier trained only on static feature vectors; model card and temporal holdout evaluation.
 - M3: optional LLM router and specialist agents, with a narrow MCP allowlist.
-- M4: authenticated UI and audit dashboard.
+- M4: responsive web dashboard, multi-user authentication, RBAC, CSRF, audit dashboard and guarded feature-data preparation implemented; hosting provider/database provisioning and first-admin bootstrap remain deployment steps.

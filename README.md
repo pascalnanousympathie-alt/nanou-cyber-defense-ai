@@ -1,20 +1,21 @@
 # Nanou Cyber Defense AI
 
-A defensive, multi-agent cybersecurity research platform. The first release focuses on vulnerability intelligence, malware **metadata and static-feature** analysis, and an auditable, permission-scoped MCP gateway.
+A defensive, browser-based cybersecurity platform. The first release focuses on vulnerability intelligence, malware **metadata and static-feature** analysis, and an auditable, permission-scoped MCP gateway. The primary interface is a responsive website; there is no Android APK requirement.
 
 > **Safety boundary:** this repository does not store, build, execute, or distribute malware binaries or offensive payloads. Malware research uses hashes, labels, public intelligence, and pre-extracted feature datasets (for example EMBER 2018/2024). All agents are designed for defensive analysis and remediation.
 
 ## MVP scope
 
-- FastAPI service for health, NVD CVE lookup, CISA KEV intelligence, and malware metadata.
+- Responsive web dashboard served by FastAPI for health, NVD CVE lookup, CISA KEV intelligence, MCP inventory and protected malware metadata.
 - Modular defensive agents for research, triage, code review and remediation recommendations.
 - Optional official MCP Python SDK v2 server (stdio) exposing only NVD and CISA read-only tools.
 - Malware feature-data manifests, validated metadata ingestion and a baseline static-feature classifier.
 - CI with lint, format and tests using standard GitHub-hosted runners.
+- Authorized Red Team tabletop simulations with an Admin-managed target allowlist, operator-declared authorization basis and expiry, Analyst-run local scenario checklists, MITRE ATT&CK references, draft SOC detection recommendations, audit history, and JSON reports. No live probing or exploit execution.
 
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md), [docs/mcp.md](docs/mcp.md), and [docs/safety-design.md](docs/safety-design.md).
+See [docs/architecture.md](docs/architecture.md), [docs/mcp.md](docs/mcp.md), [docs/safety-design.md](docs/safety-design.md), and the [Attack Simulation Manager guide](docs/attack-simulation.md).
 
 ## Quick start
 
@@ -27,15 +28,29 @@ python -m pip install -e ".[dev]"
 uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 ```
 
+Open the web dashboard at `http://127.0.0.1:8000/` after starting the service.
+
 Health: `GET /health`
 
 - `GET /api/mcp/tools` — list the registered, scope-limited tools.
 - `GET /api/kev` — fetch the CISA Known Exploited Vulnerabilities catalog.
 - `GET /api/cve/{cve_id}` — fetch one CVE from the NVD API.
-- `GET /api/malware/metadata` — list stored metadata records (requires bearer token).
-- `POST /api/malware/metadata` — add a hash/label/feature-summary record (requires bearer token; never a binary).
+- `GET /api/auth/me` — current account and first-Admin setup status.
+- `POST /api/auth/bootstrap` — one-time first Administrator setup (requires a private bootstrap token).
+- `POST /api/auth/register`, `/api/auth/login`, `/api/auth/logout` — account and session lifecycle.
+- `GET /api/admin/users`, `PATCH /api/admin/users/{id}`, `GET /api/admin/audit` — Admin-only RBAC and audit operations.
+- `GET /api/malware/metadata` — list stored metadata (authenticated account).
+- `POST /api/malware/metadata` — add a hash/label/feature-summary record (Admin/Analyst only; never a binary).
 
-The service stores metadata under `~/.local/share/nanou-cyber-defense-ai` by default. Set `NANOU_DATA_DIR` to use another directory. Set `NANOU_METADATA_API_TOKEN` locally before using metadata endpoints. Never put actual tokens, private reports, customer data, or malware samples in this public repository.
+- `GET /api/malware/inference/status` — report whether an operator-configured model passed integrity/schema checks.
+- `POST /api/malware/features/prepare/{dataset_id}` — validate one pre-extracted feature CSV row (Admin/Analyst only).
+- `POST /api/malware/inference` — classify an exact numeric feature vector (Admin/Analyst only; no APK or binary uploads).
+
+Local development uses SQLite under `~/.local/share/nanou-cyber-defense-ai` by default. Hosted/serverless environments require a least-privilege PostgreSQL `NANOU_RUNTIME_DATABASE_URL` and a private `NANOU_BOOTSTRAP_TOKEN`. `NANOU_DATABASE_URL` is retained only as a local-development compatibility fallback. Passwords are hashed with Argon2id; browser sessions use HttpOnly cookies and CSRF protection. Never put actual secrets, private reports, customer data, or malware samples in this public repository.
+
+## Web platform
+
+The responsive web interface is served directly by FastAPI; it uses local CSS/JavaScript assets and does not need a separate frontend build or external CDN. See [the web platform guide](docs/web-platform.md), [Attack Simulation Manager guide](docs/attack-simulation.md), and [deployment runbook](docs/deployment.md) for authentication, tabletop scenarios, feature CSV preparation and hosting configuration.
 
 ## Optional MCP server
 
@@ -89,4 +104,4 @@ GitHub Actions runs tests and static checks. Standard GitHub-hosted runner usage
 
 ## Status
 
-MVP scaffold with defensive API, metadata store, CISA/NVD connectors, stdio MCP tools, safe EMBER2024 archive import, feature-vector conversion and an optional static-feature training baseline. External connectors require network access. No production deployment, external LLM credentials, or autonomous changes to customer systems are enabled.
+Web platform with defensive CVE/KEV intelligence, Argon2id multi-user authentication, Admin/Analyst/Viewer RBAC, CSRF protection, audit logs, PostgreSQL persistence and pre-extracted feature CSV validation. The dashboard also includes a guarded AI Chat Command Center: local read-only commands work without an LLM key; optional server-side Responses API tool selection requires `NANOU_AI_API_KEY` and is restricted to a defensive read-only allowlist. The Attack Simulation Manager creates only deterministic tabletop reports for Admin-authorized, unexpired target scopes; it performs zero network requests and executes no exploits, payloads, malware, or automated changes. No provider key is configured by default. The Vercel deployment remains protected by SSO for all deployment targets; no unprotected public launch or autonomous changes to customer systems are enabled. The optional static-feature inference endpoint remains unavailable until a trusted model artifact is configured.
