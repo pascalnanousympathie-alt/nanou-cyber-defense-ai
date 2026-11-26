@@ -83,3 +83,19 @@ def test_symlink_migration_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(MigrationError, match="must not be a symlink"):
         load_migrations(tmp_path)
+
+def test_database_target_allows_only_the_pinned_preview_host() -> None:
+    url = f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/nanou_cyber_defense"
+    validate_database_target(url, "preview")
+
+
+def test_database_target_rejects_production_host_even_if_mislabeled_preview() -> None:
+    url = "postgresql://migration:secret@production.neon.tech:5432/nanou_cyber_defense"
+    with pytest.raises(MigrationError, match="approved isolated Preview endpoint"):
+        validate_database_target(url, "preview")
+
+
+def test_database_target_rejects_preview_host_with_production_target() -> None:
+    url = f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/nanou_cyber_defense"
+    with pytest.raises(MigrationError, match="Production migrations are disabled"):
+        validate_database_target(url, "production")
