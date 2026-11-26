@@ -7,7 +7,6 @@ import struct
 import tempfile
 from pathlib import Path
 
-from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -126,6 +125,6 @@ def decrypt_backup(source: Path, private_key_path: Path, destination: Path) -> N
                 output_file.flush()
                 os.fsync(output_file.fileno())
             os.replace(temporary_path, destination)
-        except (InvalidTag, Exception):
+        except Exception:
             temporary_path.unlink(missing_ok=True)
             raise
