@@ -56,12 +56,20 @@ def parse_postgres_uri(uri: str) -> dict[str, str]:
     if sslmode not in _ALLOWED_SSL_MODES:
         raise ValueError("PostgreSQL backup connections must require TLS.")
 
+    database = unquote(parsed.path.lstrip("/"))
+    username = unquote(parsed.username)
+    password = unquote(parsed.password)
+    if not database.strip() or not username.strip() or not password:
+        raise ValueError(
+            "Backup database URI must include a username, password and database."
+        )
+
     values = {
         "PGHOST": host,
         "PGPORT": str(port),
-        "PGDATABASE": unquote(parsed.path.lstrip("/")),
-        "PGUSER": unquote(parsed.username),
-        "PGPASSWORD": unquote(parsed.password),
+        "PGDATABASE": database,
+        "PGUSER": username,
+        "PGPASSWORD": password,
         "PGSSLMODE": sslmode,
     }
     for option, environment_name in _SUPPORTED_OPTIONS.items():
@@ -77,7 +85,7 @@ def write_libpq_environment(uri: str, output_path: Path) -> None:
     """Write validated libpq settings with shell-safe quoting and mode 0600."""
     values = parse_postgres_uri(uri)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(output_path, os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW)
+    fd = os.open(output_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
     try:
         os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as output:
