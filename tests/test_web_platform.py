@@ -263,5 +263,8 @@ def test_account_workspace_exposes_safe_password_rotation_form() -> None:
 
     assert script.status_code == 200
     assert 'apiRequest("/api/auth/password"' in script.text
-    assert 'byId("password-change-form").addEventListener("submit", submitPasswordChange)' in script.text
+    assert (
+        'byId("password-change-form").addEventListener("submit", submitPasswordChange)'
+        in script.text
+    )
     assert "localStorage" not in script.text
