@@ -3,6 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy import inspect
+from sqlalchemy.dialects import postgresql
 
 from nanou_cyber_ai.storage.bootstrap import bootstrap_schema, main, normalize_postgres_url
 from nanou_cyber_ai.storage.database import SecurityDatabase, metadata
@@ -14,8 +16,6 @@ POSTGRES_URL = "postgresql+psycopg://runtime:placeholder@db.example.invalid/nano
 def test_sqlite_still_creates_schema_for_local_development(tmp_path, monkeypatch) -> None:
     monkeypatch.delenv("VERCEL", raising=False)
     monkeypatch.delenv("AWS_LAMBDA_FUNCTION_NAME", raising=False)
-
-    from sqlalchemy import inspect
 
     database = SecurityDatabase(None, tmp_path)
     try:
@@ -108,8 +108,6 @@ def test_migration_url_must_be_postgresql() -> None:
 
 
 def test_schema_bootstrap_uses_migration_url_and_is_idempotent() -> None:
-    from sqlalchemy.dialects import postgresql
-
     fake_engine = MagicMock()
     fake_connection = fake_engine.begin.return_value.__enter__.return_value
 
