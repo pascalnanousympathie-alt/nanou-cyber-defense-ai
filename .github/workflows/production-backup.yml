@@ -177,7 +177,7 @@ jobs:
             --input "${RUNNER_TEMP}/nanou-prod-backup/production.dump" \
             --public-key backups/production-backup-public.pem \
             --output "$output"
-          sha256sum "$output" > "$output.sha256"
+          (cd "$(dirname "$output")" && sha256sum "$(basename "$output")" > "$(basename "$output").sha256")
           printf '%s' "created_utc=$stamp" > "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
           echo >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
           printf '%s' "encryption=RSA-3072-OAEP-SHA256+AES-256-GCM" >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
