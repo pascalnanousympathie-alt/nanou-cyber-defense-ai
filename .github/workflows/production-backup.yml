@@ -1,0 +1,95 @@
+name: Production database backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: nanou-production-database-backup
+  cancel-in-progress: false
+
+jobs:
+  encrypted-backup:
+    if: github.repository == 'pascalnanousympathie-alt/nanou-cyber-defense-ai' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NANOU_BACKUP_DATABASE_URL: ${{ secrets.NANOU_BACKUP_DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned backup crypto dependency
+        run: python -m pip install --disable-pip-version-check "cryptography==50.0.2"
+
+      - name: Validate backup configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${NANOU_BACKUP_DATABASE_URL}"
+          test -s backups/production-backup-public.pem
+          python - <<'PY'
+          from pathlib import Path
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric import rsa
+
+          key = serialization.load_pem_public_key(
+              Path("backups/production-backup-public.pem").read_bytes()
+          )
+          if not isinstance(key, rsa.RSAPublicKey) or key.key_size < 3072:
+              raise SystemExit("Production backup recipient key must be RSA-3072 or stronger.")
+          print("Backup configuration and RSA recipient key validated.")
+          PY
+
+      - name: Dump Production PostgreSQL with the read-only backup role
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/nanou-prod-backup"
+          docker run --rm \
+            --env DATABASE_URL="${NANOU_BACKUP_DATABASE_URL}" \
+            --volume "${RUNNER_TEMP}/nanou-prod-backup:/backup" \
+            postgres:17-alpine \
+            sh -ec 'pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file=/backup/production.dump && pg_restore --list /backup/production.dump >/dev/null'
+          echo "Production database dump completed and archive index validated."
+
+      - name: Encrypt dump with RSA-OAEP-SHA256 and AES-256-GCM
+        shell: bash
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          output="${RUNNER_TEMP}/nanou-prod-backup/nanou-production-${stamp}.ncdb"
+          python scripts/encrypt_production_backup.py \
+            --input "${RUNNER_TEMP}/nanou-prod-backup/production.dump" \
+            --public-key backups/production-backup-public.pem \
+            --output "$output"
+          sha256sum "$output" > "$output.sha256"
+          printf 'created_utc=%s\n' "$stamp" > "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          printf 'encryption=RSA-3072-OAEP-SHA256+AES-256-GCM\n' >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          printf 'retention_days=30\n' >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          shred -u "${RUNNER_TEMP}/nanou-prod-backup/production.dump" 2>/dev/null || rm -f "${RUNNER_TEMP}/nanou-prod-backup/production.dump"
+          test ! -e "${RUNNER_TEMP}/nanou-prod-backup/production.dump"
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nanou-production-backup-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/nanou-prod-backup/*.ncdb
+            ${{ runner.temp }}/nanou-prod-backup/*.sha256
+            ${{ runner.temp }}/nanou-prod-backup/manifest.txt
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
