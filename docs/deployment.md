@@ -34,6 +34,7 @@ Production Neon project `nanou-cyber-defense-ai` (`cold-resonance-28231813`), Po
 - Database `nanou_cyber_defense` contains nine application tables and is approximately 7.88 MiB.
 - Current Production row counts: `users=0`, `auth_sessions=0`, `api_keys=0`, `malware_metadata=0`, `attack_scopes=0`, `attack_simulations=0`, `audit_events=2`, `auth_attempts=4`, `platform_state=1`.
 - The live database role `nanou_app` owns the database and all application tables, has `CREATEROLE`, `CREATEDB` and inherited `BYPASSRLS` capability through `neon_superuser`; it also has broad table privileges including `TRUNCATE`. This is not an acceptable least-privilege runtime role for a public Production service.
+- The candidate web runtime now verifies required PostgreSQL tables and columns at startup and performs no PostgreSQL DDL. SQLite still initializes automatically for local development/tests. The initial PostgreSQL schema bootstrap is a separate one-off command using `NANOU_MIGRATION_DATABASE_URL`.
 - No Neon snapshots or automatic snapshot schedule were present at the time of audit. PITR history retention is six hours.
 - Neon Free rejected enabling protection for the Production default branch because the maximum protected-branch allowance was already reached. No other branch was unprotected, and no paid upgrade was performed.
 - No SQL changes, privilege changes, migrations, Production deployment or Production data writes were performed during this audit.
@@ -57,6 +58,17 @@ Latest PR #1 validation for commit `016fcd1766b69e0bfa85844630323f981e85329d`:
 CI pins GitHub Actions checkout/setup-python to v6/Node 24 and disables persisted checkout credentials. Dependency scanning covers installed third-party Python packages. These checks are not a dynamic penetration test, full independent threat model or container-image scan.
 
 ## Database and migration policy
+
+The current candidate separates schema ownership from runtime behavior:
+
+- PostgreSQL application startup verifies the required `public` tables and columns; it does **not** call `metadata.create_all` or attempt schema DDL.
+- SQLite remains self-initializing only for local development and tests.
+- Initial PostgreSQL schema bootstrap is a separate one-off command:
+  `python -m nanou_cyber_ai.storage.bootstrap`.
+- That command requires `NANOU_MIGRATION_DATABASE_URL`, stored only in a protected operator/migration environment. Do not put its raw value in Git, shell history, chat or CI logs.
+- The bootstrap uses SQLAlchemy `create_all(checkfirst)` plus an idempotent bootstrap-state insert. It creates missing initial tables but does not ALTER existing tables; it is **not** a schema-upgrade/migration engine. Future schema changes require explicit, reviewed migration SQL.
+- The web runtime `NANOU_DATABASE_URL` must use a separate login role that is not database/schema/table owner and has no `CREATEDB`, `CREATEROLE`, `BYPASSRLS`, `TRUNCATE` or schema `CREATE`. It needs only the DML required by the app (SELECT/INSERT/UPDATE/DELETE) and sequence USAGE/SELECT. Verify grants on a restored copy before using this in Production.
+- The restore-test project has a successful `NOLOGIN` prototype proving those DML/sequence privileges without CREATE/TRUNCATE/BYPASSRLS. This prototype is not a Vercel login credential and has not been connected to either environment.
 
 - Hosted/serverless runtime must use a durable PostgreSQL connection. SQLite fallback is local development/test only.
 - Introduce explicit, reviewed schema migrations; do not rely on app startup `metadata.create_all` as a substitute for Production migration management.
