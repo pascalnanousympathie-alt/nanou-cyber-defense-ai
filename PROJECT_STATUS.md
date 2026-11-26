@@ -154,7 +154,7 @@ No data was migrated or deleted on Production; no Production ownership transfer,
 - GitHub Actions secret name `NANOU_BACKUP_DATABASE_URL` is present (name only checked; value not read). The main-branch Production backup workflow is active and two manual runs succeeded: `45850155507` and `45852927966`.
 - Artifact from run `45852927966`: `nanou-production-20261126T155020Z.ncdb`; SHA-256 `7d10aa52c03d4fe03b00244a37c539bf019a79992271b476f27c19f4da308f81`. Sidecar checksum PASS.
 - Authenticated decryption and `pg_restore --list` PASS. A local isolated PostgreSQL 18.2 restore on Termux PASS: 9 tables, 60 columns; users=0, audit_events=2, auth_attempts=4, auth_sessions=0, platform_state=1. The temporary cluster was stopped and removed after verification. Production was not touched.
-- This verifies encrypted-artifact decrypt/restore to local PostgreSQL. A separate Neon branch restore of this exact artifact and a second offline recovery copy of the private key remain outstanding. The private key stays local with mode 600.
+- This verifies encrypted-artifact decrypt/restore to local PostgreSQL. A Neon branch restore of this exact artifact now PASSes on `br-little-sound-bipv6bjm` (`prod-restore-drill-20261126`), database `nanou_restore_drill_20261126`, using the isolated `nanou_runtime_restore_probe` role. The Production main branch row counts were queried read-only afterward and remained identical (users=0, audit_events=2, auth_attempts=4, auth_sessions=0, platform_state=1). A second offline recovery copy of the private key remains outstanding. The private key stays local with mode 600.
 
 ### Production deployment and cutover
 
