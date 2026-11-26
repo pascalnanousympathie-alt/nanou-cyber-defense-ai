@@ -170,9 +170,7 @@ def apply_migrations(
                 )
                 """
             )
-            cursor.execute(
-                f"SELECT version, checksum FROM {LEDGER_TABLE} ORDER BY version"
-            )
+            cursor.execute(f"SELECT version, checksum FROM {LEDGER_TABLE} ORDER BY version")
             existing = dict(cursor.fetchall())
 
             for migration in migrations:
@@ -222,9 +220,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         database_url = os.getenv("NANOU_MIGRATION_DATABASE_URL")
         if not database_url:
-            raise MigrationError(
-                "NANOU_MIGRATION_DATABASE_URL is required with --apply."
-            )
+            raise MigrationError("NANOU_MIGRATION_DATABASE_URL is required with --apply.")
 
         applied = apply_migrations(database_url, target, migrations)
         print(f"Applied {len(applied)} migration(s) to {target}.")
