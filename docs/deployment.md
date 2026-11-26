@@ -21,8 +21,8 @@ Vercel Hobby is free for personal/non-commercial use only. It is not an appropri
 - Deployment protection: Vercel Authentication is enabled for **All Deployments**, including production URLs.
 - `NANOU_DATABASE_URL`: Preview has a dedicated Preview-only Neon database secret; Production retains a separate Production-only sensitive secret. Values are not read or printed.
 - `NANOU_BOOTSTRAP_TOKEN`: Preview-only; one-time bootstrap is already claimed and the token is no longer needed for routine operation.
-- Latest verified Preview commit `6152cfaa5836484576a2fa33ebb9585bf2c9a695`: **READY** (documentation-updated PR head).
-- Latest Preview URL: https://nanou-cyber-defense-jm1fztyb8-nanou3.vercel.app
+- Latest verified Preview commit `815de1e825384089cb673251cfa14ebb686fd81a`: **READY**.
+- Latest Preview URL: https://nanou-cyber-defense-5xzwwhout-nanou3.vercel.app
 
 The secret values are not stored in Git or this document. Preview and Production database variables are separated. The Preview PostgreSQL provider and encrypted backup/restore have been checked; Production database readiness and restore have not been exercised. A Preview readiness check is not proof of a Production SLA.
 
@@ -44,11 +44,12 @@ Using the protected Preview in the connected browser:
 | Restore drill | Encrypted post-rotation backup restored in an isolated PostgreSQL test project |
 | Vercel SSO | Enabled for All Deployments |
 
-GitHub Actions PR validation run [45779479304](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45779479304) on commit `c444538bc3be01977aaf6942f1fe537a2d7547cf` completed successfully:
+GitHub Actions PR validation run [45780864273](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45780864273) on commit `815de1e825384089cb673251cfa14ebb686fd81a` completed successfully:
 - `test`: **PASS** — Ruff lint, Ruff format, **116 passed / 4 skipped**.
 - `ml-smoke`: **PASS** — **13 passed**.
-- `dependency-audit`: **PASS** — pip-audit reported **No known vulnerabilities found** for the installed third-party Python dependencies.
-- Security regression tests cover keyed HMAC fingerprints, Content-Length rejection and streamed/chunked request-body limits (2 MiB).
+- `dependency-audit`: **PASS** — pip-audit reported **No known vulnerabilities found** for installed third-party Python dependencies.
+- Security workflow [45780864270](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45780864270): **PASS** — Gitleaks checked the PR range and all fetched Git refs/history; result **No leaks detected**. CodeQL Python and JavaScript/TypeScript analyses completed and uploaded. GitHub Code Scanning returned **0 open alerts** for this branch at verification time.
+- Regression tests cover keyed/purpose-separated HMAC fingerprints, 2 MiB Content-Length and streamed/chunked request-body limits, CSRF, password rotation, session revocation, logout and RBAC boundaries.
 
 The dashboard is deployed as a protected Preview and its PostgreSQL readiness endpoint has been exercised. Automated tests cover bootstrap, login, approval, role restrictions, password rotation, logout, HMAC fingerprinting and request-size enforcement. The connected Opera browser remains signed out; the Admin console has not been live-accepted in the owner's authenticated browser. The Preview DB audit records successful password rotation and login; that does not prove the currently connected Opera tab owns the remaining valid session.
 
@@ -86,7 +87,7 @@ This is not direct APK scanning. APK-to-feature extraction and Android/on-device
 - Owner-browser Admin Console acceptance and live Viewer/Analyst acceptance remain unverified because the connected Opera browser is signed out. Automated CI tests are green but do not prove that owner's browser session.
 - PR #3 must be reviewed and integrated into PR #1's branch; then the combined candidate requires a fresh CI run and review. PR #1 still requires review before any merge to `main`.
 - Before any Production migration: verify Production database identity/permissions, create and restore a Production backup in an isolated destination, review retention/quota, and prepare a reviewed migration/rollback plan.
-- A broader SAST/secrets/container scan and operational threat-model review are not covered by `pip-audit`; no claim of a complete security audit is made.
+- CodeQL static analysis (Python and JavaScript/TypeScript), Gitleaks history scanning and pip-audit are now automated PR checks. They are not a dynamic penetration test or independent threat-model review; no container image scan is claimed for this serverless Preview.
 - External AI provider access, direct APK scanning and verified malware-model inference remain unconfigured/unimplemented. The current malware workflow validates pre-extracted CSV features only.
 - Keep Vercel SSO enabled. Do not expose a public deployment or promote Production until an approved access design, hosting-plan suitability and all launch gates are reviewed.
 - Do not incur paid plan, snapshot, provider or model costs without explicit owner approval.

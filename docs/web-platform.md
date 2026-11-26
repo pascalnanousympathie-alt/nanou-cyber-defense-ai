@@ -52,9 +52,13 @@ Without `NANOU_DATABASE_URL`, local development uses SQLite at `NANOU_DATA_DIR/m
 
 ## Security validation
 
-The pull-request CI runs Ruff lint/format, the application pytest suite, the ML smoke suite, and `pip-audit` against installed third-party Python dependencies. The development dependency floor requires `pytest>=9.0.3` to avoid the known temporary-directory permission issue reported for earlier pytest releases. The latest verified candidate run passed 116 tests (4 skipped), 13 ML smoke tests, and the dependency audit with no known vulnerabilities reported.
+The pull-request CI runs Ruff lint/format, the application pytest suite, ML smoke tests, and `pip-audit` against installed third-party Python dependencies. The development dependency floor requires `pytest>=9.0.3`. The latest verified PR run passed **116 tests (4 skipped)**, **13 ML smoke tests**, and dependency audit reported **no known vulnerabilities**.
 
-This dependency audit is not a complete SAST, secrets, container or penetration test. Run those as separate reviewed security checks before public or Production use.
+The separate security workflow runs:
+- Gitleaks 8.30.1 on the PR range and all fetched Git refs/history. Latest result: **No leaks detected**.
+- GitHub CodeQL analysis for **Python** and **JavaScript/TypeScript**. Both analyses completed and uploaded successfully; the Code Scanning API returned **0 open alerts** for the reviewed branch at the time checked.
+
+These checks are automated static/dependency scans, not a dynamic penetration test or independent threat-model review. No container-image scan is claimed for the current serverless deployment. Complete a separate operational/security review before public or Production use.
 
 ## PostgreSQL hosting
 

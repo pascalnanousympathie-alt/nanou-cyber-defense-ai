@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/web-platform
-      - fix/admin-password-rotation
   pull_request:
     branches:
       - main
