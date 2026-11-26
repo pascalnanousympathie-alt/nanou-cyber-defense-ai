@@ -1,85 +1,89 @@
-# Hosting and deployment runbook
+# Hosting, security and deployment runbook
 
-## Current hosting layout
+## Current environments
 
-- Web application: Vercel Python/FastAPI runtime on the Nanou team Hobby plan.
-- Repository: `pascalnanousympathie-alt/nanou-cyber-defense-ai`, branch `feat/web-platform`.
-- Database: PostgreSQL through the encrypted `NANOU_DATABASE_URL` environment variable.
-- Static assets: bundled in the Python package and served same-origin by FastAPI.
+The application is a FastAPI web platform deployed through Vercel. Preview and Production are separate environments and use separate Neon PostgreSQL projects and separate sensitive `NANOU_DATABASE_URL` values. Do not copy a database URL between environments or place it in Git, screenshots, CI logs or chat.
 
-The exact managed PostgreSQL provider/plan is not identified in this repository because the connection string is a protected secret. The live Preview readiness route has successfully returned `{"status":"ready","database":"postgresql"}`, which verifies a PostgreSQL connection from the deployed Preview. Do not infer the provider or its free-tier quota from that response.
+- Repository: `pascalnanousympathie-alt/nanou-cyber-defense-ai`.
+- Current candidate branch: `feat/web-platform`, PR #1 → `main`.
+- Admin password and HMAC hardening branch: `fix/admin-password-rotation`, PR #3 → `feat/web-platform`.
+- Vercel project: `nanou-cyber-defense-ai`, team `nanou3`.
+- Vercel Authentication remains enabled for **All Deployments**. The Preview is protected; this runbook does not authorize SSO removal or Production promotion.
 
-Vercel Hobby is free for personal/non-commercial use only. It is not an appropriate plan for a commercial or third-party service operated for financial gain. Confirm the current terms before broad use: https://vercel.com/legal/terms
+### Preview environment
 
-## Verified Vercel configuration
+- Dedicated Neon project: `nanou-cyber-defense-preview` (`young-snow-19049684`), PostgreSQL 17.
+- Dedicated Preview branch: `preview` (`br-long-field-bianlzu3`).
+- Preview schema has nine application tables and is connected through its separate app role.
+- First Administrator was already created in this Preview. It is active/approved with role `admin`; `bootstrap_claimed=true`. Do not reset bootstrap or recreate this account.
+- Encrypted post-rotation Preview backup was restored to a separate isolated Neon test project. The drill verified seven application tables, one Admin, four audit events and the bootstrap flag. The backup intentionally omits ephemeral `auth_sessions` and `auth_attempts`; it is not a complete live-session recovery image.
+- Preview PITR history retention is six hours. No recurring snapshot schedule is configured. No paid manual snapshot was created.
 
-- Project: `nanou-cyber-defense-ai` (FastAPI framework).
-- Team: `Nanou` (`nanou3`).
-- Git connection: this repository is linked.
-- Deployment protection: Vercel Authentication is enabled for **All Deployments**, including production URLs.
-- Encrypted `NANOU_DATABASE_URL`: configured for Preview and Production.
-- Encrypted `NANOU_BOOTSTRAP_TOKEN`: configured for Preview only.
-- Preview commit `f2427a2332c22488f1a819fa177f5a105a0dcfe4`: **READY**.
-- Preview URL: https://nanou-cyber-defense-k2gdq6umw-nanou3.vercel.app
+Latest UI Preview:
+- Deployment: **READY**, commit `016fcd1766b69e0bfa85844630323f981e85329d`.
+- URL: https://nanou-cyber-defense-n51j1uvig-nanou3.vercel.app/
+- `/ready`: `{"status":"ready","database":"postgresql"}`.
+- `/api/auth/me` from the connected signed-out browser: `authenticated:false`, `user:null`, `bootstrap_required:false`.
+- Unauthenticated `/api/admin/users`: correctly denied with `Sign in with an approved account.`.
+- The owner’s authenticated browser acceptance and live Viewer/Analyst account acceptance remain pending; automated tests are not a substitute for those owner-session checks.
 
-The secret values are not stored in Git or this document. The PostgreSQL identity, provider plan, backups and restore configuration have not been independently checked; a successful Preview connection is not proof of backup readiness or a production SLA.
+### Production environment — read-only audit
 
-The Vercel project reports SSO protection for all deployments and `live=false`. An older protected production deployment exists, but the current work is validated on the Preview branch. Do not remove the SSO gate or expose an unprotected URL as part of this runbook.
+Production Neon project `nanou-cyber-defense-ai` (`cold-resonance-28231813`), PostgreSQL 17.12:
+- Default branch `main` (`br-damp-fog-bi0lzjf4`) is **not protected**.
+- Database `nanou_cyber_defense` contains nine application tables and is approximately 7.88 MiB.
+- Current Production row counts: `users=0`, `auth_sessions=0`, `api_keys=0`, `malware_metadata=0`, `attack_scopes=0`, `attack_simulations=0`, `audit_events=2`, `auth_attempts=4`, `platform_state=1`.
+- The live database role `nanou_app` owns the database and all application tables, has `CREATEROLE`, `CREATEDB` and inherited `BYPASSRLS` capability through `neon_superuser`; it also has broad table privileges including `TRUNCATE`. This is not an acceptable least-privilege runtime role for a public Production service.
+- No Neon snapshots or automatic snapshot schedule were present at the time of audit. PITR history retention is six hours.
+- Neon Free rejected enabling protection for the Production default branch because the maximum protected-branch allowance was already reached. No other branch was unprotected, and no paid upgrade was performed.
+- No SQL changes, privilege changes, migrations, Production deployment or Production data writes were performed during this audit.
 
-## Live verification already completed
+**Production is not approved for promotion yet.** The runtime database role must be separated from the schema owner/migration role; least-privilege grants and ownership must be verified on a restored/test copy first. A proven Production backup/restore path and branch/deployment protection strategy are also required.
 
-Using the protected Preview in the connected browser:
+## CI and security validation
 
-| Check | Result |
-|---|---|
-| Vercel build | READY |
-| Dashboard `/` | Loaded; API status online |
-| `/ready` | `{"status":"ready","database":"postgresql"}` |
-| `/api/auth/me` | `authenticated:false`, `user:null`, `bootstrap_required:true` |
-| First Administrator | Not yet created |
-| Vercel SSO | Enabled for All Deployments |
+Latest PR #1 validation for commit `016fcd1766b69e0bfa85844630323f981e85329d`:
 
-GitHub Actions CI run 45635004451 completed:
-- `test`: **PASS**, Ruff lint + Ruff format + pytest; 77 passed, 4 skipped.
-- `ml-smoke`: **PASS**, 13 tests covering training, EMBER JSONL export and LAMDA Parquet preparation.
+- CI run [45788575840](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45788575840): **PASS**.
+  - Ruff lint and format: PASS (71 files formatted).
+  - Pytest: **110 passed / 4 skipped**.
+  - ML smoke: **13 passed**.
+  - `pip-audit`: **No known vulnerabilities found**.
+- Security scan run [45788575928](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45788575928): **PASS**.
+  - Gitleaks 8.30.1 scanned the PR range and fetched Git refs/history: **No leaks detected**.
+  - CodeQL Python and JavaScript/TypeScript analyses completed and uploaded SARIF.
+  - GitHub Security alert overview was not independently inspected because the connected GitHub browser session is signed out; do not infer a zero-alert count.
 
-The dashboard is therefore deployed as a protected Preview and its PostgreSQL readiness endpoint has been exercised. The first-administrator workflow and normal-user login/approval still require the owner to complete the one-time credential entry.
+CI pins GitHub Actions checkout/setup-python to v6/Node 24 and disables persisted checkout credentials. Dependency scanning covers installed third-party Python packages. These checks are not a dynamic penetration test, full independent threat model or container-image scan.
 
-## First Administrator setup
+## Database and migration policy
 
-1. Keep Vercel Authentication on **All Deployments**.
-2. Open the protected Preview URL and sign in through Vercel.
-3. In Vercel project environment settings, confirm or reset `NANOU_BOOTSTRAP_TOKEN` for the Preview environment. It must be a random value of at least 32 characters. Keep the raw value in your own password manager while completing the one-time setup; it is intentionally not recorded in Git, this runbook, or chat.
-4. Open the Preview dashboard and submit the first Administrator form with your display name, email, a unique password of at least 12 characters, and the matching bootstrap token.
-5. Check `/api/auth/me` again. Expected state after success: `authenticated:true`, Admin role, and `bootstrap_required:false`.
-6. Register a separate test user. Approve it as Analyst from the Admin console, then verify Analyst inference/metadata permissions and that an Analyst cannot access Admin user/audit routes.
-7. Verify logout revokes the session and that a fresh login works. Confirm audit events appear for registration, approval, login and logout.
+- Hosted/serverless runtime must use a durable PostgreSQL connection. SQLite fallback is local development/test only.
+- Introduce explicit, reviewed schema migrations; do not rely on app startup `metadata.create_all` as a substitute for Production migration management.
+- Use distinct roles: an owner/migration role for schema changes and a restricted runtime role for normal application queries. Test the exact DDL, grants, sequences and application behavior on an isolated restored copy before considering Production.
+- Confirm backup coverage, restore time, retention, quota, connection permissions and rollback before any Production migration.
+- Keep Preview and Production database credentials separate and sensitive. Never print or reveal their values.
+- Vercel Hobby is restricted to personal/non-commercial use under its Terms of Service. Confirm plan suitability before any public or commercial service: https://vercel.com/legal/terms
+- Neon Free has usage and branch-protection constraints. Manual snapshot storage may incur a charge; do not create paid snapshots or upgrade plans without explicit cost approval.
 
-The bootstrap token is separate from the Admin password. The backend disables bootstrap once it succeeds; a later token change does not reopen bootstrap.
+## Functional scope and limitations
 
-## Data preparation and model constraints
+The platform currently provides defensive vulnerability intelligence, CISA KEV, scoped MCP inventory, account/RBAC governance, local tabletop simulations and pre-extracted static-feature CSV validation/inference when a trusted model is provisioned.
 
-The feature workflow accepts only one-row UTF-8 CSV text up to 1 MiB:
-- EMBER2024: exactly 2,568 numeric feature columns in the trained order.
-- LAMDA: exactly 4,561 signed-int8 feature columns in the trained order.
-- Optional `sha256` and `label` fields are metadata only.
-- Unknown/reordered/missing columns, multiple rows, non-finite values, invalid hashes and out-of-range LAMDA values are rejected.
-- CSV uploads are not persisted. APK, executable or model binaries are not accepted or executed.
-
-This is not direct APK scanning. APK-to-feature extraction and Android/on-device integration are not part of the verified workflow.
-
-## Database safety and operations
-
-- Hosted/serverless execution refuses SQLite fallback; `NANOU_DATABASE_URL` must resolve to a durable PostgreSQL service.
-- The Preview `/ready` endpoint verified a PostgreSQL connection. Production readiness has not been exercised in this task.
-- SQLAlchemy creates the initial tables on startup. Introduce reviewed migrations for future schema evolution.
-- Before storing real user/security data, verify provider identity, billing/quota, automated backups, retention and a restore drill.
-- Keep database credentials and bootstrap token in the hosting provider's encrypted secret store. Never paste their values in repository files, CI logs or support messages.
+- The malware workflow accepts a single row of validated CSV features; it is **not a direct APK scanner**.
+- No APK/executable is uploaded or executed.
+- No autonomous exploit, shell, malware execution, destructive remediation or offensive command runner is provided.
+- External AI provider integration remains disabled until a secure server-side provider configuration and approved service-to-service access design exist.
+- A trusted SHA-256-verified production model artifact and independently validated decision threshold are still required before claiming production malware inference.
 
 ## Remaining launch gates
 
-- Complete the one-time first-Admin setup in the protected Preview.
-- Complete the normal-user registration, approval, role and logout checks.
-- Verify database backup/restore and confirm whether the selected PostgreSQL plan is free and suitable for the intended use.
-- If moving to public or commercial operation, select a hosting plan whose terms permit that use and conduct a separate security/operations review.
-- Do not disable Vercel SSO protection or promote a production deployment until those launch gates are deliberately approved.
+1. Complete owner-browser Admin acceptance and separate live Viewer/Analyst registration, approval, RBAC and logout/re-login acceptance.
+2. Design and test separate migration-owner and least-privilege runtime roles on a restored copy; verify application behavior and all DDL privileges.
+3. Establish a reliable Production backup/export and restore drill, and document RPO/RTO. Current Production has no snapshots/schedule; Neon branch protection is blocked by the Free plan limit.
+4. Resolve Production branch and deployment protection without weakening another service or bypassing SSO.
+5. Confirm hosting/database plan terms, quotas, retention, monitoring, alert routing and incident response.
+6. Complete independent security review, code-scanning alert review while signed into GitHub, and a documented rollback plan.
+7. Integrate PR #3 into the updated `feat/web-platform` branch, rerun combined CI/security scans, then review PR #1 before any merge to `main`.
+
+No Production promotion is permitted by this runbook until these gates are verified and the Production migration/rollback plan is approved.
