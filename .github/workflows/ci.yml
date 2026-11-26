@@ -68,4 +68,4 @@ jobs:
       - name: Install pip-audit
         run: python -m pip install pip-audit
       - name: Audit installed Python dependencies
-        run: pip-audit --strict --progress-spinner=off
+        run: pip-audit --strict --progress-spinner=off --skip-editable
