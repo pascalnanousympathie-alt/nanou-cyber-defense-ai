@@ -1,7 +1,7 @@
 """Shared SQLite/PostgreSQL storage for the web platform.
 
 SQLite is intentionally limited to local development and tests. Hosted
-serverless deployments must configure NANOU_DATABASE_URL for durable storage.
+serverless deployments must configure NANOU_RUNTIME_DATABASE_URL for durable storage.
 """
 
 from __future__ import annotations
@@ -157,6 +157,20 @@ Index("ix_attack_simulations_created", attack_simulations.c.created_at)
 Index("ix_attack_simulations_scope", attack_simulations.c.scope_id)
 
 
+def select_database_url(
+    runtime_database_url: str | None,
+    legacy_database_url: str | None,
+    *,
+    serverless: bool,
+) -> str | None:
+    """Prefer the least-privilege runtime credential and fail closed when hosted."""
+    if runtime_database_url is not None:
+        return runtime_database_url
+    if serverless:
+        return None
+    return legacy_database_url
+
+
 class SecurityDatabase:
     """A small connection-per-operation database facade."""
 
@@ -168,7 +182,7 @@ class SecurityDatabase:
             elif normalized_url.startswith("postgresql://"):
                 normalized_url = normalized_url.replace("postgresql://", "postgresql+psycopg://", 1)
             if not normalized_url.startswith("postgresql+psycopg://"):
-                raise ValueError("NANOU_DATABASE_URL must use PostgreSQL.")
+                raise ValueError("The configured database URL must use PostgreSQL.")
             self.mode = "postgresql"
             self.engine = create_engine(
                 normalized_url,
@@ -182,9 +196,7 @@ class SecurityDatabase:
             import os
 
             if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
-                raise RuntimeError(
-                    "A durable NANOU_DATABASE_URL is required on serverless hosting."
-                )
+                raise RuntimeError("NANOU_RUNTIME_DATABASE_URL is required on serverless hosting.")
             data_dir = data_dir.expanduser()
             data_dir.mkdir(parents=True, exist_ok=True)
             database_path = data_dir / "malware_metadata.sqlite3"
@@ -196,7 +208,10 @@ class SecurityDatabase:
             )
             event.listen(self.engine, "connect", self._enable_sqlite_foreign_keys)
 
-        metadata.create_all(self.engine)
+        if self.mode == "sqlite":
+            # Local development/tests may create their own disposable schema.
+            # PostgreSQL DDL is owned by the reviewed migration workflow, never the runtime role.
+            metadata.create_all(self.engine)
         self._ensure_bootstrap_state()
 
     @staticmethod
