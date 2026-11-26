@@ -61,8 +61,11 @@ app.mount("/assets", StaticFiles(directory=_WEB_DIR / "assets"), name="web-asset
 
 
 def get_database_instance() -> SecurityDatabase:
+    configured_database_url = settings.effective_database_url
     database_url = (
-        settings.database_url.get_secret_value() if settings.database_url is not None else None
+        configured_database_url.get_secret_value()
+        if configured_database_url is not None
+        else None
     )
     try:
         return get_database(database_url, settings.data_dir)
@@ -99,8 +102,9 @@ def _audit_hmac_key() -> bytes:
 
     # Each hosted environment has a distinct database credential. Derive a separate,
     # purpose-bound key from it until a dedicated NANOU_AUDIT_HMAC_KEY is configured.
-    if settings.database_url is not None:
-        database_secret = settings.database_url.get_secret_value().encode("utf-8")
+    configured_database_url = settings.effective_database_url
+    if configured_database_url is not None:
+        database_secret = configured_database_url.get_secret_value().encode("utf-8")
         return hmac.new(
             database_secret,
             b"nanou-cyber-defense-ai:audit-fingerprint-key:v1",
