@@ -99,3 +99,8 @@ def test_database_target_rejects_preview_host_with_production_target() -> None:
     url = f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/nanou_cyber_defense"
     with pytest.raises(MigrationError, match="Production migrations are disabled"):
         validate_database_target(url, "production")
+
+def test_database_target_rejects_other_database_on_preview_host() -> None:
+    url = f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/postgres"
+    with pytest.raises(MigrationError, match="approved isolated Preview database"):
+        validate_database_target(url, "preview")
