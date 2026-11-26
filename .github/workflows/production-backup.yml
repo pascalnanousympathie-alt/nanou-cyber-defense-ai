@@ -71,56 +71,10 @@ jobs:
           umask 077
           install -d -m 700 "${RUNNER_TEMP}/nanou-prod-backup"
 
-          # Parse the URI into libpq environment variables. Never pass the URI
-          # itself in Docker or pg_dump argv, where process listings could expose it.
+          # Parse the URI without exposing it in Docker or pg_dump argv.
           connection_env="$(mktemp "${RUNNER_TEMP}/nanou-pg-env.XXXXXX")"
           chmod 600 "$connection_env"
-          python - "$connection_env" <<'PY'
-          import os
-          import shlex
-          import sys
-          from urllib.parse import parse_qs, unquote, urlsplit
-
-          parsed = urlsplit(os.environ["DATABASE_URL"])
-          if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
-              raise SystemExit("NANOU_BACKUP_DATABASE_URL must be a PostgreSQL URI.")
-          if not parsed.username or parsed.password is None or not parsed.path.strip("/"):
-              raise SystemExit("Backup database URI must include a username, password and database.")
-          query = parse_qs(parsed.query, keep_blank_values=True)
-          supported = {
-              "sslmode": "PGSSLMODE",
-              "channel_binding": "PGCHANNELBINDING",
-              "application_name": "PGAPPNAME",
-              "options": "PGOPTIONS",
-              "connect_timeout": "PGCONNECT_TIMEOUT",
-              "target_session_attrs": "PGTARGETSESSIONATTRS",
-          }
-          unsupported = sorted(set(query) - set(supported))
-          if unsupported:
-              raise SystemExit(
-                  "Unsupported PostgreSQL URI query options: " + ", ".join(unsupported)
-              )
-          sslmode = query.get("sslmode", ["require"])[-1]
-          if sslmode not in {"require", "verify-ca", "verify-full"}:
-              raise SystemExit("PostgreSQL backup connections must require TLS.")
-          values = {
-              "PGHOST": parsed.hostname,
-              "PGPORT": str(parsed.port or 5432),
-              "PGDATABASE": unquote(parsed.path.lstrip("/")),
-              "PGUSER": unquote(parsed.username),
-              "PGPASSWORD": unquote(parsed.password),
-              "PGSSLMODE": sslmode,
-          }
-          for option, environment_name in supported.items():
-              if option in query:
-                  values[environment_name] = query[option][-1]
-          if any("\0" in value for value in values.values()):
-              raise SystemExit("PostgreSQL connection settings contain an invalid NUL byte.")
-          with open(sys.argv[1], "w", encoding="utf-8") as output:
-              for key, value in values.items():
-                  output.write(f"export {key}={shlex.quote(value)}")
-                  output.write(chr(10))
-          PY
+          python scripts/write_postgres_libpq_env.py --output "$connection_env"
           set -a
           source "$connection_env"
           set +a
