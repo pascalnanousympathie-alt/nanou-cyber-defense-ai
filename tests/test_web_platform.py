@@ -72,7 +72,7 @@ def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None
     assert "--panel: #08121a" in response.text
     assert "Neon cyber operations theme" in response.text
     assert "background: #03070b" in response.text
-    assert "background: #050b11" in response.text
+    assert "linear-gradient(180deg, rgba(5,12,17,.99)" in response.text
     assert ".nav-group-label" in response.text
     assert ".theme-pill" in response.text
     assert "text-shadow:" in response.text
