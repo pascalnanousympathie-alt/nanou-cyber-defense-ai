@@ -18,6 +18,7 @@ def test_sqlite_still_creates_schema_for_local_development(tmp_path, monkeypatch
     database = SecurityDatabase(None, tmp_path)
     try:
         from sqlalchemy import inspect
+from sqlalchemy.dialects import postgresql
 
         tables = set(inspect(database.engine).get_table_names())
         assert set(metadata.tables).issubset(tables)
@@ -30,6 +31,9 @@ def test_postgres_runtime_verifies_schema_without_running_ddl(tmp_path) -> None:
     fake_engine = MagicMock()
     fake_inspector = MagicMock()
     fake_inspector.get_table_names.return_value = required_tables
+    fake_inspector.get_columns.side_effect = lambda table, schema: [
+        {"name": column.name} for column in metadata.tables[table].columns
+    ]
 
     with (
         patch("nanou_cyber_ai.storage.database.create_engine", return_value=fake_engine),
@@ -65,26 +69,33 @@ def test_postgres_runtime_fails_closed_when_schema_is_incomplete(tmp_path) -> No
     fake_engine.dispose.assert_called_once()
 
 
-def test_explicit_postgres_schema_bootstrap_option_allows_create_all(tmp_path) -> None:
+
+def test_postgres_runtime_fails_closed_when_required_column_is_missing(tmp_path) -> None:
+    required_tables = sorted(metadata.tables)
     fake_engine = MagicMock()
+    fake_inspector = MagicMock()
+    fake_inspector.get_table_names.return_value = required_tables
+
+    def columns_for(table: str, schema: str) -> list[dict[str, str]]:
+        columns = [{"name": column.name} for column in metadata.tables[table].columns]
+        if table == "users":
+            return columns[:-1]
+        return columns
+
+    fake_inspector.get_columns.side_effect = columns_for
 
     with (
         patch("nanou_cyber_ai.storage.database.create_engine", return_value=fake_engine),
+        patch("nanou_cyber_ai.storage.database.inspect", return_value=fake_inspector),
         patch("nanou_cyber_ai.storage.database.metadata.create_all") as create_all,
-        patch.object(SecurityDatabase, "_ensure_bootstrap_state"),
-        patch.object(SecurityDatabase, "_verify_postgres_schema") as verify_schema,
+        patch.object(SecurityDatabase, "_ensure_bootstrap_state") as ensure_bootstrap,
+        pytest.raises(RuntimeError, match="users.updated_at"),
     ):
-        database = SecurityDatabase(
-            POSTGRES_URL,
-            tmp_path,
-            auto_create_postgres_schema=True,
-        )
-        database.close()
+        SecurityDatabase(POSTGRES_URL, tmp_path)
 
-    create_all.assert_called_once_with(fake_engine)
-    verify_schema.assert_not_called()
+    create_all.assert_not_called()
+    ensure_bootstrap.assert_not_called()
     fake_engine.dispose.assert_called_once()
-
 
 def test_migration_url_must_be_postgresql() -> None:
     assert normalize_postgres_url("postgres://u:p@db.example.invalid/app") == (
@@ -113,7 +124,7 @@ def test_schema_bootstrap_uses_migration_url_and_is_idempotent() -> None:
     create_all.assert_called_once_with(fake_engine)
     fake_connection.execute.assert_called_once()
     statement = fake_connection.execute.call_args.args[0]
-    assert "ON CONFLICT" in str(statement.compile())
+    assert "ON CONFLICT" in str(statement.compile(dialect=postgresql.dialect()))
     fake_engine.dispose.assert_called_once()
 
 
