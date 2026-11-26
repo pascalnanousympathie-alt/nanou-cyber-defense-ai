@@ -18,12 +18,37 @@ def test_runtime_database_url_takes_priority_over_legacy_url() -> None:
     assert configured.effective_database_url.get_secret_value() == runtime_url
 
 
-def test_legacy_database_url_remains_a_safe_fallback() -> None:
+def test_legacy_database_url_remains_a_local_development_fallback(monkeypatch) -> None:
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.delenv("AWS_LAMBDA_FUNCTION_NAME", raising=False)
     legacy_url = "postgresql://legacy:example@db.example.invalid/app"
     configured = Settings(database_url=SecretStr(legacy_url))
 
     assert configured.effective_database_url is configured.database_url
     assert configured.effective_database_url.get_secret_value() == legacy_url
+
+
+def test_blank_runtime_url_uses_legacy_only_for_local_development(monkeypatch) -> None:
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.delenv("AWS_LAMBDA_FUNCTION_NAME", raising=False)
+    legacy_url = "postgresql://legacy:example@db.example.invalid/app"
+    configured = Settings(
+        database_url=SecretStr(legacy_url),
+        runtime_database_url=SecretStr(""),
+    )
+
+    assert configured.effective_database_url is configured.database_url
+
+
+def test_serverless_never_falls_back_to_legacy_owner_url(monkeypatch) -> None:
+    monkeypatch.setenv("VERCEL", "1")
+    legacy_url = "postgresql://legacy:example@db.example.invalid/app"
+    configured = Settings(
+        database_url=SecretStr(legacy_url),
+        runtime_database_url=SecretStr(""),
+    )
+
+    assert configured.effective_database_url is None
 
 
 def test_missing_database_urls_remain_unconfigured() -> None:
