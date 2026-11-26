@@ -132,3 +132,39 @@ Production Neon project `cold-resonance-28231813`, default branch `main`, databa
 5. Complete owner Admin, Viewer and Analyst RBAC acceptance; keep SSO on; review monitoring, incident response, CodeQL alerts and hosting quotas.
 
 No data was migrated or deleted on Production; no Production ownership transfer, merge to `main`, Production promotion, SSO removal, paid upgrade or live public launch occurred in this update.
+
+
+## Latest continuation — 2026-11-26 (exact evidence)
+
+### PR #3 security workflow and validation
+
+- Security workflow now also triggers for pull requests targeting `fix/admin-password-rotation`; previous configuration omitted that base branch and therefore did not scan child PRs based on PR #3.
+- Updated `.github/workflows/security-scans.yml` on `fix/admin-password-rotation`; commit `7d10fb6666515d5bf6816710566f5d276d0402dc`.
+- Exact-head CI run [45819559656](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45819559656): PASS — Ruff lint/format, 132 passed / 4 skipped, ML smoke 13 passed, pip-audit clean.
+- Exact-head security run [45819559546](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45819559546): PASS — Gitleaks full-history/refs and CodeQL Python + JavaScript/TypeScript completed successfully.
+- These runs apply to PR #3 HEAD `7d10fb6666515d5bf6816710566f5d276d0402dc`. New documentation commits after that SHA require their own checks before merge.
+
+### PR #4 backup workflow hardening
+
+- PR #4 is Draft/Open and unmerged: [Harden backup secret scope and dump permissions](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/pull/4).
+- Branch `fix/backup-runner-secret-scope`, HEAD `7e002e5e165da84779dba819d6e5f11abbb8aba2`, based on `fix/admin-password-rotation`.
+- CI [45817693674](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45817693674): PASS — 132 passed / 4 skipped, ML smoke 13 passed, dependency audit PASS.
+- Vercel Preview deployment [dpl_M8BsQApGiBKFCw23w3okDAh91znA](https://vercel.com/nanou3/nanou-cyber-defense-ai/M8BsQApGiBKFCw23w3okDAh91znA) was READY for the exact PR #4 HEAD.
+- The backup workflow now scopes the URL secret to the dump step, parses it into libpq environment variables, omits the full URI from Docker/pg_dump argv, requires TLS and a password, rejects unknown query options, and uses 0600/0700/umask-077 temporary file protections.
+- PR #4 does not claim Gitleaks/CodeQL validation until its exact head receives those scans. Do not merge it solely on CI and Preview status.
+
+### Direct Neon login/permission checks
+
+- Production `nanou_runtime` connected successfully and read all nine application tables; a direct users count returned zero.
+- Production `nanou_backup` connected successfully and read audit rows; a direct count returned two.
+- Preview `nanou_preview_runtime` connected to the separate `nanou_preview` database and saw nine application tables.
+- Production role catalog still shows `nanou_app` as database owner and owner of all nine tables with CREATEROLE/CREATEDB/BYPASSRLS and TRUNCATE; `nanou_runtime` remains DML + sequences only, `nanou_backup` SELECT-only, and `nanou_migration_owner` NOLOGIN.
+- A separate isolated restore-test project was also used for a fresh SET ROLE DML smoke. INSERT, UPDATE and DELETE each affected one probe row; a final SELECT confirmed only the original row remained. No Production data was changed.
+
+### Production and automation blockers
+
+- Production deployment is still READY on old commit `db4fa6a7c059467b8728468425d63ce78414ef5d`; it does not yet use the new runtime database variable.
+- Manual Production snapshot `snap-shiny-fire-bir6x6kk` and restore drill branch `br-little-sound-bipv6bjm` remain available. Their prior comparison matched nine app tables / 60 columns and snapshot-time row counts.
+- GitHub Actions secret `NANOU_BACKUP_DATABASE_URL` remains unprovisioned. The workflow is not active and no automated encrypted artifact or automated restore has been produced. The available GitHub integration does not expose a supported Actions-secret write operation; do not bypass this with plaintext or shell history.
+- Neon Production `main` is still unprotected under Neon; the active GitHub ruleset only protects repository source, not database branching.
+- PR #1, #3 and #4 remain Draft/Open and unmerged. No Production ownership transfer, credential retirement, Production deployment, SSO change or paid upgrade occurred.
