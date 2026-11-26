@@ -28,14 +28,15 @@ def test_parse_postgres_uri_decodes_credentials_and_defaults_to_tls() -> None:
 
 def test_parse_postgres_uri_accepts_only_secure_ssl_modes() -> None:
     for sslmode in ("require", "verify-ca", "verify-full"):
-        assert parse_postgres_uri(
-            f"postgres://backup:secret@db.example/nanou?sslmode={sslmode}"
-        )["PGSSLMODE"] == sslmode
+        assert (
+            parse_postgres_uri(f"postgres://backup:secret@db.example/nanou?sslmode={sslmode}")[
+                "PGSSLMODE"
+            ]
+            == sslmode
+        )
 
     with pytest.raises(ValueError, match="require TLS"):
-        parse_postgres_uri(
-            "postgres://backup:secret@db.example/nanou?sslmode=disable"
-        )
+        parse_postgres_uri("postgres://backup:secret@db.example/nanou?sslmode=disable")
 
 
 def test_parse_postgres_uri_rejects_missing_credentials_and_database() -> None:
@@ -53,9 +54,7 @@ def test_parse_postgres_uri_rejects_missing_credentials_and_database() -> None:
 
 def test_parse_postgres_uri_rejects_unknown_or_duplicate_query_options() -> None:
     with pytest.raises(ValueError, match="Unsupported"):
-        parse_postgres_uri(
-            "postgres://backup:secret@db.example/nanou?sslrootcert=/tmp/ca.pem"
-        )
+        parse_postgres_uri("postgres://backup:secret@db.example/nanou?sslrootcert=/tmp/ca.pem")
     with pytest.raises(ValueError, match="must not be repeated"):
         parse_postgres_uri(
             "postgres://backup:secret@db.example/nanou?sslmode=require&sslmode=verify-full"
