@@ -56,11 +56,11 @@ python -m pip install -e ".[dev]"
 uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 ~~~
 
-Without `NANOU_DATABASE_URL`, local development uses SQLite at `NANOU_DATA_DIR/malware_metadata.sqlite3`. This fallback is blocked on Vercel/AWS Lambda because their local filesystems are not durable.
+Without either PostgreSQL URL, local development uses SQLite at `NANOU_DATA_DIR/malware_metadata.sqlite3`. On Vercel/AWS Lambda, the application requires `NANOU_RUNTIME_DATABASE_URL` and fails closed if it is absent; it never falls back to the legacy credential.
 
 ## PostgreSQL hosting
 
-Set `NANOU_DATABASE_URL` to a dedicated PostgreSQL project. The application requires TLS and uses a small connection pool. Do not reuse a database belonging to LudoMada, Mada Commander, Nanou Browser or another unrelated service.
+Set `NANOU_RUNTIME_DATABASE_URL` to the dedicated PostgreSQL project using the least-privilege runtime role. The legacy `NANOU_DATABASE_URL` is only a local-development fallback. The application requires TLS and uses a small connection pool. PostgreSQL runtime startup performs no schema DDL; use the separate migration-owner role for reviewed schema migrations. Do not reuse a database belonging to LudoMada, Mada Commander, Nanou Browser or another unrelated service.
 
 ## Safe feature-data preparation
 
