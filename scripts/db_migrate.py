@@ -103,6 +103,23 @@ def validate_session_roles(effective_role: str, login_role: str) -> None:
         )
 
 
+def validate_role_flags(flags: Sequence[bool]) -> None:
+    """Require a non-privileged LOGIN and a non-LOGIN migration owner."""
+    if len(flags) != 12:
+        raise MigrationError("Could not verify migration role attributes.")
+    login_can_login = flags[0]
+    login_privileges = flags[1:6]
+    owner_can_login = flags[6]
+    owner_privileges = flags[7:12]
+    if (
+        not login_can_login
+        or any(login_privileges)
+        or owner_can_login
+        or any(owner_privileges)
+    ):
+        raise MigrationError("Migration login/owner roles have unsafe PostgreSQL attributes.")
+
+
 def apply_migrations(
     database_url: str,
     target: str,
