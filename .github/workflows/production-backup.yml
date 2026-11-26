@@ -74,7 +74,7 @@ jobs:
           # Parse the URI without exposing it in Docker or pg_dump argv.
           connection_env="$(mktemp "${RUNNER_TEMP}/nanou-pg-env.XXXXXX")"
           chmod 600 "$connection_env"
-          python scripts/write_postgres_libpq_env.py --output "$connection_env"
+          PYTHONPATH=src python scripts/write_postgres_libpq_env.py --output "$connection_env"
           set -a
           source "$connection_env"
           set +a
