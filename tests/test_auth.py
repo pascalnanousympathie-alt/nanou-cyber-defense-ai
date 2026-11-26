@@ -515,3 +515,38 @@ def test_password_rotation_requires_current_password_and_revokes_prior_sessions(
         assert audit.status_code == 200
         events = [event for event in audit.json() if event["action"] == "auth.password.change"]
         assert {event["outcome"] for event in events} == {"failed", "success"}
+
+
+def test_logout_revokes_server_session_and_clears_cookie(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(
+        settings,
+        "bootstrap_token",
+        SecretStr("test-bootstrap-token-long-enough-1234567890"),
+    )
+
+    with TestClient(app) as client:
+        csrf = _csrf(client)
+        bootstrap = client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "email": "logout-admin@example.test",
+                "display_name": "Logout Admin",
+                "password": "Logout-Test-Password-42!",
+                "bootstrap_token": "test-bootstrap-token-long-enough-1234567890",
+            },
+        )
+        assert bootstrap.status_code == 200
+        assert client.get("/api/auth/me").json()["authenticated"] is True
+        assert settings.session_cookie_name in client.cookies
+
+        logout = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+        assert logout.status_code == 200
+        assert logout.json()["logged_out"] is True
+        assert settings.session_cookie_name not in client.cookies
+        assert client.get("/api/auth/me").json()["authenticated"] is False
+
+        events = client.get("/api/admin/audit?limit=20")
+        assert events.status_code == 401
