@@ -68,9 +68,7 @@ def load_migrations(directory: Path = MIGRATION_DIR) -> list[Migration]:
 def validate_target(target: str | None) -> str:
     """Require an explicit non-Production target; Production is hard-blocked."""
     if target not in {"development", "preview", "production"}:
-        raise MigrationError(
-            "Set NANOU_MIGRATION_TARGET to development or preview explicitly."
-        )
+        raise MigrationError("Set NANOU_MIGRATION_TARGET to development or preview explicitly.")
     if target == "production":
         raise MigrationError(
             "Production migrations are disabled; use the separately approved "
