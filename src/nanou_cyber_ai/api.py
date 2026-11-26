@@ -418,6 +418,41 @@ async def login_account(item: AuthLoginIn, request: Request, response: Response)
     return {"user": {key: value for key, value in user.items() if key != "password_hash"}}
 
 
+@app.post("/api/auth/password")
+async def change_account_password(
+    item: AuthPasswordChangeIn,
+    request: Request,
+    response: Response,
+    user: Annotated[dict, Depends(require_user)],
+) -> dict[str, bool]:
+    store = get_auth_store()
+    _check_rate_limit(store, request, user["email"], "auth.password_change")
+    account = store.get_user_by_email(user["email"])
+    if account is None or not verify_password(item.current_password, account["password_hash"]):
+        store.record_event(
+            actor_user_id=user["id"],
+            action="auth.password.change",
+            target_type="user",
+            target_id=user["id"],
+            outcome="failed",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=403, detail="Current password is incorrect.")
+    password_hash = hash_password(item.new_password)
+    changed = store.change_password(
+        user_id=user["id"],
+        password_hash=password_hash,
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    if not changed:
+        raise HTTPException(status_code=401, detail="Sign in again before changing your password.")
+    # Reissue one fresh session for this browser; every previously issued session is revoked.
+    _session_token(request, response, store, user["id"])
+    return {"password_changed": True}
+
+
 @app.post("/api/auth/logout")
 async def logout_account(request: Request, response: Response) -> dict[str, bool]:
     raw_token = request.cookies.get(settings.session_cookie_name)
