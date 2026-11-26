@@ -92,10 +92,7 @@ def test_symlink_migration_is_rejected(tmp_path: Path) -> None:
 
 
 def test_database_target_allows_only_the_pinned_preview_database() -> None:
-    url = (
-        f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/"
-        f"{PREVIEW_ALLOWED_DATABASE}"
-    )
+    url = f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/{PREVIEW_ALLOWED_DATABASE}"
     validate_database_target(url, "preview")
 
 
