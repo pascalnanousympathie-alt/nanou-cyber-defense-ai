@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="mg" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#03070b">
+  <meta name="description" content="Nanou Cyber Defense AI — sehatra web ho an'ny fiarovana nomerika sy threat intelligence.">
+  <title>Nanou Cyber Defense AI</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/developer.css">
+  <link rel="stylesheet" href="/assets/assistant.css">
+  <link rel="stylesheet" href="/assets/attack-simulation.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Fikarohana">
+      <a class="brand" href="/" aria-label="Nanou Cyber Defense — pejy fandraisana">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span class="brand-copy">
+          <strong>Nanou Cyber</strong>
+          <small>DEFENSE PLATFORM</small>
+        </span>
+      </a>
+
+      <div class="nav-caption">SECURE WORKSPACE</div>
+      <nav class="side-nav" aria-label="Navigation principale">
+        <div class="nav-group">
+          <span class="nav-group-label">Vue générale</span>
+          <a class="nav-link active" href="#overview" aria-current="page"><span aria-hidden="true">◈</span> Topimaso</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Accès &amp; gouvernance</span>
+          <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty sy rôles</a>
+          <a class="nav-link" href="#account" data-role-visibility="admin"><span aria-hidden="true">⚙</span> Fitantanana sy audit</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">AI WORKSPACE</span>
+          <a class="nav-link" href="#assistant-chat" data-role-visibility="authenticated"><span aria-hidden="true">✧</span> Assistant workspace</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Threat intelligence</span>
+          <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE · NVD</a>
+          <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">STATIC ANALYSIS LAB</span>
+          <a class="nav-link" href="#malware-model" data-role-visibility="admin,analyst"><span aria-hidden="true">✳</span> Static feature analysis</a>
+          <a class="nav-link" href="#metadata" data-role-visibility="authenticated"><span aria-hidden="true">⬡</span> Hash &amp; threat metadata</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">DEFENSIVE SIMULATIONS</span>
+          <a class="nav-link" href="#attack-simulation" data-role-visibility="admin,analyst"><span aria-hidden="true">◉</span> Tabletop simulation</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">Intégrations</span>
+          <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-label">DEVELOPER CONSOLE</span>
+          <a class="nav-link" href="#developer" data-role-visibility="admin,analyst"><span aria-hidden="true">⌘</span> Developer Center</a>
+        </div>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <span class="status-led"></span>
+        <div><strong>Defensive mode</strong><small>Famakafakana sy fiarovana ihany</small></div>
+      </div>
+    </aside>
+
+    <main class="main-content" id="overview">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SECURITY OPERATIONS CENTER</p>
+          <h1>Foibe fiarovana</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="theme-pill" aria-label="Affichage noir professionnel"><span aria-hidden="true">◐</span><span>Noir profond</span></div>
+          <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
+            <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
+          </div>
+          <span id="user-badge" class="user-badge" hidden></span>
+        </div>
+      </header>
+
+      <section class="hero-card">
+        <div class="hero-copy">
+          <span class="hero-kicker">NANOÛ // CYBER DEFENSE AI</span>
+          <h2>Fantaro aloha ny loza.<br><em>Arovy ny rafitrao.</em></h2>
+          <p>Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
+          <div class="hero-actions">
+            <a class="primary-link" href="#vulnerabilities">Hanomboka hijery <span aria-hidden="true">→</span></a>
+            <a class="hero-secondary-link" href="#kev">Hizaha ny CISA KEV <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="hero-graphic" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="shield-shape"><span>✓</span></div>
+          <span class="graphic-node node-one"></span>
+          <span class="graphic-node node-two"></span>
+          <span class="graphic-node node-three"></span>
+        </div>
+        <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina <span class="hero-foot-divider">•</span> Defensive operations only</div>
+      </section>
+
+
+      <section class="panel auth-panel" id="account">
+        <div class="panel-heading">
+          <div><span class="panel-icon auth-icon">♙</span><div><h3>Kaonty sy fidirana</h3><p>Kaonty manokana, session azo esorina ary andraikitra voafetra.</p></div></div>
+          <span id="auth-state-pill" class="count-pill">Manamarina…</span>
+        </div>
+        <div id="auth-message" class="auth-message" role="status" aria-live="polite">Manamarina ny fiarovana sy ny kaonty…</div>
+
+        <div id="bootstrap-panel" class="auth-form-grid" hidden>
+          <div class="auth-intro"><strong>Fametrahana voalohany — Administrator</strong><p>Ny kaonty voalohany ihany no mahazo Admin. Ampidiro eto ny tenimiafinao manokana; tsy ho hita amin'ny tompon'andraikitra na amin'ny audit log izany.</p></div>
+          <form id="bootstrap-form" class="auth-form">
+            <div class="field"><label for="bootstrap-name">Anarana</label><input id="bootstrap-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="bootstrap-email">Email</label><input id="bootstrap-email" type="email" maxlength="320" autocomplete="email" required></div>
+            <div class="field"><label for="bootstrap-password">Tenimiafina Admin (12+ caractères)</label><input id="bootstrap-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><label for="bootstrap-token">Token bootstrap manokana</label><input id="bootstrap-token" type="password" minlength="32" maxlength="256" autocomplete="off" required><small class="field-hint">NANOU_BOOTSTRAP_TOKEN napetraky ny tompon'andraikitra ao amin'ny hosting secret manager. Aza zaraina na tehirizina amin'ny navigateur.</small></div>
+            <div class="field"><button class="button button-primary" type="submit">Hamorona Administrator</button></div>
+          </form>
+        </div>
+
+        <div id="login-panel" class="auth-form-grid" hidden>
+          <form id="login-form" class="auth-form">
+            <strong>Hiditra</strong>
+            <div class="field"><label for="login-email">Email</label><input id="login-email" type="email" maxlength="320" autocomplete="username" required></div>
+            <div class="field"><label for="login-password">Tenimiafina</label><input id="login-password" type="password" maxlength="128" autocomplete="current-password" required></div>
+            <div class="field"><button class="button button-primary" type="submit">Hiditra amin'ny kaonty</button></div>
+          </form>
+          <form id="register-form" class="auth-form">
+            <strong>Hangataka kaonty</strong>
+            <p>Ny kaonty vaovao dia Viewer ary miandry fankatoavan'ny Administrator.</p>
+            <div class="field"><label for="register-name">Anarana</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="register-email">Email</label><input id="register-email" type="email" maxlength="320" autocomplete="email" required></div>
+            <div class="field"><label for="register-password">Tenimiafina (12+ caractères)</label><input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-secondary" type="submit">Handefa fangatahana</button></div>
+          </form>
+        </div>
+
+        <div id="account-panel" class="account-panel" hidden>
+          <div class="account-summary">
+            <div><strong id="account-name">—</strong><span id="account-email">—</span></div>
+            <span id="account-role" class="role-pill">viewer</span>
+            <button id="logout-button" class="button button-secondary" type="button">Hivoaka</button>
+          </div>
+        </div>
+
+        <div id="admin-panel" class="admin-panel" hidden>
+          <div class="workspace-heading">
+            <div><h4>Fitantanana mpampiasa</h4><p class="admin-subtitle">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
+            <button id="refresh-admin" class="text-button" type="button">Havaozy</button>
+          </div>
+          <div class="admin-summary" aria-label="Famintinana ny kaonty">
+            <article class="admin-summary-card"><span>Kaonty rehetra</span><strong id="admin-total-users">0</strong></article>
+            <article class="admin-summary-card"><span>Mavitrika</span><strong id="admin-active-users">0</strong></article>
+            <article class="admin-summary-card pending"><span>Miandry fankatoavana</span><strong id="admin-pending-users">0</strong></article>
+            <article class="admin-summary-card disabled"><span>Voasakana</span><strong id="admin-disabled-users">0</strong></article>
+          </div>
+          <div class="admin-toolbar">
+            <div class="field"><label for="admin-user-search">Karoka mpampiasa</label><input id="admin-user-search" type="search" placeholder="Anarana, email na rôle…" autocomplete="off"></div>
+            <div class="field"><label for="admin-user-filter">Sivana satan'ny kaonty</label><select id="admin-user-filter"><option value="all">Kaonty rehetra</option><option value="pending">Miandry fankatoavana</option><option value="active">Mavitrika</option><option value="disabled">Voasakana</option></select></div>
+          </div>
+          <p id="admin-user-result-count" class="admin-result-count" aria-live="polite">Miandry ny lisitry ny kaonty…</p>
+          <div id="admin-users" class="admin-users" aria-live="polite"></div>
+          <div class="workspace-heading list-heading">
+            <div><h4>Audit log</h4><p class="admin-subtitle">Hetsika voarakitra sy valin'ny asa farany.</p></div>
+          </div>
+          <div class="audit-toolbar">
+            <div class="field"><label for="audit-search">Karoka hetsika</label><input id="audit-search" type="search" placeholder="Action, target na request ID…" autocomplete="off"></div>
+            <div class="field"><label for="audit-outcome-filter">Vokatra</label><select id="audit-outcome-filter"><option value="all">Vokatra rehetra</option><option value="success">Tafita</option><option value="pending">Miandry</option><option value="failed">Tsy tafita</option><option value="blocked">Voasakana</option><option value="invalid_bootstrap_token">Token diso</option><option value="pending_or_disabled">Kaonty tsy mavitrika</option></select></div>
+          </div>
+          <div id="audit-list" class="audit-list" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Toe-draharaha ankapobeny">
+        <article class="metric-card">
+          <div class="metric-icon icon-blue">⌁</div>
+          <div class="metric-label">API</div>
+          <strong id="metric-api">—</strong>
+          <small id="metric-api-detail">Miandry fanamarinana</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon icon-orange">◉</div>
+          <div class="metric-label">CISA KEV</div>
+          <strong id="metric-kev">—</strong>
+          <small>Faharefoana fantatra fa voararaotina</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon icon-purple">⛨</div>
+          <div class="metric-label">MCP tools</div>
+          <strong id="metric-tools">—</strong>
+          <small>Fitaovana voasivana</small>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon icon-green">⬡</div>
+          <div class="metric-label">Malware analysis</div>
+          <strong>Feature-only</strong>
+          <small>Tsy misy binary upload na execution</small>
+        </article>
+      </section>
+
+      <section class="panel role-workspace" id="role-workspace" data-role-visibility="authenticated" hidden aria-labelledby="role-workspace-title">
+        <div class="role-workspace-heading">
+          <div>
+            <p class="eyebrow">ROLE-BASED WORKSPACE</p>
+            <h2 id="role-workspace-title">Workspace</h2>
+            <p id="role-workspace-summary">Fitaovana sy fahazoan-dalana mifanaraka amin'ny andraikitrao.</p>
+          </div>
+          <span id="role-workspace-badge" class="role-pill">—</span>
+        </div>
+        <div id="role-workspace-permissions" class="role-permissions" aria-live="polite"></div>
+        <p id="role-workspace-guidance" class="role-workspace-guidance"></p>
+      </section>
+
+      <section class="section-heading" id="assistant-chat" data-role-visibility="authenticated">
+        <div><p class="eyebrow">DEFENSIVE AI OPERATIONS</p><h2>AI Chat Command Center</h2></div>
+        <span class="section-tag">Guarded tool execution</span>
+      </section>
+      <section class="panel assistant-panel" data-role-visibility="authenticated">
+        <div class="assistant-heading">
+          <div class="assistant-avatar" aria-hidden="true">N</div>
+          <div class="assistant-title">
+            <h3>Nanou Assistant</h3>
+            <p>Manatanteraka baiko fiarovana voafetra avy hatrany.</p>
+          </div>
+          <span id="assistant-mode" class="assistant-mode">Local command mode</span>
+        </div>
+        <div class="assistant-policy">
+          <strong>Fitaovana azo tanterahina</strong>
+          <span>CVE/NVD · CISA KEV · Malware metadata · Model status · MCP tools · Service status · Attack Simulation guide</span>
+          <small>Read-only ny asa mandeha ho azy. Tsy misy shell, malware execution, exploit, account management na fanovana production.</small>
+        </div>
+        <div class="assistant-shortcuts" aria-label="Baiko haingana">
+          <button type="button" data-assistant-command="Jereo CVE-2024-3094">Jereo CVE</button>
+          <button type="button" data-assistant-command="Jereo CISA KEV">CISA KEV</button>
+          <button type="button" data-assistant-command="Jereo malware metadata">Metadata</button>
+          <button type="button" data-assistant-command="Jereo modely">Model status</button>
+          <button type="button" data-assistant-command="MCP tools">MCP tools</button>
+          <button type="button" data-assistant-command="Jereo service status">Service status</button>
+          <button type="button" data-assistant-command="Attack simulation help">Attack Simulation</button>
+        </div>
+        <div id="assistant-chat-log" class="assistant-chat-log" role="log" aria-live="polite" aria-relevant="additions">
+          <article class="assistant-message assistant">
+            <span class="assistant-message-label">Nanou Assistant</span>
+            <p>Salama. Soraty tsotra ny baiko. Ohatra: <strong>Jereo CVE-2024-3094</strong> na <strong>Jereo CISA KEV</strong>. Hataoko avy hatrany ny fikarohana azo atao.</p>
+          </article>
+        </div>
+        <form id="assistant-chat-form" class="assistant-chat-form">
+          <label class="sr-only" for="assistant-chat-input">Baiko na fanontaniana</label>
+          <input id="assistant-chat-input" name="message" maxlength="1000" autocomplete="off" placeholder="Soraty eto ny baiko… ohatra: jereo CVE-2024-3094" required>
+          <button class="button button-primary" id="assistant-chat-send" type="submit">Alefaso <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="assistant-footer">
+          <span id="assistant-status" role="status" aria-live="polite">Voaaro amin'ny session sy RBAC ny baiko.</span>
+          <button id="assistant-clear" class="text-button" type="button">Diovy ny resaka</button>
+        </div>
+        <p class="data-note">Tsy mitahiry ny chat history ao amin'ny navigateur na database ity pejy ity. Tsy misy saram-LLM amin'ny Local command mode. Raha voa-configurer ny AI provider, ny hafatra dia alefa aminy ary mety hisy sara araka ny modely sy ny token ampiasaina; aza mandefa secrets na angona saro-pady.</p>
+      </section>
+
+      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst">
+        <div><p class="eyebrow">AUTHORIZED RED TEAM · TABLETOP</p><h2>Attack Simulation Manager</h2></div>
+        <span class="section-tag">Local-only · 0 network requests</span>
+      </section>
+      <section class="panel attack-manager-panel" id="attack-manager-panel" data-role-visibility="admin,analyst">
+        <div class="attack-safety-banner">
+          <span class="attack-safety-mark" aria-hidden="true">✓</span>
+          <div><strong>Simulation locale et non intrusive</strong><p>Produit des scénarios, contrôles à vérifier, mapping MITRE ATT&amp;CK et recommandations. Tsy manao scan, exploit, payload, credential test, malware execution na network request.</p></div>
+          <span class="attack-traffic-pill">0 TRAFIC</span>
+        </div>
+        <div class="attack-manager-grid">
+          <form id="attack-scope-form" class="attack-card" data-role-visibility="admin">
+            <div class="attack-card-heading"><div><span class="eyebrow">ADMIN CONTROL</span><h3>Target allowlist</h3><p>Ny Admin ihany no afaka manoratra scope vaovao.</p></div><span class="attack-step">01</span></div>
+            <div class="field"><label for="attack-scope-name">Anaran'ny scope</label><input id="attack-scope-name" minlength="3" maxlength="80" placeholder="Laboratoire web principal" required></div>
+            <div class="field"><label for="attack-scope-target">Target host / domain / IP</label><input id="attack-scope-target" maxlength="253" placeholder="lab.example.test na 192.168.1.10" autocomplete="off" required><small class="field-hint">Host tokana ihany; tsy URL, CIDR na port. Tsy hifandraisana amin'ny réseau ilay target.</small></div>
+            <div class="field"><label for="attack-scope-basis">Fototry ny fahazoan-dalana</label><select id="attack-scope-basis" required><option value="owned_asset">Fananako / rafitra tantaniko</option><option value="written_permission">Fahazoan-dalana an-tsoratra</option><option value="isolated_lab">Laboratoire mitoka-monina</option></select></div>
+            <div class="field"><label for="attack-scope-expiry">Daty faran'ny alalana</label><input id="attack-scope-expiry" type="date" required><small class="field-hint">1–365 andro manomboka anio.</small></div>
+            <label class="attack-consent"><input id="attack-scope-confirm" type="checkbox" required><span>Manamarina aho fa tompon'andraikitra na nahazo alalana mazava amin'ity target ity.</span></label>
+            <button class="button button-primary" id="attack-scope-submit" type="submit">Ampidiro ao amin'ny allowlist</button>
+            <p id="attack-scope-status" class="attack-status" role="status" aria-live="polite">Admin permission required.</p>
+          </form>
+
+          <form id="attack-run-form" class="attack-card">
+            <div class="attack-card-heading"><div><span class="eyebrow">SIMULATION CONFIG</span><h3>Attack profile</h3><p>Scénario de sécurité no avoaka eto an-toerana.</p></div><span class="attack-step">02</span></div>
+            <div class="field"><label for="attack-scope-select">Target voasoratra</label><select id="attack-scope-select" required><option value="">Miandry ny allowlist…</option></select></div>
+            <div class="field"><label for="attack-profile">Profil de simulation</label><select id="attack-profile" required>
+              <option value="reconnaissance">Reconnaissance &amp; asset exposure</option>
+              <option value="web_security">Web application security</option>
+              <option value="api_security">API security</option>
+              <option value="authentication">Authentication &amp; identity</option>
+            </select></div>
+            <div class="field"><label for="attack-intensity">Haavon'ny simulation</label><select id="attack-intensity" required>
+              <option value="passive">Passive · checklist 3</option>
+              <option value="low">Low · checklist 5</option>
+              <option value="medium">Medium · checklist 7</option>
+            </select><small class="field-hint">Ny intensity dia isan'ny checklist aseho ihany, fa tsy hafainganam-panafihana.</small></div>
+            <div class="field"><label for="attack-duration">Fotoana kasaina hanaovana review (minitra)</label><input id="attack-duration" type="number" min="1" max="30" value="10" required></div>
+            <label class="attack-consent"><input id="attack-run-confirm" type="checkbox" required><span>Manamarina indray aho fa mbola manan-kery ny alalana ary ao anatin'ny scope ity simulation ity.</span></label>
+            <button class="button button-primary" id="attack-run-submit" type="submit" disabled>Hamorona simulation →</button>
+            <p id="attack-run-status" class="attack-status" role="status" aria-live="polite">Safidio ny target mbola manana alalana.</p>
+          </form>
+        </div>
+        <div class="attack-lower-grid">
+          <div class="attack-card">
+            <div class="attack-card-heading"><div><span class="eyebrow">AUTHORIZED ASSETS</span><h3>Scope inventory</h3><p>Active, expired ary revoked targets.</p></div><button id="attack-refresh" class="text-button" type="button">Havaozy</button></div>
+            <div id="attack-scope-list" class="attack-scope-list" aria-live="polite"><div class="loading-line">Manamarina ny allowlist…</div></div>
+          </div>
+          <div class="attack-card">
+            <div class="attack-card-heading"><div><span class="eyebrow">AUDITABLE OUTPUT</span><h3>Simulation reports</h3><p>Vokatra voatahiry sy azo averina jerena.</p></div><span id="attack-run-count" class="count-pill">0</span></div>
+            <div id="attack-report-list" class="attack-report-list" aria-live="polite"><div class="loading-line">Miandry tatitra…</div></div>
+          </div>
+        </div>
+        <p class="data-note">MITRE ATT&amp;CK IDs dia threat-reference mapping fotsiny. Ny SOC detection rules dia soso-kevitra mbola tsy deployed na enabled. Ny checklist rehetra dia <strong>requires manual validation</strong>; tsy lazaina ho vulnerability hita raha tsy misy porofo voamarina.</p>
+      </section>
+
+      <section class="section-heading" id="vulnerabilities">
+        <div><p class="eyebrow">VULNERABILITY INTELLIGENCE</p><h2>Fikarohana CVE</h2></div>
+        <span class="section-tag">NVD · Read-only</span>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel cve-panel">
+          <div class="panel-heading">
+            <div><span class="panel-icon">⌕</span><div><h3>Jereo ny CVE</h3><p>Mitadiava vulnerability amin'ny ID CVE.</p></div></div>
+            <span class="live-label">LIVE LOOKUP</span>
+          </div>
+          <form id="cve-form" class="search-form">
+            <label class="sr-only" for="cve-id">CVE identifier</label>
+            <input id="cve-id" name="cve_id" type="text" placeholder="Ohatra: CVE-2024-3094" pattern="CVE-[0-9]{4}-[0-9]{4,}" autocomplete="off" required>
+            <button class="button button-primary" type="submit">Karohy <span aria-hidden="true">→</span></button>
+          </form>
+          <div id="cve-result" class="result-area" aria-live="polite">
+            <div class="empty-state"><span>⌕</span><p>Ampidiro ny ID CVE hahitana ny antsipiriany sy ny isa CVSS.</p></div>
+          </div>
+        </article>
+
+        <article class="panel kev-panel" id="kev">
+          <div class="panel-heading">
+            <div><span class="panel-icon orange-icon">◉</span><div><h3>Known Exploited Vulnerabilities</h3><p>Lisitry ny CISA momba ny CVE efa voararaotina.</p></div></div>
+            <button class="icon-button" id="refresh-kev" type="button" aria-label="Havaozy ny lisitra">↻</button>
+          </div>
+          <div class="kev-summary"><strong id="kev-count">—</strong><span>laharana ao amin'ny CISA KEV</span></div>
+          <div id="kev-list" class="kev-list" aria-live="polite">
+            <div class="loading-line">Haka ny vaovao rehefa misokatra ny pejy…</div>
+          </div>
+          <p class="data-note">Loharano: CISA. Ny vaovao dia mila fanamarinana sy fandinihana araka ny tontolo iasanao.</p>
+        </article>
+      </section>
+
+
+      <section class="section-heading" id="malware-model" data-role-visibility="admin,analyst">
+        <div><p class="eyebrow">STATIC FEATURE CLASSIFIER</p><h2>AI malware feature analysis</h2></div>
+        <span class="section-tag">Model integrity check</span>
+      </section>
+      <section class="panel inference-panel" id="malware-analysis-panel" data-role-visibility="admin,analyst">
+        <div class="metadata-intro">
+          <div class="metadata-mark model-mark">✳</div>
+          <div><h3>Famakafakana amin'ny modely ML</h3><p>Vector numérique efa nalaina mialoha ihany no raisina; tsy mandray APK na binary.</p></div>
+        </div>
+        <div id="model-status" class="model-status" role="status" aria-live="polite">Manamarina raha misy modely azo antoka…</div>
+        <form id="malware-inference-form">
+          <fieldset id="inference-fields" disabled>
+            <div class="metadata-form">
+              <div class="field field-wide">
+                <label for="inference-dataset">Dataset / feature schema</label>
+                <select id="inference-dataset" name="dataset_id">
+                  <option value="ember2024-apk">EMBER2024 · 2,568 features</option>
+                  <option value="lamda-apk-2022-train-2023-test">LAMDA · 4,561 int8 features</option>
+                </select>
+              </div>
+              <div class="field field-wide">
+                <label for="feature-csv">CSV iray misy features efa nalaina mialoha</label>
+                <input id="feature-csv" type="file" accept=".csv,text/csv">
+                <small class="field-hint">CSV text ihany (max 1 MiB, row iray). Tsy manaiky APK, executable na model file.</small>
+              </div>
+              <div class="field field-wide">
+                <button class="button button-secondary" id="prepare-features" type="button">Hamarino sy alamino ny CSV</button>
+                <p id="feature-prepare-status" class="form-message" aria-live="polite">Mila analyst/admin sy modely mifanaraka.</p>
+              </div>
+              <div class="field field-wide">
+                <label for="inference-features">Feature vector voaomana (JSON)</label>
+                <textarea id="inference-features" rows="5" spellcheck="false" placeholder="Safidio aloha ny CSV feature ..." readonly required></textarea>
+              </div>
+              <div class="field field-wide"><button class="button button-primary" id="inference-submit" type="submit">Diniho ny feature vector</button></div>
+            </div>
+          </fieldset>
+        </form>
+        <div id="inference-result" class="result-area" aria-live="polite">
+          <div class="empty-state"><span>✳</span><p>Tsy misy fanadihadiana natao.</p></div>
+        </div>
+        <p class="data-note">Ny valiny dia tombana avy amin'ny static features, fa tsy porofo fa voa-infecté ny fitaovana. Tsy tokony hampiasaina ho fanapahan-kevitra mandeha ho azy ny threshold 0.5 raha tsy voamarina amin'ny validation set misaraka.</p>
+      </section>
+
+      <section class="section-heading" id="metadata" data-role-visibility="authenticated">
+        <div><p class="eyebrow">MALWARE INTELLIGENCE</p><h2>Metadata voaaro</h2></div>
+        <span class="section-tag">Multi-user RBAC</span>
+      </section>
+      <section class="panel metadata-panel" data-role-visibility="authenticated">
+        <div class="metadata-intro">
+          <div class="metadata-mark">⬡</div>
+          <div><h3>Rakitra famantarana malware</h3><p>SHA-256, label ary loharano ihany. Tsy misy APK, executable na payload alefa eto.</p></div>
+        </div>
+        <div class="security-note"><span aria-hidden="true">🔒</span><span>Ny fidirana dia amin'ny session HttpOnly, tenimiafina voatahiry Argon2id, CSRF protection ary andraikitra admin/analyst/viewer.</span></div>
+        <p id="metadata-auth-status" class="form-message" aria-live="polite">Midira amin'ny kaonty voa-approve raha hijery na hitahiry metadata.</p>
+        <div id="metadata-workspace" class="metadata-workspace" hidden>
+          <p id="metadata-write-access" class="access-note" role="status" aria-live="polite"></p>
+          <div class="workspace-heading"><h4>Hanampy metadata</h4></div>
+          <form id="metadata-create-form" class="metadata-form">
+            <div class="field field-wide"><label for="sample-hash">SHA-256</label><input id="sample-hash" name="sha256" minlength="64" maxlength="64" pattern="[a-fA-F0-9]{64}" placeholder="64 hexadecimal characters" required></div>
+            <div class="field"><label for="sample-label">Label</label><select id="sample-label" name="label"><option value="unknown">Unknown</option><option value="benign">Benign</option><option value="malicious">Malicious</option></select></div>
+            <div class="field"><label for="sample-source">Loharano</label><input id="sample-source" name="source" minlength="2" maxlength="200" placeholder="Ohatra: SOC report" required></div>
+            <div class="field field-wide"><label for="sample-family">Family (raha fantatra)</label><input id="sample-family" name="family" maxlength="120" placeholder="Tsy voatery"></div>
+            <div class="field field-wide"><button class="button button-primary" type="submit">Tehirizo ny metadata</button></div>
+          </form>
+          <div class="workspace-heading list-heading"><h4>Metadata voatahiry</h4><span id="metadata-total">0</span></div>
+          <div id="metadata-list" class="metadata-list" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section-heading" id="developer" data-role-visibility="admin,analyst">
+        <div><p class="eyebrow">DEVELOPER &amp; AI INTEGRATION</p><h2>Developer Center</h2></div>
+        <span class="section-tag">REST API v1 · Read-only</span>
+      </section>
+      <section class="panel developer-panel" data-role-visibility="admin,analyst">
+        <div class="developer-intro">
+          <div><div class="developer-badges"><span>Bearer auth</span><span>Scoped keys</span><span>OpenAPI / AI</span></div>
+          <h3>Fampifandraisana lavitra sy AI</h3>
+          <p>REST API versioned ho an'ny server hafa sy AI tools. Ny key dia mifamatotra amin'ny kaontinao ary voafetra amin'ny scopes.</p></div>
+          <a class="button button-secondary" href="/api/v1/openapi.json" target="_blank" rel="noopener noreferrer">OpenAPI spec ↗</a>
+        </div>
+        <div class="developer-security-note"><strong>Read-only + AI chat</strong><span>CVE/NVD, CISA KEV, malware metadata ary chat command voafetra. Tsy misy admin, write, APK upload, shell, malware execution na arbitrary command execution.</span></div>
+        <div class="developer-grid">
+          <div class="developer-card">
+            <h4>Mamorona API key</h4>
+            <form id="developer-key-form">
+              <div class="field"><label for="developer-key-name">Anaran'ny integration</label><input id="developer-key-name" minlength="3" maxlength="80" placeholder="AI Security Assistant" required></div>
+              <div class="field"><label for="developer-key-expiry">Lany daty</label><select id="developer-key-expiry"><option value="7">7 andro</option><option value="30" selected>30 andro</option><option value="90">90 andro</option></select></div>
+              <fieldset class="developer-scopes"><legend>Scopes</legend>
+                <label><input type="checkbox" value="intel:read" name="scope" checked><span><strong>intel:read</strong><small>CVE/NVD sy CISA KEV</small></span></label>
+                <label><input type="checkbox" value="malware:metadata:read" name="scope"><span><strong>malware:metadata:read</strong><small>Metadata voatahiry</small></span></label>
+                <label><input type="checkbox" value="ai:chat" name="scope"><span><strong>ai:chat</strong><small>Fidirana amin'ny assistant chat voafetra; ampio koa ny read scope ilaina</small></span></label>
+              </fieldset>
+              <button class="button button-primary" id="developer-key-create" type="submit">Hamorona API key</button>
+              <p id="developer-message" class="form-message" role="status" aria-live="polite">10 keys max · 90 andro max · Aseho indray mandeha ihany ny token.</p>
+            </form>
+            <div id="developer-key-once" class="developer-key-once" hidden>
+              <label for="developer-key-value">Token vaovao — aseho indray mandeha</label>
+              <div class="developer-token-row"><input id="developer-key-value" type="password" readonly autocomplete="off"><button id="developer-key-reveal" class="button button-secondary" type="button">Asehoy</button><button id="developer-key-copy" class="button button-primary" type="button">Copy</button></div>
+              <small class="field-hint">Raha very ilay token dia mamoròna vaovao ary revoke ilay taloha.</small>
+            </div>
+          </div>
+          <div class="developer-card">
+            <div class="workspace-heading"><h4>API keys anao</h4><button id="developer-key-refresh" class="text-button" type="button">Havaozy</button></div>
+            <div id="developer-key-list" class="developer-key-list" aria-live="polite"><div class="loading-line">Miandry…</div></div>
+          </div>
+        </div>
+        <div class="developer-endpoints">
+          <h4>Endpoints v1</h4>
+          <div class="developer-endpoint"><code>GET /api/v1/kev</code><span>intel:read</span></div>
+          <div class="developer-endpoint"><code>GET /api/v1/cve/{cve_id}</code><span>intel:read</span></div>
+          <div class="developer-endpoint"><code>GET /api/v1/malware/metadata</code><span>malware:metadata:read</span></div>
+          <div class="developer-endpoint"><code>POST /api/v1/assistant/chat</code><span>ai:chat + read scope</span></div>
+        </div>
+        <div class="developer-ai-guide">
+          <h4>Fampifandraisana amin'ny AI</h4>
+          <ol><li>Ampidiro ao amin'ny AI tool manohana OpenAPI/Actions ny URL <code>/api/v1/openapi.json</code>.</li><li>Safidio ny HTTP Bearer authentication.</li><li>Ampidiro ao amin'ny secret manager ilay token ary omeo scope ilaina ihany.</li></ol>
+          <p class="data-note">Tsy mbola mifandray ho azy amin'ny ChatGPT na AI hafa ny application. Atao ao amin'ny AI platform-nao ny fametrahana OpenAPI sy token.</p>
+        </div>
+        <p class="data-note">Aza apetraka amin'ny JavaScript public, APK, URL, logs na repository ny token. Ampiasao amin'ny backend/server-side na secret vault an'ny AI ihany.</p>
+      </section>
+
+      <section class="section-heading" id="tools">
+        <div><p class="eyebrow">CONTROLLED INTEGRATIONS</p><h2>Fitaovana MCP</h2></div>
+        <span class="section-tag">Scoped access</span>
+      </section>
+      <section class="panel tools-panel">
+        <div class="panel-heading">
+          <div><span class="panel-icon green-icon">⛨</span><div><h3>Fitaovana azo ampiasaina</h3><p>Fitaovana voasoratra anarana sy voafetra amin'ny alalana.</p></div></div>
+          <span id="tools-count" class="count-pill">—</span>
+        </div>
+        <div id="tools-list" class="tools-list"><div class="loading-line">Manamarina ny lisitra…</div></div>
+        <p class="data-note">Tsy misy shell execution, process control, arbitrary URL fetch na fanovana rafitra mandeha ho azy.</p>
+      </section>
+
+      <footer class="footer">
+        <div><strong>Nanou Cyber Defense AI</strong><span>Web platform · Defensive analysis only</span></div>
+        <a href="/docs">API documentation ↗</a>
+      </footer>
+    </main>
+  </div>
+  <script src="/assets/developer.js" defer></script>
+  <script src="/assets/assistant.js" defer></script>
+  <script src="/assets/attack-simulation.js" defer></script>
+</body>
+</html>
