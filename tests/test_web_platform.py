@@ -269,3 +269,31 @@ def test_account_workspace_exposes_safe_password_rotation_form() -> None:
         in script.text
     )
     assert "localStorage" not in script.text
+
+
+def test_request_body_limit_rejects_oversized_content_length() -> None:
+    oversized_body = b"x" * (2 * 1024 * 1024 + 1)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/login",
+            content=oversized_body,
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status_code == 413
+
+
+def test_request_body_limit_rejects_chunked_body_without_content_length() -> None:
+    def chunks():
+        yield b'{"email":"large@example.test","password":"'
+        yield b"x" * (2 * 1024 * 1024)
+        yield b'"}'
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/login",
+            content=chunks(),
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status_code == 413
