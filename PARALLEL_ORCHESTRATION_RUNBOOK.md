@@ -102,3 +102,13 @@ Production is blocked until:
 - Monitoring, alert response, incident plan, retention and hosting-plan suitability reviewed.
 - CI/security green on the exact merge candidate.
 - Owner explicitly approves merge to main and Production promotion.
+
+
+## 11. 2026-11-26 restore drill and role preparation
+
+- Production snapshot prod-pre-hardening-2026-11-26 was restored with finalize=false into br-little-sound-bipv6bjm (prod-restore-drill-20261126). Source and restored branch match across 60 public columns and application row counts. Do not finalize or swap this branch into main; it is a retained restore-test copy.
+- A login role on the restored copy passed capability checks and INSERT/UPDATE/DELETE smoke. It lacks superuser, CREATEROLE, CREATEDB, BYPASSRLS, database/schema CREATE and TRUNCATE, and has DML plus sequence USAGE/SELECT. Probe row count after test was zero.
+- Production login role nanou_runtime was created and verified with equivalent least-privilege flags/grants. Its connection string is held in Vercel sensitive Production NANOU_RUNTIME_DATABASE_URL. Existing NANOU_DATABASE_URL and live nanou_app remain untouched. Current Production deployment code (db4fa6a7c059467b8728468425d63ce78414ef5d) does not consume the runtime variable; role is staged only.
+- Vercel Preview NANOU_RUNTIME_DATABASE_URL is set to the dedicated nanou_preview_runtime credential on the separate Preview Neon project. Existing deployment may need a fresh Git-linked Preview to consume it. Do not bypass deployment quotas.
+- Do not finalize the restore branch, change Production ownership/grants, revoke nanou_app, deploy, merge, disable SSO, or buy upgrades without explicit approval and a tested rollback. The manual snapshot is not offsite backup or recurring automation; Neon Free protection quota remains unresolved.
+- After the documentation commit, rerun full CI/security on exact PR #3 HEAD; the prior green run is only a baseline, not evidence for the new HEAD.
