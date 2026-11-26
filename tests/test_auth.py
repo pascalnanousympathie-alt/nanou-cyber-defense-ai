@@ -568,9 +568,7 @@ def test_audit_and_rate_limit_fingerprints_are_keyed_and_domain_separated(monkey
 
     audit_ip = _ip_digest(request)
     email_login, ip_login = _rate_fingerprints(request, "Owner@Example.Test", "auth.login")
-    email_register, ip_register = _rate_fingerprints(
-        request, "owner@example.test", "auth.register"
-    )
+    email_register, ip_register = _rate_fingerprints(request, "owner@example.test", "auth.register")
 
     assert audit_ip is not None and len(audit_ip) == 64
     assert ip_login is not None and len(ip_login) == 64
