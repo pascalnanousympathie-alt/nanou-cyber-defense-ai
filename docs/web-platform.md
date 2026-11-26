@@ -30,7 +30,7 @@ The application is a responsive browser-based platform served directly by FastAP
 
 Passwords use Argon2id. Browser sessions use opaque HttpOnly cookies with SameSite=Strict and Secure on HTTPS; only token hashes are stored. Sessions have a configurable absolute expiry (default 12 hours). Logout revokes the server-side session.
 
-State-changing requests require a double-submit CSRF token and same-origin validation when an Origin header is present. The app applies request-size limits, auth rate limits, restrictive CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and HSTS on HTTPS.
+State-changing requests require a double-submit CSRF token and same-origin validation when an Origin header is present. Request bodies are bounded to 2 MiB while streaming, including requests without `Content-Length`; oversized and malformed declared lengths are rejected before route handlers run. The app also applies auth rate limits, restrictive CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and HSTS on HTTPS.
 
 Roles:
 - `admin` — approve/manage users, assign roles, view audit events, manage Attack Simulation scopes, and use analyst features.
@@ -39,7 +39,7 @@ Roles:
 
 The first account is the one-time Administrator bootstrap. It requires a random NANOU_BOOTSTRAP_TOKEN of at least 32 characters stored in the server/hosting secret manager and entered once in the protected bootstrap form. With no configured token, bootstrap is disabled. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
 
-Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses are not stored; only a digest is retained.
+Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses and email-derived rate-limit identifiers are not stored; keyed HMAC-SHA-256 fingerprints are used with purpose separation. Configure a stable, high-entropy `NANOU_AUDIT_HMAC_KEY` (64–128 characters) in the hosting secret manager when available. If it is not configured, hosted environments derive a separate HMAC key from their environment-specific PostgreSQL secret; local development uses a process-local random key. Changing either key rotates rate-limit fingerprints, so active rate-limit windows naturally restart.
 
 ## Local development
 
