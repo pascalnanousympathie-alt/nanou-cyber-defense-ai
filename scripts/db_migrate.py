@@ -96,8 +96,8 @@ def validate_session_roles(effective_role: str, login_role: str) -> None:
     """Require the dedicated migration login and its NOLOGIN owner role."""
     if effective_role != MIGRATION_ROLE or login_role != MIGRATION_LOGIN:
         raise MigrationError(
-            "Database session must be nanou_preview_migration_login with "
-            "SET ROLE nanou_preview_migration_owner."
+            "Database session must use the dedicated migration login "
+            "nanou_preview_migration_login with SET ROLE nanou_preview_migration_owner."
         )
 
 
