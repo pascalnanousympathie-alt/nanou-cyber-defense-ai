@@ -76,7 +76,7 @@ Workflow: `.github/workflows/production-backup.yml`.
 - GitHub artifact retention is 30 days.
 - The workflow requires repository Actions secret `NANOU_BACKUP_DATABASE_URL`; it must contain the direct-host PostgreSQL URL for `nanou_backup`, not the runtime or owner credential.
 
-**Current status: BLOCKED / NOT ACTIVE.** The workflow and crypto code are committed to this PR branch, but `NANOU_BACKUP_DATABASE_URL` has not been provisioned as a GitHub Actions secret. No unencrypted dump was uploaded. The automated schedule will not run until the workflow is merged to `main` and the secret is available. The connector route for setting this secret was unavailable, and the attempted secret handoff was stopped by the security guard; do not bypass that guard or put the credential in source code.
+**Current status: CONFIGURED / NOT ACTIVE.** The repository Actions secret `NANOU_BACKUP_DATABASE_URL` is now provisioned; its name was verified through `gh secret list` without displaying or transferring its value. The workflow file is currently on this PR branch only, and the job has a hard guard requiring `refs/heads/main`. Therefore no Production dump runs from this PR. The scheduled/manual backup remains inactive until this PR is explicitly approved and merged to `main`. No encrypted Production artifact or automated restore rehearsal is claimed. Never place the connection URI in source code, logs, or chat.
 
 ## Production cutover gates
 
@@ -105,3 +105,13 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - The matching offline private key path is documented above. Its current file existence/permissions and the presence of a second offline recovery copy were not re-verified in this session because both Desktop Commander devices checked (Nanou48 and Mercia) were offline. Verify the key locally without displaying or transferring its contents before relying on encrypted backups for recovery.
 - Production remains on Vercel deployment commit `db4fa6a7c059467b8728468425d63ce78414ef5d`; Production `/api/auth/me` previously reported `bootstrap_required=true`. Production database ownership remains with `nanou_app`. No Admin bootstrap, ownership transfer, merge, Production deployment, or credential revocation was performed.
 - Neon rejected protecting Production branch `main` with HTTP 422 because the current plan's protected-branch quota is full. No other branch protection was removed and no paid upgrade was made.
+
+
+## Current verification — 2026-11-26
+
+- Exact PR head: `2458f8bba97a762478a426c14f150ecd3a048871`.
+- CI run [45829753859](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45829753859): PASS — Ruff lint/format; 51 passed / 4 skipped; ML smoke 13 passed; pip-audit found no known vulnerabilities.
+- Security run [45829753884](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45829753884): PASS — Gitleaks found no leaks; CodeQL Python succeeded; JavaScript/TypeScript was explicitly not applicable because this ref contains no non-empty tracked JS/TS source files.
+- GitHub Actions secret `NANOU_BACKUP_DATABASE_URL`: present (secret name verified; secret value not printed).
+- On Desktop Commander device Nanou, the local private key exists with mode `600`; its derived public-key SHA-256 fingerprint matches the pinned recipient fingerprint `f5cb681b49a315ee94dccf420fdef26b92ac002c723f85544a0b5dd77b6fa7c1`. A separate offline recovery copy has not yet been verified.
+- The workflow is restricted to `refs/heads/main`; the PR remains open/draft and unmerged. No scheduled/manual Production backup has run, no encrypted Production artifact exists yet, and no automated artifact restore rehearsal has been completed.
