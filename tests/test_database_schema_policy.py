@@ -3,6 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy import inspect
+from sqlalchemy.dialects import postgresql
 
 from nanou_cyber_ai.storage.bootstrap import bootstrap_schema, main, normalize_postgres_url
 from nanou_cyber_ai.storage.database import SecurityDatabase, metadata
@@ -17,9 +19,6 @@ def test_sqlite_still_creates_schema_for_local_development(tmp_path, monkeypatch
 
     database = SecurityDatabase(None, tmp_path)
     try:
-        from sqlalchemy import inspect
-from sqlalchemy.dialects import postgresql
-
         tables = set(inspect(database.engine).get_table_names())
         assert set(metadata.tables).issubset(tables)
     finally:
@@ -69,7 +68,6 @@ def test_postgres_runtime_fails_closed_when_schema_is_incomplete(tmp_path) -> No
     fake_engine.dispose.assert_called_once()
 
 
-
 def test_postgres_runtime_fails_closed_when_required_column_is_missing(tmp_path) -> None:
     required_tables = sorted(metadata.tables)
     fake_engine = MagicMock()
@@ -96,6 +94,7 @@ def test_postgres_runtime_fails_closed_when_required_column_is_missing(tmp_path)
     create_all.assert_not_called()
     ensure_bootstrap.assert_not_called()
     fake_engine.dispose.assert_called_once()
+
 
 def test_migration_url_must_be_postgresql() -> None:
     assert normalize_postgres_url("postgres://u:p@db.example.invalid/app") == (
