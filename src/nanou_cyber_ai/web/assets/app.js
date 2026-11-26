@@ -916,6 +916,7 @@ byId("bootstrap-form").addEventListener("submit", submitBootstrap);
 byId("login-form").addEventListener("submit", submitLogin);
 byId("register-form").addEventListener("submit", submitRegistration);
 byId("logout-button").addEventListener("click", logoutAccount);
+byId("password-change-form").addEventListener("submit", submitPasswordChange);
 byId("refresh-admin").addEventListener("click", loadAdminConsole);
 byId("admin-user-search").addEventListener("input", () => renderAdminUsers(adminUsersCache));
 byId("admin-user-filter").addEventListener("change", () => renderAdminUsers(adminUsersCache));
