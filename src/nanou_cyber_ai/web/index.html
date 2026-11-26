@@ -146,6 +146,15 @@
             <span id="account-role" class="role-pill">viewer</span>
             <button id="logout-button" class="button button-secondary" type="button">Hivoaka</button>
           </div>
+          <form id="password-change-form" class="auth-form account-password-form">
+            <strong>Hanova tenimiafina</strong>
+            <p>Hamarino ny tenimiafina ankehitriny ary mamoròna tenimiafina vaovao mihoatra ny 12 tarehintsoratra. Hivoaka ho azy ny session taloha rehetra.</p>
+            <div class="field"><label for="current-password">Tenimiafina ankehitriny</label><input id="current-password" type="password" minlength="1" maxlength="128" autocomplete="current-password" required></div>
+            <div class="field"><label for="new-password">Tenimiafina vaovao</label><input id="new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><label for="confirm-password">Avereno ny tenimiafina vaovao</label><input id="confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-secondary" type="submit">Tehirizo ny tenimiafina vaovao</button></div>
+            <p id="password-change-status" class="form-message" aria-live="polite"></p>
+          </form>
         </div>
 
         <div id="admin-panel" class="admin-panel" hidden>
