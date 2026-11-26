@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -52,6 +53,7 @@ app = FastAPI(
 _WEB_DIR = Path(__file__).resolve().parent / "web"
 _CSRF_COOKIE = "nanou_csrf"
 _MAX_REQUEST_BYTES = 2 * 1024 * 1024
+_LOCAL_AUDIT_HMAC_KEY = secrets.token_bytes(32)
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
@@ -90,19 +92,41 @@ def _request_id(request: Request) -> str:
     return uuid.uuid4().hex
 
 
+def _audit_hmac_key() -> bytes:
+    configured = settings.audit_hmac_key
+    if configured is not None:
+        return configured.get_secret_value().encode("utf-8")
+
+    # Each hosted environment has a distinct database credential. Derive a separate,
+    # purpose-bound key from it until a dedicated NANOU_AUDIT_HMAC_KEY is configured.
+    if settings.database_url is not None:
+        database_secret = settings.database_url.get_secret_value().encode("utf-8")
+        return hmac.new(
+            database_secret,
+            b"nanou-cyber-defense-ai:audit-fingerprint-key:v1",
+            hashlib.sha256,
+        ).digest()
+
+    # Local development only: a process-local key avoids storing recoverable PII.
+    return _LOCAL_AUDIT_HMAC_KEY
+
+
+def _hmac_fingerprint(purpose: str, value: str) -> str:
+    message = f"{purpose}:{value}".encode("utf-8")
+    return hmac.new(_audit_hmac_key(), message, hashlib.sha256).hexdigest()
+
+
 def _ip_digest(request: Request) -> str | None:
     # Use the direct peer address; do not trust arbitrary X-Forwarded-For input.
     peer = request.client.host if request.client else None
-    return hashlib.sha256(peer.encode("utf-8")).hexdigest() if peer else None
+    return _hmac_fingerprint("audit-ip", peer) if peer else None
 
 
 def _rate_fingerprints(request: Request, email: str, action: str) -> tuple[str, str | None]:
-    email_payload = f"{action}:{email}".encode()
-    email_digest = hashlib.sha256(email_payload).hexdigest()
-    ip_digest = _ip_digest(request)
-    if ip_digest:
-        ip_payload = f"{action}:{ip_digest}".encode()
-        ip_digest = hashlib.sha256(ip_payload).hexdigest()
+    normalized_email = email.strip().lower()
+    email_digest = _hmac_fingerprint(f"rate-email:{action}", normalized_email)
+    peer = request.client.host if request.client else None
+    ip_digest = _hmac_fingerprint(f"rate-ip:{action}", peer) if peer else None
     return email_digest, ip_digest
 
 
@@ -208,16 +232,41 @@ def _csrf_valid(request: Request) -> bool:
     return True
 
 
+async def _buffer_request_body_with_limit(request: Request) -> Response | None:
+    """Bound streamed bodies before route handlers or JSON parsing can consume them."""
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        if not content_length.isascii() or not content_length.isdecimal():
+            return Response("Invalid content length.", status_code=400)
+        if int(content_length) > _MAX_REQUEST_BYTES:
+            return Response("Request body too large.", status_code=413)
+
+    original_receive = request._receive
+    body = bytearray()
+    async for chunk in request.stream():
+        if len(body) + len(chunk) > _MAX_REQUEST_BYTES:
+            return Response("Request body too large.", status_code=413)
+        body.extend(chunk)
+
+    # BaseHTTPMiddleware creates the downstream Request from this receive callable.
+    # Replay the already bounded body once so normal FastAPI parsing remains unchanged.
+    body_bytes = bytes(body)
+    replayed = False
+
+    async def replay_receive():
+        nonlocal replayed
+        if not replayed:
+            replayed = True
+            return {"type": "http.request", "body": body_bytes, "more_body": False}
+        return await original_receive()
+
+    request._receive = replay_receive
+    return None
+
+
 @app.middleware("http")
 async def secure_request_middleware(request: Request, call_next):
-    rejection: Response | None = None
-    content_length = request.headers.get("content-length")
-    if content_length:
-        try:
-            if int(content_length) < 0 or int(content_length) > _MAX_REQUEST_BYTES:
-                rejection = Response("Request body too large or invalid.", status_code=413)
-        except ValueError:
-            rejection = Response("Invalid content length.", status_code=400)
+    rejection = await _buffer_request_body_with_limit(request)
 
     bearer_api_request = request.url.path == "/api/v1/assistant/chat" and request.headers.get(
         "authorization", ""
