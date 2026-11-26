@@ -103,10 +103,7 @@ def test_database_target_rejects_production_host_even_if_mislabeled_preview() ->
 
 
 def test_database_target_rejects_preview_host_with_production_target() -> None:
-    url = (
-        f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/"
-        f"{PREVIEW_ALLOWED_DATABASE}"
-    )
+    url = f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/{PREVIEW_ALLOWED_DATABASE}"
     with pytest.raises(MigrationError, match="Production migrations are disabled"):
         validate_database_target(url, "production")
 
