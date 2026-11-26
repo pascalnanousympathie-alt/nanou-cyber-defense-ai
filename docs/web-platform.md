@@ -37,7 +37,7 @@ Roles:
 - `analyst` — prepare feature data, run inference, add metadata, view intelligence, and create local Attack Simulation tabletop reports (cannot add or revoke target scopes).
 - `viewer` — read permitted intelligence and metadata.
 
-The first account is the one-time Administrator bootstrap. It requires a random NANOU_BOOTSTRAP_TOKEN of at least 32 characters stored in the server/hosting secret manager and entered once in the protected bootstrap form. With no configured token, bootstrap is disabled. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
+The first account is created through one-time Administrator bootstrap. It requires a random `NANOU_BOOTSTRAP_TOKEN` of at least 32 characters stored in the hosting secret manager and entered once in the protected bootstrap form. Once claimed, bootstrap remains disabled; changing the token does not reopen it. The current dedicated Preview already has its first Admin and `bootstrap_claimed=true`. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
 
 Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses and email-derived rate-limit identifiers are not stored; keyed HMAC-SHA-256 fingerprints are used with purpose separation. Configure a stable, high-entropy `NANOU_AUDIT_HMAC_KEY` (64–128 characters) in the hosting secret manager when available. If it is not configured, hosted environments derive a separate HMAC key from their environment-specific PostgreSQL secret; local development uses a process-local random key. Changing either key rotates rate-limit fingerprints, so active rate-limit windows naturally restart.
 
@@ -72,17 +72,20 @@ This is not an APK scanner. The platform does not yet parse APK binaries or extr
 
 ## Vercel deployment
 
-The repository includes `index.py`, `requirements.txt`, `.python-version`, and `vercel.json`. Vercel project protection is configured for all deployments; the first Administrator must be created while that protection remains enabled.
+The repository includes `index.py`, `requirements.txt`, `.python-version`, and `vercel.json`. Vercel project protection is configured for all deployments. The dedicated Preview's first Administrator has already been created; a separate new environment must complete its own one-time bootstrap with its own secret.
 
 The Vercel Hobby plan is free but restricted to personal/non-commercial use. Do not use it for commercial or third-party service delivery. See [deployment runbook](deployment.md).
 
 ## Before public launch
 
-1. A dedicated PostgreSQL project and `NANOU_DATABASE_URL`.
-2. HTTPS and provider-side deployment protection.
-3. First Admin bootstrap and end-to-end login/approval/RBAC verification.
-4. Backup/restore test.
-5. Separate validation-set selection of the ML decision threshold.
-6. Email verification and self-service recovery before accepting public registrations at scale.
+For the current Preview, a dedicated Neon PostgreSQL project, Preview-only database secret, first Admin bootstrap, encrypted backup/restore drill and protected HTTPS deployment have been verified. They are not Production evidence.
 
-Do not expose the app publicly while the database is unconfigured or the first Administrator has not been created.
+Before Production or public use:
+1. Prepare a separate Production PostgreSQL migration, least-privilege role, backup/restore drill and rollback plan.
+2. Complete owner-browser Admin acceptance and live Viewer/Analyst approval, permissions and logout checks.
+3. Review hosting-plan terms, data retention, quotas, rate limits, logging and incident-response ownership.
+4. Select and verify the ML decision threshold on a separate validation set; deploy only a trusted, SHA-256-verified model artifact.
+5. Implement email verification and self-service recovery before accepting public registrations at scale.
+6. Complete SAST, secret scanning, container scanning (if applicable), and an independent security review.
+
+Do not expose an unprotected public deployment or use Production data until its database, access, backup/restore and operational controls are separately verified.
