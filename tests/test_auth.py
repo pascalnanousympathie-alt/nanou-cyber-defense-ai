@@ -432,3 +432,85 @@ def test_user_role_change_revokes_owned_developer_api_keys(tmp_path) -> None:
     assert store.get_api_key_principal(token_hash) is None
     assert store.list_api_keys(analyst["id"])[0]["revoked_at"] is not None
     database.close()
+
+def test_password_rotation_requires_current_password_and_revokes_prior_sessions(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "auth_attempts_per_window", 50)
+    monkeypatch.setattr(
+        settings,
+        "bootstrap_token",
+        SecretStr("test-bootstrap-token-long-enough-1234567890"),
+    )
+
+    old_password = "Admin-Password-Before-Rotation-42!"
+    new_password = "Admin-Password-After-Rotation-84!"
+    with TestClient(app) as admin_client:
+        csrf = _csrf(admin_client)
+        bootstrap = admin_client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "email": "rotate-admin@example.test",
+                "display_name": "Rotate Admin",
+                "password": old_password,
+                "bootstrap_token": "test-bootstrap-token-long-enough-1234567890",
+            },
+        )
+        assert bootstrap.status_code == 200
+        old_session_cookie = admin_client.cookies.get(settings.session_cookie_name)
+        assert old_session_cookie
+
+        with TestClient(app) as second_browser:
+            second_browser.cookies.set(settings.session_cookie_name, old_session_cookie)
+            assert second_browser.get("/api/auth/me").json()["authenticated"] is True
+
+            no_csrf = admin_client.post(
+                "/api/auth/password",
+                json={"current_password": old_password, "new_password": new_password},
+            )
+            assert no_csrf.status_code == 403
+
+            wrong_current = admin_client.post(
+                "/api/auth/password",
+                headers={"X-CSRF-Token": csrf},
+                json={
+                    "current_password": "Wrong-Current-Password-99!",
+                    "new_password": new_password,
+                },
+            )
+            assert wrong_current.status_code == 403
+
+            changed = admin_client.post(
+                "/api/auth/password",
+                headers={"X-CSRF-Token": csrf},
+                json={"current_password": old_password, "new_password": new_password},
+            )
+            assert changed.status_code == 200
+            assert changed.json()["password_changed"] is True
+            assert admin_client.cookies.get(settings.session_cookie_name) != old_session_cookie
+            assert admin_client.get("/api/auth/me").json()["authenticated"] is True
+            assert second_browser.get("/api/auth/me").json()["authenticated"] is False
+
+            old_login_csrf = _csrf(second_browser)
+            old_login = second_browser.post(
+                "/api/auth/login",
+                headers={"X-CSRF-Token": old_login_csrf},
+                json={"email": "rotate-admin@example.test", "password": old_password},
+            )
+            assert old_login.status_code == 401
+
+            new_login_csrf = _csrf(second_browser)
+            new_login = second_browser.post(
+                "/api/auth/login",
+                headers={"X-CSRF-Token": new_login_csrf},
+                json={"email": "rotate-admin@example.test", "password": new_password},
+            )
+            assert new_login.status_code == 200
+
+        audit = admin_client.get("/api/admin/audit?limit=20")
+        assert audit.status_code == 200
+        events = [event for event in audit.json() if event["action"] == "auth.password.change"]
+        assert {event["outcome"] for event in events} == {"failed", "success"}
