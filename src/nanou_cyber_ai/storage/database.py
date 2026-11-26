@@ -24,6 +24,7 @@ from sqlalchemy import (
     event,
     func,
     insert,
+    inspect,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -158,9 +159,21 @@ Index("ix_attack_simulations_scope", attack_simulations.c.scope_id)
 
 
 class SecurityDatabase:
-    """A small connection-per-operation database facade."""
+    """A small connection-per-operation database facade.
 
-    def __init__(self, database_url: str | None, data_dir: Path) -> None:
+    SQLite remains self-initializing for local development and tests. Hosted
+    PostgreSQL is schema-verify-only by default so the runtime role does not
+    need CREATE privileges. Provision or change PostgreSQL schema separately
+    using an explicitly configured migration connection.
+    """
+
+    def __init__(
+        self,
+        database_url: str | None,
+        data_dir: Path,
+        *,
+        auto_create_postgres_schema: bool = False,
+    ) -> None:
         if database_url:
             normalized_url = database_url.strip()
             if normalized_url.startswith("postgres://"):
@@ -196,8 +209,23 @@ class SecurityDatabase:
             )
             event.listen(self.engine, "connect", self._enable_sqlite_foreign_keys)
 
-        metadata.create_all(self.engine)
+        if self.mode == "sqlite" or auto_create_postgres_schema:
+            metadata.create_all(self.engine)
+        else:
+            self._verify_postgres_schema()
         self._ensure_bootstrap_state()
+
+    def _verify_postgres_schema(self) -> None:
+        existing_tables = set(inspect(self.engine).get_table_names(schema="public"))
+        required_tables = {table.name for table in metadata.tables.values()}
+        missing_tables = sorted(required_tables - existing_tables)
+        if missing_tables:
+            missing = ", ".join(missing_tables)
+            raise RuntimeError(
+                "PostgreSQL schema is incomplete; missing tables: "
+                f"{missing}. Run the reviewed schema bootstrap/migration with "
+                "NANOU_MIGRATION_DATABASE_URL before starting the application."
+            )
 
     @staticmethod
     def _enable_sqlite_foreign_keys(connection, _record) -> None:
@@ -218,10 +246,27 @@ class SecurityDatabase:
 
 
 @lru_cache(maxsize=8)
-def _cached_database(database_url: str | None, data_dir: str) -> SecurityDatabase:
-    return SecurityDatabase(database_url, Path(data_dir))
+def _cached_database(
+    database_url: str | None,
+    data_dir: str,
+    auto_create_postgres_schema: bool,
+) -> SecurityDatabase:
+    return SecurityDatabase(
+        database_url,
+        Path(data_dir),
+        auto_create_postgres_schema=auto_create_postgres_schema,
+    )
 
 
-def get_database(database_url: str | None, data_dir: Path) -> SecurityDatabase:
+def get_database(
+    database_url: str | None,
+    data_dir: Path,
+    *,
+    auto_create_postgres_schema: bool = False,
+) -> SecurityDatabase:
     """Get a cached engine without retaining a readable copy of a secret in logs."""
-    return _cached_database(database_url, str(data_dir.expanduser()))
+    return _cached_database(
+        database_url,
+        str(data_dir.expanduser()),
+        auto_create_postgres_schema,
+    )
