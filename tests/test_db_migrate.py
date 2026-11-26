@@ -30,10 +30,10 @@ def test_nonproduction_targets_are_allowed(target: str) -> None:
 
 def test_load_migrations_orders_files_and_calculates_sha256(tmp_path: Path) -> None:
     (tmp_path / "0002_add_index.sql").write_text(
-        "CREATE INDEX ix_probe ON public.probe (id);\\n", encoding="utf-8"
+        "CREATE INDEX ix_probe ON public.probe (id);\n", encoding="utf-8"
     )
     (tmp_path / "0001_create_probe.sql").write_text(
-        "CREATE TABLE public.probe (id integer PRIMARY KEY);\\n", encoding="utf-8"
+        "CREATE TABLE public.probe (id integer PRIMARY KEY);\n", encoding="utf-8"
     )
     (tmp_path / "notes.txt").write_text("not a migration", encoding="utf-8")
 
