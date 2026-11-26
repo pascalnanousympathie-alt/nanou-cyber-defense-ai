@@ -2,7 +2,7 @@
 
 ## Current environments
 
-The application is a FastAPI web platform deployed through Vercel. Preview and Production are separate environments and use separate Neon PostgreSQL projects and separate sensitive `NANOU_DATABASE_URL` values. Do not copy a database URL between environments or place it in Git, screenshots, CI logs or chat.
+The application is a FastAPI web platform deployed through Vercel. Preview and Production are separate environments and use separate Neon PostgreSQL projects and separate sensitive `NANOU_RUNTIME_DATABASE_URL` values. Do not copy a database URL between environments or place it in Git, screenshots, CI logs or chat.
 
 - Repository: `pascalnanousympathie-alt/nanou-cyber-defense-ai`.
 - Current candidate branch: `feat/web-platform`, PR #1 → `main`.
@@ -34,6 +34,8 @@ Production Neon project `nanou-cyber-defense-ai` (`cold-resonance-28231813`), Po
 - Database `nanou_cyber_defense` contains nine application tables and is approximately 7.88 MiB.
 - Current Production row counts: `users=0`, `auth_sessions=0`, `api_keys=0`, `malware_metadata=0`, `attack_scopes=0`, `attack_simulations=0`, `audit_events=2`, `auth_attempts=4`, `platform_state=1`.
 - The live database role `nanou_app` owns the database and all application tables, has `CREATEROLE`, `CREATEDB` and inherited `BYPASSRLS` capability through `neon_superuser`; it also has broad table privileges including `TRUNCATE`. This is not an acceptable least-privilege runtime role for a public Production service.
+- Read-only catalog checks confirmed `nanou_runtime` is a separate LOGIN role with no superuser, database/role creation, replication, BYPASSRLS or `neon_superuser` membership. It has DML on all nine application tables, sequence USAGE/SELECT, and no TRUNCATE, REFERENCES, TRIGGER or schema CREATE.
+- `nanou_migration_owner` exists as NOLOGIN, but all nine Production tables and both sequences are still owned by `nanou_app`; ownership has not been transferred.
 - No Neon snapshots or automatic snapshot schedule were present at the time of audit. PITR history retention is six hours.
 - Neon Free rejected enabling protection for the Production default branch because the maximum protected-branch allowance was already reached. No other branch was unprotected, and no paid upgrade was performed.
 - No SQL changes, privilege changes, migrations, Production deployment or Production data writes were performed during this audit.
@@ -58,8 +60,8 @@ CI pins GitHub Actions checkout/setup-python to v6/Node 24 and disables persiste
 
 ## Database and migration policy
 
-- Hosted/serverless runtime must use a durable PostgreSQL connection. SQLite fallback is local development/test only.
-- Introduce explicit, reviewed schema migrations; do not rely on app startup `metadata.create_all` as a substitute for Production migration management.
+- Hosted/serverless runtime must use `NANOU_RUNTIME_DATABASE_URL`, a durable PostgreSQL connection using the least-privilege runtime role. `NANOU_DATABASE_URL` is retained only as a local-development compatibility fallback; hosted runtime fails closed if the runtime URL is missing. SQLite fallback is local development/test only.
+- PostgreSQL runtime startup performs no schema DDL; `metadata.create_all` is limited to local SQLite development/tests. Apply explicit, reviewed schema migrations with the migration-owner role before deploying code that needs them.
 - Use distinct roles: an owner/migration role for schema changes and a restricted runtime role for normal application queries. Test the exact DDL, grants, sequences and application behavior on an isolated restored copy before considering Production.
 - Confirm backup coverage, restore time, retention, quota, connection permissions and rollback before any Production migration.
 - Keep Preview and Production database credentials separate and sensitive. Never print or reveal their values.
@@ -79,7 +81,7 @@ The platform currently provides defensive vulnerability intelligence, CISA KEV, 
 ## Remaining launch gates
 
 1. Complete owner-browser Admin acceptance and separate live Viewer/Analyst registration, approval, RBAC and logout/re-login acceptance.
-2. Design and test separate migration-owner and least-privilege runtime roles on a restored copy; verify application behavior and all DDL privileges.
+2. Transfer Production table/sequence ownership to the NOLOGIN migration owner through a reviewed, tested migration plan; verify its DDL scope and preserve the existing least-privilege runtime grants.
 3. Establish a reliable Production backup/export and restore drill, and document RPO/RTO. Current Production has no snapshots/schedule; Neon branch protection is blocked by the Free plan limit.
 4. Resolve Production branch and deployment protection without weakening another service or bypassing SSO.
 5. Confirm hosting/database plan terms, quotas, retention, monitoring, alert routing and incident response.
