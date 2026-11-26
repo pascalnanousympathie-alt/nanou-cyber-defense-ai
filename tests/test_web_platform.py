@@ -48,15 +48,18 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
     assert '<html lang="mg" data-theme="dark">' in response.text
     assert 'aria-label="Navigation principale"' in response.text
     assert 'class="nav-group-label">Threat intelligence</span>' in response.text
-    assert 'class="nav-group-label">Malware laboratory</span>' in response.text
+    assert 'class="nav-group-label">STATIC ANALYSIS LAB</span>' in response.text
     assert 'class="nav-group-label">Accès &amp; gouvernance</span>' in response.text
+    assert 'class="nav-group-label">DEFENSIVE SIMULATIONS</span>' in response.text
+    assert "Tabletop simulation" in response.text
+    assert "Assistant workspace" in response.text
     assert 'href="#vulnerabilities"' in response.text
     assert 'href="#kev"' in response.text
     assert 'href="#malware-model"' in response.text
     assert 'href="#metadata"' in response.text
     assert 'href="#tools"' in response.text
     assert 'class="theme-pill"' in response.text
-    assert '<meta name="theme-color" content="#050505">' in response.text
+    assert '<meta name="theme-color" content="#03070b">' in response.text
 
 
 def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None:
@@ -64,14 +67,17 @@ def test_dark_soc_styles_include_responsive_and_reduced_motion_support() -> None
         response = client.get("/assets/app.css")
 
     assert response.status_code == 200
-    assert "--bg: #050505" in response.text
-    assert "--sidebar: #080808" in response.text
-    assert "--panel: #101010" in response.text
-    assert "Pure-black executive SOC theme" in response.text
-    assert "background: #050505" in response.text
-    assert "background: #080808" in response.text
+    assert "--bg: #03070b" in response.text
+    assert "--sidebar: #050b11" in response.text
+    assert "--panel: #08121a" in response.text
+    assert "Neon cyber operations theme" in response.text
+    assert "background: #03070b" in response.text
+    assert "background: #050b11" in response.text
     assert ".nav-group-label" in response.text
     assert ".theme-pill" in response.text
+    assert "text-shadow:" in response.text
+    assert "transform-style: preserve-3d" in response.text
+    assert "Neon cyber operations theme" in response.text
     assert "@media (max-width: 760px)" in response.text
     assert "@media (prefers-reduced-motion: reduce)" in response.text
 
