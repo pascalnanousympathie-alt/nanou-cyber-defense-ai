@@ -76,7 +76,7 @@ Workflow: `.github/workflows/production-backup.yml`.
 - GitHub artifact retention is 30 days.
 - The workflow requires repository Actions secret `NANOU_BACKUP_DATABASE_URL`; it must contain the direct-host PostgreSQL URL for `nanou_backup`, not the runtime or owner credential.
 
-**Current status: FIRST BACKUP COMPLETED; SCHEDULE ACTIVE.** The repository Actions secret `NANOU_BACKUP_DATABASE_URL` is provisioned. PR #5 merged the workflow to `main`; its hard guard requires `refs/heads/main`. The first manual Production backup completed successfully on 2026-11-26 and its encrypted artifact is retained for 30 days. Daily schedule is enabled. An authenticated decrypt-and-restore rehearsal of this downloaded artifact is still outstanding. Never place the connection URI in source code, logs, or chat.
+**Current status: TWO BACKUPS COMPLETED; SCHEDULE ACTIVE.** The repository Actions secret `NANOU_BACKUP_DATABASE_URL` is provisioned. PR #5 merged the workflow to `main`; its hard guard requires `refs/heads/main`. Two manual Production backups completed successfully on 2026-11-26, and both encrypted artifacts are retained for 30 days. The daily schedule at 02:17 UTC is enabled. An authenticated decrypt-and-restore rehearsal of the downloaded artifact is still outstanding. Never place the connection URI in source code, logs, or chat.
 
 ## Production cutover gates
 
@@ -103,7 +103,7 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - The crypto tests use an ephemeral RSA keypair to prove streaming round-trip, authentication-tag tamper rejection, and rejection of RSA keys below 3072 bits. This is cryptographic unit-test evidence only; it is not an actual Production artifact restore rehearsal.
 - The first post-merge manual backup run [45850155507](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45850155507) completed successfully and uploaded the encrypted artifact `nanou-production-backup-45850155507`. Details, size, expiry and checksum are recorded in the execution evidence below.
 - On Desktop Commander device Nanou, the private key was re-verified as present with filesystem mode `600`; its derived public-key SHA-256 fingerprint matches the pinned recipient key. A separate offline recovery copy has not yet been verified.
-- Production database ownership remains with `nanou_app`; the old Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains the last READY Production deployment. A new Production build on the backup-workflow merge commit failed with `FASTAPI_ENTRYPOINT_NOT_FOUND`; PR #6 adds the recommended `[tool.vercel] entrypoint` configuration. Its Preview build is READY, but the fix has not been merged to `main` or promoted to Production. No Admin bootstrap, ownership transfer, or credential revocation was performed.
+- Production database ownership remains with `nanou_app`. PR #6 merged the `[tool.vercel] entrypoint` fix in commit `46afde6042841715364f416623a416022a8476d1`; the resulting Vercel Production deployment `dpl_Xoz7AtnCrfoaPaghxJ3eyj62FjQP` is READY. The canonical Production alias returns HTTP 200 for `/health`, `/openapi.json`, and `/api/mcp/tools`. The metadata API is intentionally fail-closed and returns HTTP 503 until `NANOU_METADATA_API_TOKEN` is provisioned. No Admin bootstrap, database ownership transfer, or credential revocation was performed.
 - Neon rejected protecting Production branch `main` with HTTP 422 because the current plan's protected-branch quota is full. No other branch protection was removed and no paid upgrade was made.
 
 
@@ -114,7 +114,7 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - Security run [45829753884](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45829753884): PASS — Gitleaks found no leaks; CodeQL Python succeeded; JavaScript/TypeScript was explicitly not applicable because this ref contains no non-empty tracked JS/TS source files.
 - GitHub Actions secret `NANOU_BACKUP_DATABASE_URL`: present (secret name verified; secret value not printed).
 - On Desktop Commander device Nanou, the local private key exists with mode `600`; its derived public-key SHA-256 fingerprint matches the pinned recipient fingerprint `f5cb681b49a315ee94dccf420fdef26b92ac002c723f85544a0b5dd77b6fa7c1`. A separate offline recovery copy has not yet been verified.
-- The workflow remains restricted to `refs/heads/main`. PR #5 is merged; the manual workflow_dispatch run `45850155507` succeeded, and one encrypted artifact exists. No post-download authenticated decrypt-and-restore rehearsal has been completed.
+- The workflow remains restricted to `refs/heads/main`. PR #5 is merged; manual workflow_dispatch runs `45850155507` and `45852927966` both succeeded, and two encrypted artifacts exist. The second artifact's portable checksum was verified on the authorized Termux device with `sha256sum -c`. No post-download authenticated decrypt-and-restore rehearsal has been completed.
 
 
 ## First encrypted Production backup execution — 2026-11-26
@@ -132,8 +132,8 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 
 - The merge commit triggered a Vercel Production build that failed at the build step with `FASTAPI_ENTRYPOINT_NOT_FOUND`.
 - Vercel identified `src/nanou_cyber_ai/api.py` and its `app` object as the valid application entrypoint, and recommended `[tool.vercel] entrypoint = "src.nanou_cyber_ai.api:app"`.
-- The same missing Vercel configuration was present in the parent `main` commit before PR #5, so this is a pre-existing project configuration defect, not a backup workflow failure.
-- The previous Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains READY. The PR #6 Preview for head `e9430b037bdd77fa425459bede296452057e65b7` is READY (`dpl_89tdV6FXpuKZUhMDUEqN8ZWb52Mw`). The preview is protected by Vercel Authentication, so unauthenticated `/health` and `/openapi.json` checks were not completed. No Production promotion or deployment was performed.
+- The same missing Vercel configuration was present in the parent `main` commit before PR #5, so this was a pre-existing project configuration defect, not a backup workflow failure. PR #6 subsequently corrected it.
+- The PR #6 Preview deployments reached READY. After PR #6 merged, Production deployment `dpl_Xoz7AtnCrfoaPaghxJ3eyj62FjQP` reached READY on commit `46afde6042841715364f416623a416022a8476d1`.
 
 
 ## PR #6 validation — 2026-11-26
@@ -141,6 +141,26 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - PR: [#6 — Fix Vercel FastAPI entrypoint and portable backup checksum](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/pull/6).
 - At validated head `e9430b037bdd77fa425459bede296452057e65b7`, CI run [45851810022](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45851810022) passed: Ruff lint/format; 51 tests passed / 4 skipped; ML smoke 13 passed; dependency audit found no known vulnerabilities.
 - Security run [45851809676](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45851809676) passed: Gitleaks, CodeQL Python and CodeQL JavaScript/TypeScript.
-- Vercel generated a Preview deployment for the PR branch; deployment `dpl_89tdV6FXpuKZUhMDUEqN8ZWb52Mw` reached **READY** with the FastAPI entrypoint configured. This is Preview only, not a Production promotion. HTTP endpoint verification remained blocked by Vercel Authentication.
+- Vercel generated Preview deployment `dpl_89tdV6FXpuKZUhMDUEqN8ZWb52Mw`, which reached **READY** with the FastAPI entrypoint configured. After merge, Production deployment `dpl_Xoz7AtnCrfoaPaghxJ3eyj62FjQP` also reached **READY**. Authenticated Vercel fetch confirmed `/health` HTTP 200 and `/openapi.json` HTTP 200.
 - The revised relative checksum command was exercised with a synthetic test payload on the authorized Termux device; `sha256sum -c` returned `OK`. The next actual Production backup should verify the new sidecar format on the uploaded artifact.
-- PR #6 remains open and unmerged. Merge would trigger the connected Vercel Production deployment; do not merge or promote without explicit Production approval.
+- PR #6 merged on 2026-11-26 at 15:49:14 UTC in commit `46afde6042841715364f416623a416022a8476d1` after CI, Security and Preview validation passed.
+
+
+## Second encrypted Production backup execution — 2026-11-26
+
+- The second manual workflow dispatch, [run 45852927966](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45852927966), completed with conclusion **success** on main commit `46afde6042841715364f416623a416022a8476d1`.
+- Recipient-key validation, read-only Production database preflight, `pg_dump`, in-runner `pg_restore --list`, encryption and artifact upload all succeeded.
+- Artifact `nanou-production-backup-45852927966`, ID `15132954840`, ZIP size 22,294 bytes, created 2026-11-26 15:50:21 UTC; expires 2026-12-26 15:50:20 UTC.
+- Encrypted payload `nanou-production-20261126T155020Z.ncdb`, 21,610 bytes. Downloaded to the authorized Nanou Termux device; the sidecar contains a portable relative filename and `sha256sum -c` returned **OK** from the extracted artifact directory.
+- Payload SHA-256: `7d10aa52c03d4fe03b00244a37c539bf019a79992271b476f27c19f4da308f81`.
+- Manifest format check passed: `RSA-3072-OAEP-SHA256+AES-256-GCM`.
+- No plaintext dump was restored to Production. Post-download authenticated decryption and isolated restore verification remain outstanding.
+
+## Final deployment and CI evidence — 2026-11-26
+
+- PR #6 merged to `main` as `46afde6042841715364f416623a416022a8476d1`.
+- Post-merge CI [45852852858](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45852852858): **PASS** — Ruff lint/format, 51 passed / 4 skipped, ML smoke 13 passed, dependency audit found no known vulnerabilities.
+- Post-merge Security [45852852502](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45852852502): **PASS** — Gitleaks and CodeQL Python. JavaScript/TypeScript CodeQL was not applicable because no non-empty tracked JS/TS source files exist on this ref.
+- Vercel Production deployment `dpl_Xoz7AtnCrfoaPaghxJ3eyj62FjQP` is **READY** on the merge commit. The canonical alias `https://nanou-cyber-defense-ai.vercel.app` returned HTTP 200 for `/health`, `/openapi.json` and `/api/mcp/tools`.
+- OpenAPI confirms HTTP Bearer protection on `/api/malware/metadata`. A GET without the optional `NANOU_METADATA_API_TOKEN` returned HTTP 503 with a fail-closed message; this feature remains disabled until its owner intentionally configures the token.
+- The private decryption key remains local to the authorized device (mode `600`; public fingerprint matches the pinned recipient key). A second offline recovery copy has not been verified. The private key was not copied to GitHub, Vercel, or chat.
