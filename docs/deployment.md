@@ -21,8 +21,8 @@ Vercel Hobby is free for personal/non-commercial use only. It is not an appropri
 - Deployment protection: Vercel Authentication is enabled for **All Deployments**, including production URLs.
 - `NANOU_DATABASE_URL`: Preview has a dedicated Preview-only Neon database secret; Production retains a separate Production-only sensitive secret. Values are not read or printed.
 - `NANOU_BOOTSTRAP_TOKEN`: Preview-only; one-time bootstrap is already claimed and the token is no longer needed for routine operation.
-- Latest verified Preview commit `c444538bc3be01977aaf6942f1fe537a2d7547cf`: **READY**.
-- Latest Preview URL: https://nanou-cyber-defense-h1yp6hkpg-nanou3.vercel.app
+- Latest verified Preview commit `6152cfaa5836484576a2fa33ebb9585bf2c9a695`: **READY** (documentation-updated PR head).
+- Latest Preview URL: https://nanou-cyber-defense-jm1fztyb8-nanou3.vercel.app
 
 The secret values are not stored in Git or this document. Preview and Production database variables are separated. The Preview PostgreSQL provider and encrypted backup/restore have been checked; Production database readiness and restore have not been exercised. A Preview readiness check is not proof of a Production SLA.
 
@@ -38,6 +38,7 @@ Using the protected Preview in the connected browser:
 | Dashboard `/` | Loaded; API status online |
 | `/ready` | `{"status":"ready","database":"postgresql"}` |
 | `/api/auth/me` in the connected Opera tab | `authenticated:false`, `user:null`, `bootstrap_required:false` (signed-out browser) |
+| Unauthenticated `/api/admin/users` | Correctly denied: `Sign in with an approved account.` |
 | First Administrator | Created; active, approved, role `admin` |
 | Password rotation | Success event recorded in Preview audit |
 | Restore drill | Encrypted post-rotation backup restored in an isolated PostgreSQL test project |
