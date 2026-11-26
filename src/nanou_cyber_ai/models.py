@@ -135,6 +135,19 @@ class AuthLoginIn(BaseModel):
         return normalized
 
 
+class AuthPasswordChangeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
+
+    @model_validator(mode="after")
+    def require_new_password(self) -> "AuthPasswordChangeIn":
+        if self.current_password == self.new_password:
+            raise ValueError("The new password must differ from the current password.")
+        return self
+
+
 class AdminUserUpdateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

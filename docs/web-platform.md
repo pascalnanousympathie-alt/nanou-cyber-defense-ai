@@ -58,6 +58,21 @@ uvicorn nanou_cyber_ai.api:app --host 127.0.0.1 --port 8000
 
 Without either PostgreSQL URL, local development uses SQLite at `NANOU_DATA_DIR/malware_metadata.sqlite3`. On Vercel/AWS Lambda, the application requires `NANOU_RUNTIME_DATABASE_URL` and fails closed if it is absent; it never falls back to the legacy credential.
 
+## PostgreSQL schema and runtime privileges
+
+The hosted PostgreSQL runtime is schema-verify-only: application startup checks that required `public` tables and columns exist, then initializes the bootstrap-state row with normal DML. It does not execute PostgreSQL DDL. Local SQLite development/tests still create their own schema.
+
+Use a separate operator/migration connection for the initial PostgreSQL schema:
+`NANOU_MIGRATION_DATABASE_URL` must be supplied through a protected one-off operator environment, then run:
+
+```bash
+python -m nanou_cyber_ai.storage.bootstrap
+```
+
+The bootstrap command uses `metadata.create_all(checkfirst)` to create missing initial tables and an idempotent bootstrap-state insert. It does not alter existing columns or constraints, so it is not a replacement for reviewed migrations. Future changes to an existing schema require explicit migration SQL and a restore/rollback plan.
+
+The application runtime's `NANOU_DATABASE_URL` must point to a separate restricted login role with only the required DML privileges and sequence usage. It must not own the database/schema/tables and must not have CREATE, TRUNCATE, CREATEROLE, CREATEDB or BYPASSRLS capability. Test this exact role on a restored copy before changing any hosted environment.
+
 ## PostgreSQL hosting
 
 Set `NANOU_RUNTIME_DATABASE_URL` to the dedicated PostgreSQL project using the least-privilege runtime role. The legacy `NANOU_DATABASE_URL` is only a local-development fallback. The application requires TLS and uses a small connection pool. PostgreSQL runtime startup performs no schema DDL; use the separate migration-owner role for reviewed schema migrations. Do not reuse a database belonging to LudoMada, Mada Commander, Nanou Browser or another unrelated service.
@@ -96,3 +111,11 @@ Before public use:
 Vercel Hobby is restricted to personal/non-commercial use under its Terms of Service. Select a plan appropriate to the intended service before public/commercial operation. See [deployment runbook](deployment.md).
 
 Do not expose an unprotected public deployment or migrate Production data until its database access, backup/restore, deployment protection and operational controls are separately verified.
+
+## Additional account and request hardening (PR #3 candidate)
+
+The follow-up `fix/admin-password-rotation` branch adds `POST /api/auth/password`. It requires an authenticated user, CSRF validation, the current password and a different 12+ character replacement. On success, all previous sessions for the account are revoked and only the current browser receives a new session. Logout revokes the server-side session.
+
+The candidate also uses purpose-separated HMAC-SHA-256 values for audit IP and email/IP rate-limit fingerprints. A dedicated `NANOU_AUDIT_HMAC_KEY` can be configured as a 64–128 character hosting secret; until configured, hosted environments derive a separate key from their environment-specific PostgreSQL secret, while local development uses a process-local random key. Key rotation changes the fingerprints and restarts rate-limit windows.
+
+The candidate enforces a 2 MiB request-body ceiling at the ASGI receive stream so both declared and chunked request bodies are bounded without pre-consuming the body. PR #3 remains Draft/Open until post-sync CI and security checks pass.

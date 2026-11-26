@@ -24,6 +24,7 @@ from sqlalchemy import (
     event,
     func,
     insert,
+    inspect,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -157,22 +158,14 @@ Index("ix_attack_simulations_created", attack_simulations.c.created_at)
 Index("ix_attack_simulations_scope", attack_simulations.c.scope_id)
 
 
-def select_database_url(
-    runtime_database_url: str | None,
-    legacy_database_url: str | None,
-    *,
-    serverless: bool,
-) -> str | None:
-    """Prefer the least-privilege runtime credential and fail closed when hosted."""
-    if runtime_database_url is not None:
-        return runtime_database_url
-    if serverless:
-        return None
-    return legacy_database_url
-
-
 class SecurityDatabase:
-    """A small connection-per-operation database facade."""
+    """A small connection-per-operation database facade.
+
+    SQLite remains self-initializing for local development and tests. Hosted
+    PostgreSQL is schema-verify-only by default so the runtime role does not
+    need CREATE privileges. Provision or change PostgreSQL schema separately
+    using an explicitly configured migration connection.
+    """
 
     def __init__(self, database_url: str | None, data_dir: Path) -> None:
         if database_url:
@@ -182,7 +175,7 @@ class SecurityDatabase:
             elif normalized_url.startswith("postgresql://"):
                 normalized_url = normalized_url.replace("postgresql://", "postgresql+psycopg://", 1)
             if not normalized_url.startswith("postgresql+psycopg://"):
-                raise ValueError("The configured database URL must use PostgreSQL.")
+                raise ValueError("NANOU_RUNTIME_DATABASE_URL must use PostgreSQL.")
             self.mode = "postgresql"
             self.engine = create_engine(
                 normalized_url,
@@ -196,7 +189,9 @@ class SecurityDatabase:
             import os
 
             if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
-                raise RuntimeError("NANOU_RUNTIME_DATABASE_URL is required on serverless hosting.")
+                raise RuntimeError(
+                    "A durable NANOU_RUNTIME_DATABASE_URL is required on serverless hosting."
+                )
             data_dir = data_dir.expanduser()
             data_dir.mkdir(parents=True, exist_ok=True)
             database_path = data_dir / "malware_metadata.sqlite3"
@@ -208,11 +203,44 @@ class SecurityDatabase:
             )
             event.listen(self.engine, "connect", self._enable_sqlite_foreign_keys)
 
-        if self.mode == "sqlite":
-            # Local development/tests may create their own disposable schema.
-            # PostgreSQL DDL is owned by the reviewed migration workflow, never the runtime role.
-            metadata.create_all(self.engine)
-        self._ensure_bootstrap_state()
+        try:
+            if self.mode == "sqlite":
+                metadata.create_all(self.engine)
+            else:
+                self._verify_postgres_schema()
+            self._ensure_bootstrap_state()
+        except Exception:
+            self.engine.dispose()
+            raise
+
+    def _verify_postgres_schema(self) -> None:
+        inspector = inspect(self.engine)
+        existing_tables = set(inspector.get_table_names(schema="public"))
+        required_tables = {table.name for table in metadata.tables.values()}
+        missing_tables = sorted(required_tables - existing_tables)
+        missing_columns: list[str] = []
+        for table in metadata.tables.values():
+            if table.name not in existing_tables:
+                continue
+            existing_columns = {
+                column["name"] for column in inspector.get_columns(table.name, schema="public")
+            }
+            for column in table.columns:
+                if column.name not in existing_columns:
+                    missing_columns.append(f"{table.name}.{column.name}")
+
+        if missing_tables or missing_columns:
+            details = []
+            if missing_tables:
+                details.append(f"missing tables: {', '.join(missing_tables)}")
+            if missing_columns:
+                details.append(f"missing columns: {', '.join(sorted(missing_columns))}")
+            raise RuntimeError(
+                "PostgreSQL schema is incomplete ("
+                + "; ".join(details)
+                + "). Run the reviewed schema bootstrap/migration with "
+                "NANOU_MIGRATION_DATABASE_URL before starting the application."
+            )
 
     @staticmethod
     def _enable_sqlite_foreign_keys(connection, _record) -> None:

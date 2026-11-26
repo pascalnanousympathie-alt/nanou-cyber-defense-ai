@@ -164,3 +164,12 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - Vercel Production deployment `dpl_Xoz7AtnCrfoaPaghxJ3eyj62FjQP` is **READY** on the merge commit. The canonical alias `https://nanou-cyber-defense-ai.vercel.app` returned HTTP 200 for `/health`, `/openapi.json` and `/api/mcp/tools`.
 - OpenAPI confirms HTTP Bearer protection on `/api/malware/metadata`. A GET without the optional `NANOU_METADATA_API_TOKEN` returned HTTP 503 with a fail-closed message; this feature remains disabled until its owner intentionally configures the token.
 - The private decryption key remains local to the authorized device (mode `600`; public fingerprint matches the pinned recipient key). A second offline recovery copy has not been verified. The private key was not copied to GitHub, Vercel, or chat.
+
+## Authenticated encrypted-artifact restore rehearsal — 2026-11-26
+
+- GitHub Actions backup run `45852927966` completed successfully on `main`; the repository secret name `NANOU_BACKUP_DATABASE_URL` is present. The secret value was not read or displayed.
+- Downloaded encrypted artifact: `nanou-production-20261126T155020Z.ncdb`; SHA-256 `7d10aa52c03d4fe03b00244a37c539bf019a79992271b476f27c19f4da308f81`. `sha256sum -c` returned **OK**.
+- Authenticated RSA-OAEP-SHA256/AES-256-GCM decryption succeeded using the private key stored locally with mode `600`; `pg_restore --list` succeeded.
+- Restored the archive into a temporary, isolated local PostgreSQL 18.2 cluster on the Nanou Termux device. Result: **9 tables / 60 columns**, `users=0`, `audit_events=2`, `auth_attempts=4`, `auth_sessions=0`, `platform_state=1`. These counts match the documented snapshot-time evidence.
+- The temporary local PostgreSQL cluster was stopped and removed after the test. Production Neon was not used as the restore target and was not modified.
+- This proves authenticated decrypt and PostgreSQL archive restore locally. A separate Neon branch restore of this exact artifact and a second offline recovery copy of the private key remain outstanding.
