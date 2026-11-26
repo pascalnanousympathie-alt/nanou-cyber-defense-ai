@@ -48,9 +48,19 @@ jobs:
           key = serialization.load_pem_public_key(
               Path("backups/production-backup-public.pem").read_bytes()
           )
+          import hashlib
+
           if not isinstance(key, rsa.RSAPublicKey) or key.key_size < 3072:
               raise SystemExit("Production backup recipient key must be RSA-3072 or stronger.")
-          print("Backup configuration and RSA recipient key validated.")
+          der = key.public_bytes(
+              encoding=serialization.Encoding.DER,
+              format=serialization.PublicFormat.SubjectPublicKeyInfo,
+          )
+          fingerprint = hashlib.sha256(der).hexdigest()
+          expected = "f5cb681b49a315ee94dccf420fdef26b92ac002c723f85544a0b5dd77b6fa7c1"
+          if fingerprint != expected:
+              raise SystemExit("Production backup public-key fingerprint does not match the offline key.")
+          print("Backup configuration and pinned RSA recipient key validated.")
           PY
 
       - name: Dump Production PostgreSQL with the read-only backup role
@@ -71,7 +81,7 @@ jobs:
           set -euo pipefail
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
           output="${RUNNER_TEMP}/nanou-prod-backup/nanou-production-${stamp}.ncdb"
-          python scripts/encrypt_production_backup.py \
+          PYTHONPATH=src python scripts/encrypt_production_backup.py \
             --input "${RUNNER_TEMP}/nanou-prod-backup/production.dump" \
             --public-key backups/production-backup-public.pem \
             --output "$output"
