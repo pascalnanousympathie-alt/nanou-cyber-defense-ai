@@ -51,3 +51,21 @@ jobs:
         run: python -m pip install "git+https://github.com/FutureComputing4AI/EMBER2024.git@0ef753e81d98bf209f71b03cd331dfc190b5b54d"
       - name: Training, EMBER JSONL and LAMDA Parquet smoke tests
         run: pytest -q tests/test_malware_training.py tests/test_ember_raw_export.py tests/test_lamda_parquet.py
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install application dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp]"
+      - name: Install pip-audit
+        run: python -m pip install pip-audit
+      - name: Audit installed Python dependencies
+        run: pip-audit --strict --progress-spinner=off
