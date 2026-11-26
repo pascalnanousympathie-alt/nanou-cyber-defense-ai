@@ -115,7 +115,7 @@ This section supersedes older PR candidate status in this runbook.
 
 Candidate head `125dc8c14acb3179ba320aee6ac4e1fbb6b777c0`, PR #3 → `feat/web-platform`:
 - GitHub Actions CI run [45793385104](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793385104): **PASS** — Ruff lint, Ruff format, pytest, ML smoke and dependency audit.
-- The previous full suite count remains **116 passed / 4 skipped**; the newly-added PostgreSQL schema-policy test module adds seven isolated schema/bootstrap tests. The run logs for the latest commit should be used for the exact updated test count before recording it.
+- Pytest: **123 passed / 4 skipped** (includes seven PostgreSQL schema-policy/bootstrap tests).
 - ML smoke: **13 passed**.
 - pip-audit: **No known vulnerabilities found**.
 - Security run [45793385156](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793385156): **PASS** — Gitleaks no leaks; CodeQL Python and JavaScript/TypeScript completed successfully and uploaded SARIF.
