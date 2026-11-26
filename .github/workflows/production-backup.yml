@@ -83,8 +83,8 @@ jobs:
           parsed = urlsplit(os.environ["DATABASE_URL"])
           if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
               raise SystemExit("NANOU_BACKUP_DATABASE_URL must be a PostgreSQL URI.")
-          if not parsed.username or not parsed.path.strip("/"):
-              raise SystemExit("Backup database URI must include a username and database.")
+          if not parsed.username or parsed.password is None or not parsed.path.strip("/"):
+              raise SystemExit("Backup database URI must include a username, password and database.")
           query = parse_qs(parsed.query, keep_blank_values=True)
           supported = {
               "sslmode": "PGSSLMODE",
@@ -99,13 +99,16 @@ jobs:
               raise SystemExit(
                   "Unsupported PostgreSQL URI query options: " + ", ".join(unsupported)
               )
+          sslmode = query.get("sslmode", ["require"])[-1]
+          if sslmode not in {"require", "verify-ca", "verify-full"}:
+              raise SystemExit("PostgreSQL backup connections must require TLS.")
           values = {
               "PGHOST": parsed.hostname,
               "PGPORT": str(parsed.port or 5432),
               "PGDATABASE": unquote(parsed.path.lstrip("/")),
               "PGUSER": unquote(parsed.username),
-              "PGPASSWORD": unquote(parsed.password or ""),
-              "PGSSLMODE": query.get("sslmode", ["require"])[-1],
+              "PGPASSWORD": unquote(parsed.password),
+              "PGSSLMODE": sslmode,
           }
           for option, environment_name in supported.items():
               if option in query:
