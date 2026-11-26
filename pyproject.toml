@@ -26,6 +26,7 @@ ml = ["joblib>=1.3,<2", "numpy>=1.26,<3", "scikit-learn>=1.5,<2"]
 mcp = ["mcp>=2,<3"]
 ember-download = ["huggingface-hub>=0.32.4"]
 ember-extract = ["signify==0.8.1"]
+backup = ["cryptography==50.0.2"]
 lamda = ["pyarrow>=15,<25"]
 
 [tool.setuptools.packages.find]

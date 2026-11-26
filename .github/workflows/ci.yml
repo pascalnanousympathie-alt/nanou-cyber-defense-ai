@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp]"
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,backup]"
       - name: Ruff lint
         run: ruff check .
       - name: Ruff format
@@ -70,7 +70,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install application dependencies
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp]"
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,backup]"
       - name: Remove local editable project before auditing third-party dependencies
         run: python -m pip uninstall -y nanou-cyber-defense-ai
       - name: Install pip-audit

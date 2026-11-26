@@ -24,6 +24,7 @@ from sqlalchemy import (
     event,
     func,
     insert,
+    inspect,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -158,7 +159,13 @@ Index("ix_attack_simulations_scope", attack_simulations.c.scope_id)
 
 
 class SecurityDatabase:
-    """A small connection-per-operation database facade."""
+    """A small connection-per-operation database facade.
+
+    SQLite remains self-initializing for local development and tests. Hosted
+    PostgreSQL is schema-verify-only by default so the runtime role does not
+    need CREATE privileges. Provision or change PostgreSQL schema separately
+    using an explicitly configured migration connection.
+    """
 
     def __init__(self, database_url: str | None, data_dir: Path) -> None:
         if database_url:
@@ -196,8 +203,44 @@ class SecurityDatabase:
             )
             event.listen(self.engine, "connect", self._enable_sqlite_foreign_keys)
 
-        metadata.create_all(self.engine)
-        self._ensure_bootstrap_state()
+        try:
+            if self.mode == "sqlite":
+                metadata.create_all(self.engine)
+            else:
+                self._verify_postgres_schema()
+            self._ensure_bootstrap_state()
+        except Exception:
+            self.engine.dispose()
+            raise
+
+    def _verify_postgres_schema(self) -> None:
+        inspector = inspect(self.engine)
+        existing_tables = set(inspector.get_table_names(schema="public"))
+        required_tables = {table.name for table in metadata.tables.values()}
+        missing_tables = sorted(required_tables - existing_tables)
+        missing_columns: list[str] = []
+        for table in metadata.tables.values():
+            if table.name not in existing_tables:
+                continue
+            existing_columns = {
+                column["name"] for column in inspector.get_columns(table.name, schema="public")
+            }
+            for column in table.columns:
+                if column.name not in existing_columns:
+                    missing_columns.append(f"{table.name}.{column.name}")
+
+        if missing_tables or missing_columns:
+            details = []
+            if missing_tables:
+                details.append(f"missing tables: {', '.join(missing_tables)}")
+            if missing_columns:
+                details.append(f"missing columns: {', '.join(sorted(missing_columns))}")
+            raise RuntimeError(
+                "PostgreSQL schema is incomplete ("
+                + "; ".join(details)
+                + "). Run the reviewed schema bootstrap/migration with "
+                "NANOU_MIGRATION_DATABASE_URL before starting the application."
+            )
 
     @staticmethod
     def _enable_sqlite_foreign_keys(connection, _record) -> None:
