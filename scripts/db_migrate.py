@@ -20,8 +20,8 @@ import psycopg
 
 MIGRATION_DIR = Path(__file__).resolve().parents[1] / "migrations"
 LEDGER_TABLE = "public.nanou_schema_migrations"
-MIGRATION_ROLE = "nanou_migration_owner"
-MIGRATION_LOGIN = "nanou_migration_login"
+MIGRATION_ROLE = "nanou_preview_migration_owner"
+MIGRATION_LOGIN = "nanou_preview_migration_login"
 VERSION_PATTERN = re.compile(r"^(?P<version>[0-9]{4,})_[a-z0-9_]+\.sql$")
 LOCK_KEY = 741_902_611
 PREVIEW_ALLOWED_HOST = "ep-bitter-sunset-biteo9x5.c-5.ap-southeast-1.aws.neon.tech"
@@ -98,8 +98,8 @@ def validate_session_roles(effective_role: str, login_role: str) -> None:
     """Require the dedicated migration login and its NOLOGIN owner role."""
     if effective_role != MIGRATION_ROLE or login_role != MIGRATION_LOGIN:
         raise MigrationError(
-            "Database session must be nanou_migration_login with "
-            "SET ROLE nanou_migration_owner."
+            "Database session must be nanou_preview_migration_login with "
+            "SET ROLE nanou_preview_migration_owner."
         )
 
 
@@ -133,7 +133,7 @@ def apply_migrations(
     applied: list[str] = []
     with psycopg.connect(database_url, connect_timeout=10, sslmode="require") as connection:
         with connection.cursor() as cursor:
-            cursor.execute("SET ROLE nanou_migration_owner")
+            cursor.execute("SET ROLE nanou_preview_migration_owner")
             cursor.execute("SELECT current_user, session_user, current_database()")
             effective_role, login_role, database_name = cursor.fetchone()
             validate_session_roles(effective_role, login_role)
