@@ -56,9 +56,7 @@ def parse_postgres_uri(uri: str) -> dict[str, str]:
     username = unquote(parsed.username)
     password = unquote(parsed.password)
     if not database.strip() or not username.strip() or not password:
-        raise ValueError(
-            "Backup database URI must include a username, password and database."
-        )
+        raise ValueError("Backup database URI must include a username, password and database.")
 
     values = {
         "PGHOST": host,
