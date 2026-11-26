@@ -76,7 +76,7 @@ Workflow: `.github/workflows/production-backup.yml`.
 - GitHub artifact retention is 30 days.
 - The workflow requires repository Actions secret `NANOU_BACKUP_DATABASE_URL`; it must contain the direct-host PostgreSQL URL for `nanou_backup`, not the runtime or owner credential.
 
-**Current status: CONFIGURED / NOT ACTIVE.** The repository Actions secret `NANOU_BACKUP_DATABASE_URL` is now provisioned; its name was verified through `gh secret list` without displaying or transferring its value. The workflow file is currently on this PR branch only, and the job has a hard guard requiring `refs/heads/main`. Therefore no Production dump runs from this PR. The scheduled/manual backup remains inactive until this PR is explicitly approved and merged to `main`. No encrypted Production artifact or automated restore rehearsal is claimed. Never place the connection URI in source code, logs, or chat.
+**Current status: FIRST BACKUP COMPLETED; SCHEDULE ACTIVE.** The repository Actions secret `NANOU_BACKUP_DATABASE_URL` is provisioned. PR #5 merged the workflow to `main`; its hard guard requires `refs/heads/main`. The first manual Production backup completed successfully on 2026-11-26 and its encrypted artifact is retained for 30 days. Daily schedule is enabled. An authenticated decrypt-and-restore rehearsal of this downloaded artifact is still outstanding. Never place the connection URI in source code, logs, or chat.
 
 ## Production cutover gates
 
@@ -99,11 +99,11 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - Backup URI parsing lives in the installed `nanou_cyber_ai.backup.connection` package. It requires a PostgreSQL URI, username/password/database, TLS mode, unique supported query options and rejects arbitrary `options` / `PGOPTIONS`. The wrapper script imports this package.
 - The backup workflow requires exact login `nanou_backup`, rejects membership in any other PostgreSQL role, database/schema CREATE and table/sequence write privileges, and dumps only `public`.
 - Direct read-only Production queries executed as `nanou_backup` confirmed SELECT access to all nine application tables and both public sequences; no table write privileges, no sequence USAGE/UPDATE, and no extra role memberships. The role has `public` schema USAGE. RLS and FORCE RLS are disabled on all nine application tables. Thus, the current schema does not cause `pg_dump` to omit rows due to RLS, and sequence state can be read without granting sequence write privileges.
-- The latest workflow refinement explicitly verifies public-schema USAGE, SELECT on every public sequence, and absence of RLS/FORCE RLS on public tables before dumping. This refinement was committed after the last successful CI/security run and still requires exact-head CI/security validation.
+- The latest workflow verifies public-schema USAGE, SELECT on every public sequence, and absence of RLS/FORCE RLS on public tables before dumping. Exact-head CI/Security subsequently passed on PR #5 at `2458f8bba97a762478a426c14f150ecd3a048871` and again on the follow-up documentation commit.
 - The crypto tests use an ephemeral RSA keypair to prove streaming round-trip, authentication-tag tamper rejection, and rejection of RSA keys below 3072 bits. This is cryptographic unit-test evidence only; it is not an actual Production artifact restore rehearsal.
-- The last validated CI run [45827291114](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45827291114) produced no backup artifacts. Production snapshot evidence remains the manual snapshot `snap-shiny-fire-bir6x6kk`; no scheduled GitHub backup artifact has been produced. The scheduled workflow is restricted to `main`, and the repository Actions secret `NANOU_BACKUP_DATABASE_URL` still requires owner provisioning through GitHub Settings.
-- The matching offline private key path is documented above. Its current file existence/permissions and the presence of a second offline recovery copy were not re-verified in this session because both Desktop Commander devices checked (Nanou48 and Mercia) were offline. Verify the key locally without displaying or transferring its contents before relying on encrypted backups for recovery.
-- Production remains on Vercel deployment commit `db4fa6a7c059467b8728468425d63ce78414ef5d`; Production `/api/auth/me` previously reported `bootstrap_required=true`. Production database ownership remains with `nanou_app`. No Admin bootstrap, ownership transfer, merge, Production deployment, or credential revocation was performed.
+- The first post-merge manual backup run [45850155507](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45850155507) completed successfully and uploaded the encrypted artifact `nanou-production-backup-45850155507`. Details, size, expiry and checksum are recorded in the execution evidence below.
+- On Desktop Commander device Nanou, the private key was re-verified as present with filesystem mode `600`; its derived public-key SHA-256 fingerprint matches the pinned recipient key. A separate offline recovery copy has not yet been verified.
+- Production database ownership remains with `nanou_app`; the old Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains the last READY deployment. A new deployment on the backup-workflow merge commit failed with `FASTAPI_ENTRYPOINT_NOT_FOUND`; the corrective `[tool.vercel] entrypoint` change is prepared in PR #6 and has not been merged or deployed. No Admin bootstrap, ownership transfer, or credential revocation was performed.
 - Neon rejected protecting Production branch `main` with HTTP 422 because the current plan's protected-branch quota is full. No other branch protection was removed and no paid upgrade was made.
 
 
@@ -114,4 +114,23 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - Security run [45829753884](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45829753884): PASS — Gitleaks found no leaks; CodeQL Python succeeded; JavaScript/TypeScript was explicitly not applicable because this ref contains no non-empty tracked JS/TS source files.
 - GitHub Actions secret `NANOU_BACKUP_DATABASE_URL`: present (secret name verified; secret value not printed).
 - On Desktop Commander device Nanou, the local private key exists with mode `600`; its derived public-key SHA-256 fingerprint matches the pinned recipient fingerprint `f5cb681b49a315ee94dccf420fdef26b92ac002c723f85544a0b5dd77b6fa7c1`. A separate offline recovery copy has not yet been verified.
-- The workflow is restricted to `refs/heads/main`; the PR remains open/draft and unmerged. No scheduled/manual Production backup has run, no encrypted Production artifact exists yet, and no automated artifact restore rehearsal has been completed.
+- The workflow remains restricted to `refs/heads/main`. PR #5 is merged; the manual workflow_dispatch run `45850155507` succeeded, and one encrypted artifact exists. No post-download authenticated decrypt-and-restore rehearsal has been completed.
+
+
+## First encrypted Production backup execution — 2026-11-26
+
+- PR #5 was merged to `main` in merge commit `a7669d7e6969a647c6f78a8edb02085179ae646c`.
+- The first manual workflow dispatch, [run 45850155507](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45850155507), completed with conclusion **success** on that merge commit.
+- All operational steps succeeded: recipient-key validation, read-only Production database preflight, `pg_dump`, in-runner `pg_restore --list` archive-index validation, RSA-OAEP-SHA256 + AES-256-GCM encryption, and artifact upload.
+- Uploaded artifact: `nanou-production-backup-45850155507`; artifact ID `15134116099`; archive size 22,336 bytes; created 2026-11-26 15:33:27 UTC; expires 2026-12-26 15:33:26 UTC.
+- Encrypted payload: `nanou-production-20261126T153326Z.ncdb`, 21,610 bytes. It was downloaded to the authorized Nanou Termux device and independently compared with its sidecar digest: `3aa2be9e6cae503e0e69321c91872954d0157c09eafddcad03699b402bf43c02` — **match**.
+- Initial sidecar recorded the GitHub runner's absolute path, so `sha256sum -c` failed on the Termux device due to path mismatch; direct hash comparison confirmed the bytes match. PR #6 changes sidecar creation to store only the payload basename.
+- The private key remained on the authorized device and was not uploaded or sent in chat. A separate offline recovery copy and an authenticated decrypt/isolated restore rehearsal are still outstanding.
+- The workflow runs daily at 02:17 UTC, with artifacts retained for 30 days.
+
+## Vercel FastAPI build diagnosis — 2026-11-26
+
+- The merge commit triggered a Vercel Production build that failed at the build step with `FASTAPI_ENTRYPOINT_NOT_FOUND`.
+- Vercel identified `src/nanou_cyber_ai/api.py` and its `app` object as the valid application entrypoint, and recommended `[tool.vercel] entrypoint = "src.nanou_cyber_ai.api:app"`.
+- The same missing Vercel configuration was present in the parent `main` commit before PR #5, so this is a pre-existing project configuration defect, not a backup workflow failure.
+- The previous Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains READY. The corrective entrypoint declaration is prepared in PR #6; it has not been merged or deployed.
