@@ -8,7 +8,7 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from scripts.production_backup_crypto import decrypt_backup, encrypt_backup
+from nanou_cyber_ai.backup.crypto import decrypt_backup, encrypt_backup
 
 
 def make_rsa_keypair(directory: Path, *, bits: int = 3072) -> tuple[Path, Path]:
