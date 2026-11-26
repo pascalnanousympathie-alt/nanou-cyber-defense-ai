@@ -107,3 +107,30 @@ The follow-up branch `fix/admin-password-rotation` adds authenticated password r
 The same candidate adds purpose-separated keyed HMAC-SHA-256 fingerprints for IP audit and email/IP rate-limit identifiers, plus an ASGI receive-boundary request-size ceiling of 2 MiB that includes streamed requests without `Content-Length`. Its tests cover password-change failures/success, old-session revocation, logout, HMAC separation and streamed body rejection.
 
 These hardening changes remain in Draft PR #3 until the updated branch has passed its post-sync CI/security runs and the PRs are deliberately integrated. They are not represented as Production changes.
+
+
+## Latest candidate validation and deployment limit (2026-11-26)
+
+This section supersedes older PR candidate status in this runbook.
+
+Candidate head `125dc8c14acb3179ba320aee6ac4e1fbb6b777c0`, PR #3 → `feat/web-platform`:
+- GitHub Actions CI run [45793385104](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793385104): **PASS** — Ruff lint, Ruff format, pytest, ML smoke and dependency audit.
+- The previous full suite count remains **116 passed / 4 skipped**; the newly-added PostgreSQL schema-policy test module adds seven isolated schema/bootstrap tests. The run logs for the latest commit should be used for the exact updated test count before recording it.
+- ML smoke: **13 passed**.
+- pip-audit: **No known vulnerabilities found**.
+- Security run [45793385156](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793385156): **PASS** — Gitleaks no leaks; CodeQL Python and JavaScript/TypeScript completed successfully and uploaded SARIF.
+- PR #3 remains Draft/Open, targets `feat/web-platform`, is mergeable and unmerged. PR #1 remains Draft/Open to `main`.
+
+### Runtime role model proof
+
+The candidate now has no PostgreSQL DDL during application startup:
+- SQLite still initializes schema for local development/tests.
+- PostgreSQL startup checks the required `public` tables and columns, then uses DML to ensure the one-time bootstrap-state row. Missing tables/columns fail closed with a startup error.
+- Initial PostgreSQL schema creation is a separate command, `python -m nanou_cyber_ai.storage.bootstrap`, requiring the protected `NANOU_MIGRATION_DATABASE_URL` environment variable. This is an initial bootstrap only, not an ALTER/schema-upgrade system.
+- In the isolated Neon restore-test project, a `NOLOGIN` runtime probe role with SELECT/INSERT/UPDATE/DELETE and sequence privileges passed a `SET ROLE` capability check and a test INSERT→UPDATE→DELETE. It had no superuser, CREATEROLE, CREATEDB, BYPASSRLS, database/schema CREATE or TRUNCATE; no test row remained. This is a prototype validation, not a login role configured in Vercel or Production.
+
+### Preview deployment status
+
+The existing UI-only Preview at https://nanou-cyber-defense-90y9bz97o-nanou3.vercel.app/ remains the latest verified READY interface build. It is not the integrated PR #3 candidate head.
+
+A new Preview deployment for the current branch/head was blocked by Vercel with HTTP 402, resource `api-deployments-free-per-day`, message “more than 100” deployments and retry-after 86,400 seconds. A read-only Vercel query for commit `125dc8c` returned zero deployment records. No CLI bypass, plan upgrade or repeated deployment attempt was used. Treat the integrated password-rotation/database-policy build as **not yet Preview-live** until the limit resets or the owner resolves the team quota.
