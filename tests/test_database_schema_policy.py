@@ -6,9 +6,12 @@ import pytest
 from sqlalchemy import inspect
 from sqlalchemy.dialects import postgresql
 
-from nanou_cyber_ai.storage.bootstrap import bootstrap_schema, main, normalize_postgres_url
+from nanou_cyber_ai.storage.bootstrap import (
+    bootstrap_schema,
+    main,
+    normalize_postgres_url,
+)
 from nanou_cyber_ai.storage.database import SecurityDatabase, metadata
-
 
 POSTGRES_URL = "postgresql+psycopg://runtime:placeholder@db.example.invalid/nanou_test"
 
