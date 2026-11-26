@@ -8,6 +8,7 @@ from scripts.db_migrate import (
     MigrationError,
     load_migrations,
     validate_database_target,
+    validate_role_flags,
     validate_session_roles,
     validate_target,
 )
@@ -118,13 +119,18 @@ def test_database_target_rejects_other_database_on_preview_host() -> None:
     with pytest.raises(MigrationError, match="approved isolated Preview database"):
         validate_database_target(url, "preview")
 
+
 def test_migration_role_flags_require_login_and_no_login_owner() -> None:
-    validate_role_flags(\n        (True, False, False, False, False, False, False, False, False, False, False, False)\n    )
+    validate_role_flags(
+        (True, False, False, False, False, False, False, False, False, False, False, False)
+    )
 
 
 def test_migration_role_flags_reject_elevated_login_or_owner() -> None:
     with pytest.raises(MigrationError, match="unsafe PostgreSQL attributes"):
-        validate_role_flags(\n            (True, True, False, False, False, False, False, False, False, False, False, False)\n        )
+        validate_role_flags(
+            (True, True, False, False, False, False, False, False, False, False, False, False)
+        )
 
 
 def test_migration_role_flags_reject_missing_roles() -> None:
