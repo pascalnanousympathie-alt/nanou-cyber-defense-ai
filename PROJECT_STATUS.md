@@ -81,3 +81,13 @@ Production remains BLOCKED until:
 7. Only then consider merge to main and Production promotion, with explicit owner approval.
 
 No Production launch, merge to main, SSO removal, paid plan upgrade, public release or real malware execution is authorized by this status document.
+
+
+## 2026-11-26 verified follow-up
+
+- Production manual snapshot prod-pre-hardening-2026-11-26 created and restored with finalize=false to isolated branch prod-restore-drill-20261126. Source and restore match across 60 public columns and all application table row counts. Production main/compute were not replaced or restarted.
+- Restore-copy login-role capability and DML smoke PASS: no superuser/CREATEROLE/CREATEDB/BYPASSRLS/database CREATE/schema CREATE/TRUNCATE; SELECT/INSERT/UPDATE/DELETE and sequence privileges only; temporary probe row deleted.
+- Created Production login role nanou_runtime and verified direct grants/flags. Sensitive Vercel Production NANOU_RUNTIME_DATABASE_URL now holds its connection string; legacy NANOU_DATABASE_URL unchanged. Current live Production deployment commit db4fa6a7c059467b8728468425d63ce78414ef5d does not yet read the new runtime variable, so this role is prepared but not active.
+- Updated the existing sensitive Preview NANOU_RUNTIME_DATABASE_URL with the dedicated nanou_preview_runtime credential for the isolated Preview Neon project. A fresh Git Preview deployment may be required to consume the changed environment value; no deployment request or quota bypass was made.
+- Production remains BLOCKED for cutover: existing nanou_app remains active and overprivileged; Neon Free does not permit protecting this default branch at current protected-branch quota; the snapshot/restore drill is not an off-provider backup or recurring schedule. Keep the existing snapshot and restore branch; no merge, Production deployment, SSO weakening or paid upgrade.
+- CI baseline before these documentation-only commits: 123 passed / 4 skipped, ML smoke 13 passed, Ruff, pip-audit, Gitleaks and CodeQL PASS on prior PR #3 HEAD. New documentation commits require fresh CI/security confirmation before merge.
