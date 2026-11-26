@@ -93,21 +93,21 @@ def test_symlink_migration_is_rejected(tmp_path: Path) -> None:
 
 def test_database_target_allows_only_the_pinned_preview_database() -> None:
     url = (
-        f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/"
+        f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/"
         f"{PREVIEW_ALLOWED_DATABASE}"
     )
     validate_database_target(url, "preview")
 
 
 def test_database_target_rejects_production_host_even_if_mislabeled_preview() -> None:
-    url = "postgresql://migration:secret@production.neon.tech:5432/nanou_preview"
+    url = "postgresql://migration@production.neon.tech:5432/nanou_preview"
     with pytest.raises(MigrationError, match="approved isolated Preview database"):
         validate_database_target(url, "preview")
 
 
 def test_database_target_rejects_preview_host_with_production_target() -> None:
     url = (
-        f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/"
+        f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/"
         f"{PREVIEW_ALLOWED_DATABASE}"
     )
     with pytest.raises(MigrationError, match="Production migrations are disabled"):
@@ -115,7 +115,7 @@ def test_database_target_rejects_preview_host_with_production_target() -> None:
 
 
 def test_database_target_rejects_other_database_on_preview_host() -> None:
-    url = f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/postgres"
+    url = f"postgresql://migration@{PREVIEW_ALLOWED_HOST}:5432/postgres"
     with pytest.raises(MigrationError, match="approved isolated Preview database"):
         validate_database_target(url, "preview")
 
