@@ -131,7 +131,7 @@ def apply_migrations(
         raise MigrationError("Migration URL must use PostgreSQL.")
 
     applied: list[str] = []
-    with psycopg.connect(database_url, connect_timeout=10) as connection:
+    with psycopg.connect(database_url, connect_timeout=10, sslmode="require") as connection:
         with connection.cursor() as cursor:
             cursor.execute("SET ROLE nanou_migration_owner")
             cursor.execute("SELECT current_user, session_user, current_database()")
