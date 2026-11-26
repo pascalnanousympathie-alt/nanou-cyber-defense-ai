@@ -52,7 +52,7 @@ def test_invalid_migration_filename_is_rejected(tmp_path: Path) -> None:
 
 
 def test_empty_migration_is_rejected(tmp_path: Path) -> None:
-    (tmp_path / "0001_empty.sql").write_text("  \\n", encoding="utf-8")
+    (tmp_path / "0001_empty.sql").write_text("  \n", encoding="utf-8")
 
     with pytest.raises(MigrationError, match="Migration is empty"):
         load_migrations(tmp_path)
