@@ -2,6 +2,14 @@
 
 The application is a responsive browser-based platform served directly by FastAPI. It does not require an Android APK or a separate frontend build.
 
+## Visual design system
+
+The dashboard uses an original cyber-operations visual system: deep black surfaces, emerald/cyan accents, grid/HUD texture, terminal-inspired monospace labels, subtle glow and layered CSS text shadows for dimensional headings. The sidebar groups navigation by workspace, access/governance, threat intelligence, static analysis, defensive simulations and integrations.
+
+The visual treatment is CSS-only and uses system font fallbacks; it does not download font assets or rely on a heavy WebGL background. Reduced-motion preferences, visible keyboard focus, responsive navigation and readable contrast are preserved. The design takes broad cyber-terminal visual cues only; product branding and layout are original.
+
+The “Tabletop simulation” menu is a local defensive exercise/report feature, not an exploit runner. “Static feature analysis” accepts pre-extracted CSV feature rows, not APK binaries.
+
 ## Web interface and APIs
 
 - `/` — responsive Malagasy dashboard for mobile and desktop browsers.
@@ -37,7 +45,7 @@ Roles:
 - `analyst` — prepare feature data, run inference, add metadata, view intelligence, and create local Attack Simulation tabletop reports (cannot add or revoke target scopes).
 - `viewer` — read permitted intelligence and metadata.
 
-The first account is the one-time Administrator bootstrap. It requires a random NANOU_BOOTSTRAP_TOKEN of at least 32 characters stored in the server/hosting secret manager and entered once in the protected bootstrap form. With no configured token, bootstrap is disabled. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
+The first account is created through one-time Administrator bootstrap. It requires a random `NANOU_BOOTSTRAP_TOKEN` of at least 32 characters stored in the hosting secret manager and entered once in the protected bootstrap form. Once claimed, bootstrap remains disabled; changing the token does not reopen it. The dedicated Preview already has its first active/approved Admin and `bootstrap_claimed=true`; the Production database currently has zero users. Public registrations remain pending until an Administrator approves them. There is no email verification or self-service password reset yet; account approval and recovery are administrator-managed.
 
 Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses are not stored; only a digest is retained.
 
@@ -72,11 +80,19 @@ The Vercel Hobby plan is free but restricted to personal/non-commercial use. Do 
 
 ## Before public launch
 
-1. A dedicated PostgreSQL project and `NANOU_DATABASE_URL`.
-2. HTTPS and provider-side deployment protection.
-3. First Admin bootstrap and end-to-end login/approval/RBAC verification.
-4. Backup/restore test.
-5. Separate validation-set selection of the ML decision threshold.
-6. Email verification and self-service recovery before accepting public registrations at scale.
+Preview currently has a dedicated PostgreSQL project, its own sensitive database credential, one-time Admin bootstrap and an encrypted backup/restore drill in an isolated test project. This is not Production evidence.
 
-Do not expose the app publicly while the database is unconfigured or the first Administrator has not been created.
+Production currently has nine application tables but zero users. The Production runtime database role owns the database and all tables and has excessive role/table privileges, no snapshots or automatic snapshot schedule were present, and the default branch could not be protected on the current Neon Free plan. Do not promote Production until these findings are resolved on a tested copy and a backup/rollback path is proven.
+
+Before public use:
+1. Separate a schema migration owner from a least-privilege application runtime role, test grants/ownership on a restored database copy, and verify all application queries and migration steps.
+2. Complete owner-browser Admin acceptance and live Viewer/Analyst approval, role boundaries, logout and re-login checks.
+3. Establish and restore a Production backup; document RPO/RTO, retention, billing and quota. Do not create paid snapshots or upgrade a plan without approval.
+4. Resolve Production branch/deployment protection without disabling Vercel SSO or weakening other projects.
+5. Review monitoring, incident response, SAST/secrets/dependency alerts and independent security findings.
+6. Complete model-artifact integrity and separate validation-set threshold checks before claiming malware inference readiness.
+7. Implement email verification and self-service recovery before accepting public registrations at scale.
+
+Vercel Hobby is restricted to personal/non-commercial use under its Terms of Service. Select a plan appropriate to the intended service before public/commercial operation. See [deployment runbook](deployment.md).
+
+Do not expose an unprotected public deployment or migrate Production data until its database access, backup/restore, deployment protection and operational controls are separately verified.
