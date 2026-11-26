@@ -114,7 +114,8 @@ jobs:
               raise SystemExit("PostgreSQL connection settings contain an invalid NUL byte.")
           with open(sys.argv[1], "w", encoding="utf-8") as output:
               for key, value in values.items():
-                  output.write(f"export {key}={shlex.quote(value)}\\n")
+                  output.write(f"export {key}={shlex.quote(value)}")
+                  output.write(chr(10))
           PY
           set -a
           source "$connection_env"
@@ -152,9 +153,12 @@ jobs:
             --public-key backups/production-backup-public.pem \
             --output "$output"
           sha256sum "$output" > "$output.sha256"
-          printf 'created_utc=%s\\n' "$stamp" > "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
-          printf 'encryption=RSA-3072-OAEP-SHA256+AES-256-GCM\\n' >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
-          printf 'retention_days=30\\n' >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          printf '%s' "created_utc=$stamp" > "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          echo >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          printf '%s' "encryption=RSA-3072-OAEP-SHA256+AES-256-GCM" >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          echo >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          printf '%s' "retention_days=30" >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
+          echo >> "${RUNNER_TEMP}/nanou-prod-backup/manifest.txt"
           shred -u "${RUNNER_TEMP}/nanou-prod-backup/production.dump" 2>/dev/null || rm -f "${RUNNER_TEMP}/nanou-prod-backup/production.dump"
           test ! -e "${RUNNER_TEMP}/nanou-prod-backup/production.dump"
 
