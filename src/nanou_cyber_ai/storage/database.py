@@ -158,6 +158,20 @@ Index("ix_attack_simulations_created", attack_simulations.c.created_at)
 Index("ix_attack_simulations_scope", attack_simulations.c.scope_id)
 
 
+def select_database_url(
+    runtime_database_url: str | None,
+    legacy_database_url: str | None,
+    *,
+    serverless: bool,
+) -> str | None:
+    """Prefer the least-privilege runtime credential and fail closed when hosted."""
+    if runtime_database_url is not None and runtime_database_url.strip():
+        return runtime_database_url
+    if serverless:
+        return None
+    return legacy_database_url
+
+
 class SecurityDatabase:
     """A small connection-per-operation database facade.
 
