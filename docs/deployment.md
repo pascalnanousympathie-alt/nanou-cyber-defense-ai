@@ -2,7 +2,8 @@
 
 ## Current hosting layout
 
-- Web application: Vercel Python/FastAPI runtime on the Nanou team Hobby plan.
+- Web application: Vercel Python/FastAPI runtime; current Preview is protected by Vercel Authentication.
+- Plan suitability: confirm the team's current Vercel plan before any non-personal or commercial use. Hobby is restricted to personal/non-commercial use under the current Terms of Service.
 - Repository: `pascalnanousympathie-alt/nanou-cyber-defense-ai`, branch `feat/web-platform`.
 - Database: PostgreSQL through the encrypted `NANOU_DATABASE_URL` environment variable.
 - Static assets: bundled in the Python package and served same-origin by FastAPI.
@@ -17,12 +18,12 @@ Vercel Hobby is free for personal/non-commercial use only. It is not an appropri
 - Team: `Nanou` (`nanou3`).
 - Git connection: this repository is linked.
 - Deployment protection: Vercel Authentication is enabled for **All Deployments**, including production URLs.
-- Encrypted `NANOU_DATABASE_URL`: configured for Preview and Production.
-- Encrypted `NANOU_BOOTSTRAP_TOKEN`: configured for Preview only.
-- Preview commit `f2427a2332c22488f1a819fa177f5a105a0dcfe4`: **READY**.
-- Preview URL: https://nanou-cyber-defense-k2gdq6umw-nanou3.vercel.app
+- `NANOU_DATABASE_URL`: Preview has a dedicated Preview-only Neon database secret; Production retains a separate Production-only sensitive secret. Values are not read or printed.
+- `NANOU_BOOTSTRAP_TOKEN`: Preview-only; the one-time bootstrap has already been claimed.
+- Latest verified Preview commit `8a9a3eff77e43ac51249ab4c3299e0b7bd03fc58`: **READY**.
+- Latest Preview URL: https://nanou-cyber-defense-92smirzsz-nanou3.vercel.app
 
-The secret values are not stored in Git or this document. The PostgreSQL identity, provider plan, backups and restore configuration have not been independently checked; a successful Preview connection is not proof of backup readiness or a production SLA.
+The secret values are not stored in Git or this document. Preview and Production database variables are separated. The Preview PostgreSQL provider and encrypted backup/restore have been checked; Production database readiness and restore have not been exercised. A Preview readiness check is not proof of a Production SLA.
 
 The Vercel project reports SSO protection for all deployments and `live=false`. An older protected production deployment exists, but the current work is validated on the Preview branch. Do not remove the SSO gate or expose an unprotected URL as part of this runbook.
 
@@ -35,15 +36,17 @@ Using the protected Preview in the connected browser:
 | Vercel build | READY |
 | Dashboard `/` | Loaded; API status online |
 | `/ready` | `{"status":"ready","database":"postgresql"}` |
-| `/api/auth/me` | `authenticated:false`, `user:null`, `bootstrap_required:true` |
-| First Administrator | Not yet created |
+| `/api/auth/me` in the connected Opera tab | `authenticated:false`, `user:null`, `bootstrap_required:false` (signed-out browser) |
+| First Administrator | Created; active, approved, role `admin` |
+| Password rotation | Success event recorded in Preview audit |
+| Restore drill | Encrypted post-rotation backup restored in an isolated PostgreSQL test project |
 | Vercel SSO | Enabled for All Deployments |
 
 GitHub Actions CI run 45635004451 completed:
 - `test`: **PASS**, Ruff lint + Ruff format + pytest; 77 passed, 4 skipped.
 - `ml-smoke`: **PASS**, 13 tests covering training, EMBER JSONL export and LAMDA Parquet preparation.
 
-The dashboard is therefore deployed as a protected Preview and its PostgreSQL readiness endpoint has been exercised. The first-administrator workflow and normal-user login/approval still require the owner to complete the one-time credential entry.
+The dashboard is deployed as a protected Preview and its PostgreSQL readiness endpoint has been exercised. Automated tests cover bootstrap, login, approval, role restrictions, password rotation and logout. The connected Opera browser remains signed out; owner-browser acceptance cannot be claimed from that tab.
 
 ## First Administrator setup
 
@@ -78,8 +81,8 @@ This is not direct APK scanning. APK-to-feature extraction and Android/on-device
 
 ## Remaining launch gates
 
-- Complete the one-time first-Admin setup in the protected Preview.
-- Complete the normal-user registration, approval, role and logout checks.
-- Verify database backup/restore and confirm whether the selected PostgreSQL plan is free and suitable for the intended use.
+- Complete the owner-browser Admin Console acceptance and separate live test-user acceptance. CI covers the same authentication and RBAC paths using isolated test accounts.
+- Complete Production-only database identity, backup/restore, quota and connection-permission review before any Production migration.
+- Keep Vercel SSO enabled. Do not disable it to make an external AI provider work.
 - If moving to public or commercial operation, select a hosting plan whose terms permit that use and conduct a separate security/operations review.
 - Do not disable Vercel SSO protection or promote a production deployment until those launch gates are deliberately approved.
