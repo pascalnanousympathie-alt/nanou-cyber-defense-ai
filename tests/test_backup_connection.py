@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.write_postgres_libpq_env import parse_postgres_uri, write_libpq_environment
+from nanou_cyber_ai.backup.connection import parse_postgres_uri, write_libpq_environment
 
 
 def test_parse_postgres_uri_decodes_credentials_and_defaults_to_tls() -> None:
