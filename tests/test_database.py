@@ -38,6 +38,7 @@ def test_postgresql_runtime_does_not_attempt_schema_ddl(monkeypatch, tmp_path) -
         "create_all",
         lambda _engine: pytest.fail("PostgreSQL runtime must not issue schema DDL"),
     )
+    monkeypatch.setattr(SecurityDatabase, "_verify_postgres_schema", lambda _self: None)
     monkeypatch.setattr(SecurityDatabase, "_ensure_bootstrap_state", lambda _self: None)
 
     database = SecurityDatabase("postgresql://runtime.example/db", tmp_path)
