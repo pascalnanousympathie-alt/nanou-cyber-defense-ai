@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic import Field, SecretStr
@@ -30,8 +31,18 @@ class Settings(BaseSettings):
 
     @property
     def effective_database_url(self) -> SecretStr | None:
-        """Prefer a dedicated least-privilege runtime connection when configured."""
-        return self.runtime_database_url or self.database_url
+        """Use a dedicated runtime role on hosting; never fall back to an owner credential there."""
+        runtime_url = self.runtime_database_url
+        if runtime_url is not None and runtime_url.get_secret_value().strip():
+            return runtime_url
+
+        if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+            return None
+
+        legacy_url = self.database_url
+        if legacy_url is not None and legacy_url.get_secret_value().strip():
+            return legacy_url
+        return None
 
 
 settings = Settings()
