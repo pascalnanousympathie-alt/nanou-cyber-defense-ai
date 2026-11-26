@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from nanou_cyber_ai.backup.connection import main
+
+def main() -> int:
+    from nanou_cyber_ai.backup.connection import main as run_connection_parser
+
+    return run_connection_parser()
 
 
 if __name__ == "__main__":
