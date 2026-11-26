@@ -209,11 +209,15 @@ class SecurityDatabase:
             )
             event.listen(self.engine, "connect", self._enable_sqlite_foreign_keys)
 
-        if self.mode == "sqlite" or auto_create_postgres_schema:
-            metadata.create_all(self.engine)
-        else:
-            self._verify_postgres_schema()
-        self._ensure_bootstrap_state()
+        try:
+            if self.mode == "sqlite" or auto_create_postgres_schema:
+                metadata.create_all(self.engine)
+            else:
+                self._verify_postgres_schema()
+            self._ensure_bootstrap_state()
+        except Exception:
+            self.engine.dispose()
+            raise
 
     def _verify_postgres_schema(self) -> None:
         existing_tables = set(inspect(self.engine).get_table_names(schema="public"))
