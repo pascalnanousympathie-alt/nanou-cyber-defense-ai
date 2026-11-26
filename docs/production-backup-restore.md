@@ -103,7 +103,7 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - The crypto tests use an ephemeral RSA keypair to prove streaming round-trip, authentication-tag tamper rejection, and rejection of RSA keys below 3072 bits. This is cryptographic unit-test evidence only; it is not an actual Production artifact restore rehearsal.
 - The first post-merge manual backup run [45850155507](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45850155507) completed successfully and uploaded the encrypted artifact `nanou-production-backup-45850155507`. Details, size, expiry and checksum are recorded in the execution evidence below.
 - On Desktop Commander device Nanou, the private key was re-verified as present with filesystem mode `600`; its derived public-key SHA-256 fingerprint matches the pinned recipient key. A separate offline recovery copy has not yet been verified.
-- Production database ownership remains with `nanou_app`; the old Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains the last READY deployment. A new deployment on the backup-workflow merge commit failed with `FASTAPI_ENTRYPOINT_NOT_FOUND`; the corrective `[tool.vercel] entrypoint` change is prepared in PR #6 and has not been merged or deployed. No Admin bootstrap, ownership transfer, or credential revocation was performed.
+- Production database ownership remains with `nanou_app`; the old Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains the last READY Production deployment. A new Production build on the backup-workflow merge commit failed with `FASTAPI_ENTRYPOINT_NOT_FOUND`; PR #6 adds the recommended `[tool.vercel] entrypoint` configuration. Its Preview build is READY, but the fix has not been merged to `main` or promoted to Production. No Admin bootstrap, ownership transfer, or credential revocation was performed.
 - Neon rejected protecting Production branch `main` with HTTP 422 because the current plan's protected-branch quota is full. No other branch protection was removed and no paid upgrade was made.
 
 
@@ -133,4 +133,14 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - The merge commit triggered a Vercel Production build that failed at the build step with `FASTAPI_ENTRYPOINT_NOT_FOUND`.
 - Vercel identified `src/nanou_cyber_ai/api.py` and its `app` object as the valid application entrypoint, and recommended `[tool.vercel] entrypoint = "src.nanou_cyber_ai.api:app"`.
 - The same missing Vercel configuration was present in the parent `main` commit before PR #5, so this is a pre-existing project configuration defect, not a backup workflow failure.
-- The previous Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains READY. The corrective entrypoint declaration is prepared in PR #6; it has not been merged or deployed.
+- The previous Vercel Production deployment at `db4fa6a7c059467b8728468425d63ce78414ef5d` remains READY. The PR #6 Preview for head `e9430b037bdd77fa425459bede296452057e65b7` is READY (`dpl_89tdV6FXpuKZUhMDUEqN8ZWb52Mw`). The preview is protected by Vercel Authentication, so unauthenticated `/health` and `/openapi.json` checks were not completed. No Production promotion or deployment was performed.
+
+
+## PR #6 validation — 2026-11-26
+
+- PR: [#6 — Fix Vercel FastAPI entrypoint and portable backup checksum](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/pull/6).
+- At validated head `e9430b037bdd77fa425459bede296452057e65b7`, CI run [45851810022](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45851810022) passed: Ruff lint/format; 51 tests passed / 4 skipped; ML smoke 13 passed; dependency audit found no known vulnerabilities.
+- Security run [45851809676](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45851809676) passed: Gitleaks, CodeQL Python and CodeQL JavaScript/TypeScript.
+- Vercel generated a Preview deployment for the PR branch; deployment `dpl_89tdV6FXpuKZUhMDUEqN8ZWb52Mw` reached **READY** with the FastAPI entrypoint configured. This is Preview only, not a Production promotion. HTTP endpoint verification remained blocked by Vercel Authentication.
+- The revised relative checksum command was exercised with a synthetic test payload on the authorized Termux device; `sha256sum -c` returned `OK`. The next actual Production backup should verify the new sidecar format on the uploaded artifact.
+- PR #6 remains open and unmerged. Merge would trigger the connected Vercel Production deployment; do not merge or promote without explicit Production approval.
