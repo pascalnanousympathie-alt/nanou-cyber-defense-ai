@@ -46,7 +46,7 @@ Health: `GET /health`
 - `POST /api/malware/features/prepare/{dataset_id}` — validate one pre-extracted feature CSV row (Admin/Analyst only).
 - `POST /api/malware/inference` — classify an exact numeric feature vector (Admin/Analyst only; no APK or binary uploads).
 
-Local development uses SQLite under `~/.local/share/nanou-cyber-defense-ai` by default. Hosted/serverless environments require a dedicated PostgreSQL `NANOU_DATABASE_URL` and a private `NANOU_BOOTSTRAP_TOKEN`. Passwords are hashed with Argon2id; browser sessions use HttpOnly cookies and CSRF protection. Never put actual secrets, private reports, customer data, or malware samples in this public repository.
+Local development uses SQLite under `~/.local/share/nanou-cyber-defense-ai` by default. Hosted/serverless environments require a least-privilege PostgreSQL `NANOU_RUNTIME_DATABASE_URL` and a private `NANOU_BOOTSTRAP_TOKEN`. `NANOU_DATABASE_URL` is retained only as a local-development compatibility fallback. Passwords are hashed with Argon2id; browser sessions use HttpOnly cookies and CSRF protection. Never put actual secrets, private reports, customer data, or malware samples in this public repository.
 
 ## Web platform
 
