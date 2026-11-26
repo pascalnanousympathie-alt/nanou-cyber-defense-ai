@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -40,7 +41,11 @@ from nanou_cyber_ai.security.passwords import hash_password, verify_password
 from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.attack_simulation import AttackSimulationStore
 from nanou_cyber_ai.storage.auth import AuthStore
-from nanou_cyber_ai.storage.database import SecurityDatabase, get_database
+from nanou_cyber_ai.storage.database import (
+    SecurityDatabase,
+    get_database,
+    select_database_url,
+)
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
 
 app = FastAPI(
@@ -58,8 +63,18 @@ app.mount("/assets", StaticFiles(directory=_WEB_DIR / "assets"), name="web-asset
 
 
 def get_database_instance() -> SecurityDatabase:
-    database_url = (
+    runtime_database_url = (
+        settings.runtime_database_url.get_secret_value()
+        if settings.runtime_database_url is not None
+        else None
+    )
+    legacy_database_url = (
         settings.database_url.get_secret_value() if settings.database_url is not None else None
+    )
+    database_url = select_database_url(
+        runtime_database_url,
+        legacy_database_url,
+        serverless=bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")),
     )
     try:
         return get_database(database_url, settings.data_dir)
