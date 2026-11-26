@@ -31,6 +31,7 @@ from nanou_cyber_ai.models import (
     AttackSimulationCreateIn,
     AuthBootstrapIn,
     AuthLoginIn,
+    AuthPasswordChangeIn,
     AuthRegisterIn,
     DeveloperApiKeyCreateIn,
     MalwareInferenceIn,
@@ -42,11 +43,7 @@ from nanou_cyber_ai.security.passwords import hash_password, verify_password
 from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.attack_simulation import AttackSimulationStore
 from nanou_cyber_ai.storage.auth import AuthStore
-from nanou_cyber_ai.storage.database import (
-    SecurityDatabase,
-    get_database,
-    select_database_url,
-)
+from nanou_cyber_ai.storage.database import SecurityDatabase, get_database
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
 
 app = FastAPI(
@@ -57,6 +54,7 @@ app = FastAPI(
 _WEB_DIR = Path(__file__).resolve().parent / "web"
 _CSRF_COOKIE = "nanou_csrf"
 _MAX_REQUEST_BYTES = 2 * 1024 * 1024
+_LOCAL_AUDIT_HMAC_KEY = secrets.token_bytes(32)
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
@@ -64,18 +62,9 @@ app.mount("/assets", StaticFiles(directory=_WEB_DIR / "assets"), name="web-asset
 
 
 def get_database_instance() -> SecurityDatabase:
-    runtime_database_url = (
-        settings.runtime_database_url.get_secret_value()
-        if settings.runtime_database_url is not None
-        else None
-    )
-    legacy_database_url = (
-        settings.database_url.get_secret_value() if settings.database_url is not None else None
-    )
-    database_url = select_database_url(
-        runtime_database_url,
-        legacy_database_url,
-        serverless=bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")),
+    configured_database_url = settings.effective_database_url
+    database_url = (
+        configured_database_url.get_secret_value() if configured_database_url is not None else None
     )
     try:
         return get_database(database_url, settings.data_dir)
@@ -105,31 +94,34 @@ def _request_id(request: Request) -> str:
     return uuid.uuid4().hex
 
 
-def _fingerprint(payload: str) -> str:
-    key = settings.audit_hmac_key
-    if key is not None:
-        return hmac.new(
-            key.get_secret_value().encode("utf-8"),
-            payload.encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
+def _audit_hmac_key() -> bytes:
+    configured = settings.audit_hmac_key
+    if configured is not None:
+        return configured.get_secret_value().encode("utf-8")
+
     if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
         raise RuntimeError("NANOU_AUDIT_HMAC_KEY is required on serverless hosting.")
-    # Local development/tests may use a non-secret digest; hosted environments fail closed.
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    # Local development only: a process-local key avoids storing recoverable PII.
+    return _LOCAL_AUDIT_HMAC_KEY
+
+
+def _hmac_fingerprint(purpose: str, value: str) -> str:
+    message = f"{purpose}:{value}".encode()
+    return hmac.new(_audit_hmac_key(), message, hashlib.sha256).hexdigest()
 
 
 def _ip_digest(request: Request) -> str | None:
     # Use the direct peer address; do not trust arbitrary X-Forwarded-For input.
     peer = request.client.host if request.client else None
-    return _fingerprint(peer) if peer else None
+    return _hmac_fingerprint("audit-ip", peer) if peer else None
 
 
 def _rate_fingerprints(request: Request, email: str, action: str) -> tuple[str, str | None]:
-    email_digest = _fingerprint(f"{action}:{email}")
-    ip_digest = _ip_digest(request)
-    if ip_digest:
-        ip_digest = _fingerprint(f"{action}:{ip_digest}")
+    normalized_email = email.strip().lower()
+    email_digest = _hmac_fingerprint(f"rate-email:{action}", normalized_email)
+    peer = request.client.host if request.client else None
+    ip_digest = _hmac_fingerprint(f"rate-ip:{action}", peer) if peer else None
     return email_digest, ip_digest
 
 
@@ -235,16 +227,75 @@ def _csrf_valid(request: Request) -> bool:
     return True
 
 
+class RequestBodyLimitMiddleware:
+    """Enforce request size on the ASGI receive stream without consuming it early."""
+
+    def __init__(self, app, *, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = {name.lower(): value for name, value in scope.get("headers", ())}
+        content_length = headers.get(b"content-length")
+        if content_length is not None:
+            try:
+                raw_length = content_length.decode("ascii")
+                if not raw_length.isdecimal():
+                    raise ValueError
+                if int(raw_length) > self.max_bytes:
+                    await Response("Request body too large.", status_code=413)(scope, receive, send)
+                    return
+            except (UnicodeDecodeError, ValueError):
+                await Response("Invalid content length.", status_code=400)(scope, receive, send)
+                return
+
+        received_bytes = 0
+        request_too_large = False
+        response_body_sent = False
+        error_body = b"Request body too large."
+
+        async def limited_receive():
+            nonlocal received_bytes, request_too_large
+            message = await receive()
+            if message.get("type") == "http.request":
+                received_bytes += len(message.get("body", b""))
+                if received_bytes > self.max_bytes:
+                    request_too_large = True
+                    return {"type": "http.request", "body": b"", "more_body": False}
+            return message
+
+        async def limited_send(message):
+            nonlocal response_body_sent
+            if request_too_large and message.get("type") == "http.response.start":
+                headers = [
+                    (name, value)
+                    for name, value in message.get("headers", [])
+                    if name.lower() not in {b"content-type", b"content-length"}
+                ]
+                headers.extend(
+                    [
+                        (b"content-type", b"text/plain; charset=utf-8"),
+                        (b"content-length", str(len(error_body)).encode()),
+                    ]
+                )
+                message = {**message, "status": 413, "headers": headers}
+            elif request_too_large and message.get("type") == "http.response.body":
+                if response_body_sent:
+                    return
+                response_body_sent = True
+                message = {**message, "body": error_body, "more_body": False}
+            await send(message)
+
+        await self.app(scope, limited_receive, limited_send)
+
+
 @app.middleware("http")
 async def secure_request_middleware(request: Request, call_next):
     rejection: Response | None = None
-    content_length = request.headers.get("content-length")
-    if content_length:
-        try:
-            if int(content_length) < 0 or int(content_length) > _MAX_REQUEST_BYTES:
-                rejection = Response("Request body too large or invalid.", status_code=413)
-        except ValueError:
-            rejection = Response("Invalid content length.", status_code=400)
 
     bearer_api_request = request.url.path == "/api/v1/assistant/chat" and request.headers.get(
         "authorization", ""
@@ -276,6 +327,10 @@ async def secure_request_middleware(request: Request, call_next):
     if request.url.path == "/" or request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     return response
+
+
+# Register after BaseHTTPMiddleware so the ASGI receive wrapper is outermost.
+app.add_middleware(RequestBodyLimitMiddleware, max_bytes=_MAX_REQUEST_BYTES)
 
 
 @app.get("/", include_in_schema=False)
@@ -443,6 +498,41 @@ async def login_account(item: AuthLoginIn, request: Request, response: Response)
         ip_digest=_ip_digest(request),
     )
     return {"user": {key: value for key, value in user.items() if key != "password_hash"}}
+
+
+@app.post("/api/auth/password")
+async def change_account_password(
+    item: AuthPasswordChangeIn,
+    request: Request,
+    response: Response,
+    user: Annotated[dict, Depends(require_user)],
+) -> dict[str, bool]:
+    store = get_auth_store()
+    _check_rate_limit(store, request, user["email"], "auth.password_change")
+    account = store.get_user_by_email(user["email"])
+    if account is None or not verify_password(item.current_password, account["password_hash"]):
+        store.record_event(
+            actor_user_id=user["id"],
+            action="auth.password.change",
+            target_type="user",
+            target_id=user["id"],
+            outcome="failed",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=403, detail="Current password is incorrect.")
+    password_hash = hash_password(item.new_password)
+    changed = store.change_password(
+        user_id=user["id"],
+        password_hash=password_hash,
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    if not changed:
+        raise HTTPException(status_code=401, detail="Sign in again before changing your password.")
+    # Reissue one fresh session for this browser; every previously issued session is revoked.
+    _session_token(request, response, store, user["id"])
+    return {"password_changed": True}
 
 
 @app.post("/api/auth/logout")

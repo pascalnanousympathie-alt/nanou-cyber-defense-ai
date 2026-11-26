@@ -1,1 +1,1 @@
-"""Operational scripts for Nanou Cyber Defense AI."""
+"""Operational and maintenance scripts for Nanou Cyber Defense AI."""

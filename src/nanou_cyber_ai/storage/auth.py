@@ -291,6 +291,50 @@ class AuthStore:
         with self.database.engine.begin() as connection:
             connection.execute(delete(sessions).where(sessions.c.token_hash == token_hash))
 
+    def change_password(
+        self,
+        *,
+        user_id: str,
+        password_hash: str,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> bool:
+        now = datetime.now(UTC)
+        with self.database.engine.begin() as connection:
+            account = (
+                connection.execute(
+                    select(users)
+                    .where(
+                        users.c.id == user_id,
+                        users.c.is_active.is_(True),
+                        users.c.is_approved.is_(True),
+                    )
+                    .with_for_update()
+                )
+                .mappings()
+                .first()
+            )
+            if account is None:
+                return False
+            connection.execute(
+                update(users)
+                .where(users.c.id == user_id)
+                .values(password_hash=password_hash, updated_at=now)
+            )
+            # Password rotation invalidates all previously issued browser sessions.
+            connection.execute(delete(sessions).where(sessions.c.user_id == user_id))
+            self._audit(
+                connection,
+                actor_user_id=user_id,
+                action="auth.password.change",
+                target_type="user",
+                target_id=user_id,
+                outcome="success",
+                request_id=request_id,
+                ip_digest=ip_digest,
+            )
+        return True
+
     def list_users(self, limit: int = 200) -> list[dict[str, Any]]:
         with self.database.engine.connect() as connection:
             rows = connection.execute(

@@ -253,3 +253,54 @@ def test_assistant_chat_assets_and_command_policy_are_present() -> None:
     assert operation["requestBody"]["required"] is True
     request_ref = operation["requestBody"]["content"]["application/json"]["schema"]["$ref"]
     assert "AssistantChatRequest" in request_ref
+
+
+def test_account_workspace_exposes_safe_password_rotation_form() -> None:
+    with TestClient(app) as client:
+        home = client.get("/")
+        script = client.get("/assets/app.js")
+
+    assert home.status_code == 200
+    assert 'id="password-change-form"' in home.text
+    assert 'id="current-password"' in home.text
+    assert 'id="new-password"' in home.text
+    assert 'id="confirm-password"' in home.text
+    assert 'autocomplete="current-password"' in home.text
+    assert 'autocomplete="new-password"' in home.text
+
+    assert script.status_code == 200
+    assert 'apiRequest("/api/auth/password"' in script.text
+    assert (
+        'byId("password-change-form").addEventListener("submit", submitPasswordChange)'
+        in script.text
+    )
+    assert "localStorage" not in script.text
+
+
+def test_request_body_limit_rejects_oversized_content_length() -> None:
+    oversized_body = b"x" * (2 * 1024 * 1024 + 1)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/login",
+            content=oversized_body,
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status_code == 413
+
+
+def test_request_body_limit_rejects_chunked_body_without_content_length() -> None:
+    def chunks():
+        yield b'{"email":"large@example.test","password":"'
+        yield b"x" * (2 * 1024 * 1024)
+        yield b'"}'
+
+    with TestClient(app) as client:
+        csrf = client.get("/api/auth/csrf").json()["csrf_token"]
+        response = client.post(
+            "/api/auth/login",
+            content=chunks(),
+            headers={"Content-Type": "application/json", "X-CSRF-Token": csrf},
+        )
+
+    assert response.status_code == 413, response.text
