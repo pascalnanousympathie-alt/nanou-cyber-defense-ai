@@ -12,7 +12,6 @@ _SUPPORTED_OPTIONS = {
     "sslmode": "PGSSLMODE",
     "channel_binding": "PGCHANNELBINDING",
     "application_name": "PGAPPNAME",
-    "options": "PGOPTIONS",
     "connect_timeout": "PGCONNECT_TIMEOUT",
     "target_session_attrs": "PGTARGETSESSIONATTRS",
 }
