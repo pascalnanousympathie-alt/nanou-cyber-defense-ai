@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from scripts.production_backup_crypto import decrypt_backup
+from nanou_cyber_ai.backup.crypto import decrypt_backup
 
 
 def main() -> int:
