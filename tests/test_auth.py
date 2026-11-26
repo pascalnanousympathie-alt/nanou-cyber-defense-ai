@@ -5,8 +5,9 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from starlette.requests import Request
 
-from nanou_cyber_ai.api import app
+from nanou_cyber_ai.api import _ip_digest, _rate_fingerprints, app
 from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.auth import AuthStore
 from nanou_cyber_ai.storage.database import SecurityDatabase
@@ -550,3 +551,38 @@ def test_logout_revokes_server_session_and_clears_cookie(monkeypatch, tmp_path) 
 
         events = client.get("/api/admin/audit?limit=20")
         assert events.status_code == 401
+
+
+def test_audit_and_rate_limit_fingerprints_are_keyed_and_domain_separated(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "audit_hmac_key", SecretStr("a" * 64))
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/auth/login",
+            "headers": [],
+            "client": ("203.0.113.25", 43123),
+        }
+    )
+
+    audit_ip = _ip_digest(request)
+    email_login, ip_login = _rate_fingerprints(request, "Owner@Example.Test", "auth.login")
+    email_register, ip_register = _rate_fingerprints(
+        request, "owner@example.test", "auth.register"
+    )
+
+    assert audit_ip is not None and len(audit_ip) == 64
+    assert ip_login is not None and len(ip_login) == 64
+    assert ip_register is not None and len(ip_register) == 64
+    assert email_login == _rate_fingerprints(request, "owner@example.test", "auth.login")[0]
+    assert email_login != email_register
+    assert ip_login != ip_register
+    assert audit_ip != ip_login
+    assert "203.0.113.25" not in audit_ip
+    assert "owner@example.test" not in email_login
+
+    monkeypatch.setattr(settings, "audit_hmac_key", SecretStr("b" * 64))
+    rotated_email, rotated_ip = _rate_fingerprints(request, "owner@example.test", "auth.login")
+    assert rotated_email != email_login
+    assert rotated_ip != ip_login
