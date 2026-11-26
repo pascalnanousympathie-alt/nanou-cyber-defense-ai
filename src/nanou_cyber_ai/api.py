@@ -232,10 +232,6 @@ def _csrf_valid(request: Request) -> bool:
     return True
 
 
-class _RequestBodyTooLarge(Exception):
-    """Raised when a streamed request body exceeds the configured limit."""
-
-
 class RequestBodyLimitMiddleware:
     """Enforce request size on the ASGI receive stream without consuming it early."""
 
@@ -263,20 +259,43 @@ class RequestBodyLimitMiddleware:
                 return
 
         received_bytes = 0
+        request_too_large = False
+        response_body_sent = False
+        error_body = b"Request body too large."
 
         async def limited_receive():
-            nonlocal received_bytes
+            nonlocal received_bytes, request_too_large
             message = await receive()
             if message.get("type") == "http.request":
                 received_bytes += len(message.get("body", b""))
                 if received_bytes > self.max_bytes:
-                    raise _RequestBodyTooLarge
+                    request_too_large = True
+                    return {"type": "http.request", "body": b"", "more_body": False}
             return message
 
-        try:
-            await self.app(scope, limited_receive, send)
-        except _RequestBodyTooLarge:
-            await Response("Request body too large.", status_code=413)(scope, receive, send)
+        async def limited_send(message):
+            nonlocal response_body_sent
+            if request_too_large and message.get("type") == "http.response.start":
+                headers = [
+                    (name, value)
+                    for name, value in message.get("headers", [])
+                    if name.lower() not in {b"content-type", b"content-length"}
+                ]
+                headers.extend(
+                    [
+                        (b"content-type", b"text/plain; charset=utf-8"),
+                        (b"content-length", str(len(error_body)).encode()),
+                    ]
+                )
+                message = {**message, "status": 413, "headers": headers}
+            elif request_too_large and message.get("type") == "http.response.body":
+                if response_body_sent:
+                    return
+                response_body_sent = True
+                message = {**message, "body": error_body, "more_body": False}
+            await send(message)
+
+        await self.app(scope, limited_receive, limited_send)
 
 
 @app.middleware("http")
