@@ -142,6 +142,23 @@ def apply_migrations(
                     "Connected database is not the approved isolated Preview database."
                 )
 
+            cursor.execute(
+                """
+                SELECT login.rolcanlogin, login.rolsuper, login.rolcreatedb,
+                       login.rolcreaterole, login.rolreplication, login.rolbypassrls,
+                       owner.rolcanlogin, owner.rolsuper, owner.rolcreatedb,
+                       owner.rolcreaterole, owner.rolreplication, owner.rolbypassrls
+                FROM pg_roles AS login
+                CROSS JOIN pg_roles AS owner
+                WHERE login.rolname = %s AND owner.rolname = %s
+                """,
+                (MIGRATION_LOGIN, MIGRATION_ROLE),
+            )
+            role_flags = cursor.fetchone()
+            if role_flags is None:
+                raise MigrationError("Dedicated migration roles are not provisioned.")
+            validate_role_flags(role_flags)
+
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", (LOCK_KEY,))
             cursor.execute(
                 f"""
@@ -212,7 +229,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         applied = apply_migrations(database_url, target, migrations)
         print(f"Applied {len(applied)} migration(s) to {target}.")
         return 0
-    except (MigrationError, OSError, psycopg.Error) as exc:
+    except psycopg.Error:
+        print(
+            "Migration blocked: database operation failed; details omitted to protect credentials.",
+            file=sys.stderr,
+        )
+        return 2
+    except (MigrationError, OSError) as exc:
         print(f"Migration blocked: {exc}", file=sys.stderr)
         return 2
 
