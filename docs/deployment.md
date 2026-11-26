@@ -21,8 +21,8 @@ Vercel Hobby is free for personal/non-commercial use only. It is not an appropri
 - Deployment protection: Vercel Authentication is enabled for **All Deployments**, including production URLs.
 - `NANOU_DATABASE_URL`: Preview has a dedicated Preview-only Neon database secret; Production retains a separate Production-only sensitive secret. Values are not read or printed.
 - `NANOU_BOOTSTRAP_TOKEN`: Preview-only; one-time bootstrap is already claimed and the token is no longer needed for routine operation.
-- Latest verified Preview commit `815de1e825384089cb673251cfa14ebb686fd81a`: **READY**.
-- Latest Preview URL: https://nanou-cyber-defense-5xzwwhout-nanou3.vercel.app
+- Latest verified Preview commit `8c13460745e91e6038984764db9d542910efc554`: **READY**.
+- Latest Preview URL: https://nanou-cyber-defense-4z4wzdz8z-nanou3.vercel.app
 
 The secret values are not stored in Git or this document. Preview and Production database variables are separated. The Preview PostgreSQL provider and encrypted backup/restore have been checked; Production database readiness and restore have not been exercised. A Preview readiness check is not proof of a Production SLA.
 
@@ -44,12 +44,13 @@ Using the protected Preview in the connected browser:
 | Restore drill | Encrypted post-rotation backup restored in an isolated PostgreSQL test project |
 | Vercel SSO | Enabled for All Deployments |
 
-GitHub Actions PR validation run [45780864273](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45780864273) on commit `815de1e825384089cb673251cfa14ebb686fd81a` completed successfully:
+GitHub Actions PR validation run [45782512780](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45782512780) on commit `8c13460745e91e6038984764db9d542910efc554` completed successfully:
 - `test`: **PASS** — Ruff lint, Ruff format, **116 passed / 4 skipped**.
 - `ml-smoke`: **PASS** — **13 passed**.
 - `dependency-audit`: **PASS** — pip-audit reported **No known vulnerabilities found** for installed third-party Python dependencies.
-- Security workflow [45780864270](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45780864270): **PASS** — Gitleaks checked the PR range and all fetched Git refs/history; result **No leaks detected**. CodeQL Python and JavaScript/TypeScript analyses completed and uploaded. GitHub Code Scanning returned **0 open alerts** for this branch at verification time.
+- Security workflow [45782512686](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45782512686): **PASS** — Gitleaks 8.30.1 checked the PR range and all fetched Git refs/history; result **No leaks detected**. CodeQL Python and JavaScript/TypeScript analyses passed and SARIF results were uploaded. Review the repository's GitHub Security tab while signed in to inspect any generated CodeQL alerts; this browser session is not authenticated to GitHub.
 - Regression tests cover keyed/purpose-separated HMAC fingerprints, 2 MiB Content-Length and streamed/chunked request-body limits, CSRF, password rotation, session revocation, logout and RBAC boundaries.
+- CI uses SHA-pinned `actions/checkout@v6` and `actions/setup-python@v6` (Node 24); Git checkout credentials are not persisted in test jobs.
 
 The dashboard is deployed as a protected Preview and its PostgreSQL readiness endpoint has been exercised. Automated tests cover bootstrap, login, approval, role restrictions, password rotation, logout, HMAC fingerprinting and request-size enforcement. The connected Opera browser remains signed out; the Admin console has not been live-accepted in the owner's authenticated browser. The Preview DB audit records successful password rotation and login; that does not prove the currently connected Opera tab owns the remaining valid session.
 
