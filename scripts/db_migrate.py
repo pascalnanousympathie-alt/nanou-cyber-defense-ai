@@ -109,12 +109,7 @@ def validate_role_flags(flags: Sequence[bool]) -> None:
     login_privileges = flags[1:6]
     owner_can_login = flags[6]
     owner_privileges = flags[7:12]
-    if (
-        not login_can_login
-        or any(login_privileges)
-        or owner_can_login
-        or any(owner_privileges)
-    ):
+    if not login_can_login or any(login_privileges) or owner_can_login or any(owner_privileges):
         raise MigrationError("Migration login/owner roles have unsafe PostgreSQL attributes.")
 
 
