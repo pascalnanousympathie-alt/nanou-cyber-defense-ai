@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - feat/web-platform
+      - fix/admin-password-rotation
   workflow_dispatch:
   schedule:
     - cron: "23 6 * * 1"
