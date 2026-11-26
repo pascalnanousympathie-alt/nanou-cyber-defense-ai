@@ -29,6 +29,7 @@ from nanou_cyber_ai.models import (
     AttackSimulationCreateIn,
     AuthBootstrapIn,
     AuthLoginIn,
+    AuthPasswordChangeIn,
     AuthRegisterIn,
     DeveloperApiKeyCreateIn,
     MalwareInferenceIn,
