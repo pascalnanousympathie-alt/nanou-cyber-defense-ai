@@ -112,7 +112,7 @@ def _audit_hmac_key() -> bytes:
 
 
 def _hmac_fingerprint(purpose: str, value: str) -> str:
-    message = f"{purpose}:{value}".encode("utf-8")
+    message = f"{purpose}:{value}".encode()
     return hmac.new(_audit_hmac_key(), message, hashlib.sha256).hexdigest()
 
 
