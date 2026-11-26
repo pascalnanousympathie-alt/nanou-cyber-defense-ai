@@ -117,3 +117,16 @@ def test_database_target_rejects_other_database_on_preview_host() -> None:
     url = f"postgresql://migration:secret@{PREVIEW_ALLOWED_HOST}:5432/postgres"
     with pytest.raises(MigrationError, match="approved isolated Preview database"):
         validate_database_target(url, "preview")
+
+def test_migration_role_flags_require_login_and_no_login_owner() -> None:
+    validate_role_flags((True, False, False, False, False, False, False, False, False, False, False, False))
+
+
+def test_migration_role_flags_reject_elevated_login_or_owner() -> None:
+    with pytest.raises(MigrationError, match="unsafe PostgreSQL attributes"):
+        validate_role_flags((True, True, False, False, False, False, False, False, False, False, False, False))
+
+
+def test_migration_role_flags_reject_missing_roles() -> None:
+    with pytest.raises(MigrationError, match="Could not verify migration role attributes"):
+        validate_role_flags(())
