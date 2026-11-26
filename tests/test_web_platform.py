@@ -297,4 +297,4 @@ def test_request_body_limit_rejects_chunked_body_without_content_length() -> Non
             headers={"Content-Type": "application/json", "X-CSRF-Token": csrf},
         )
 
-    assert response.status_code == 413
+    assert response.status_code == 413, response.text
