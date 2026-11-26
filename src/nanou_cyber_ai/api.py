@@ -63,9 +63,7 @@ app.mount("/assets", StaticFiles(directory=_WEB_DIR / "assets"), name="web-asset
 def get_database_instance() -> SecurityDatabase:
     configured_database_url = settings.effective_database_url
     database_url = (
-        configured_database_url.get_secret_value()
-        if configured_database_url is not None
-        else None
+        configured_database_url.get_secret_value() if configured_database_url is not None else None
     )
     try:
         return get_database(database_url, settings.data_dir)
