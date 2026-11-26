@@ -157,3 +157,17 @@ Production is blocked until:
 8. Complete Viewer/Analyst RBAC and operational acceptance.
 
 Never bypass the stopped secret handoff by embedding credentials in shell history, command arguments, repository files, logs or chat. If the supported secret write action remains unavailable, report BLOCKED with the exact missing secret and continue independent work.
+
+
+## 12. Latest continuation evidence and PR #4 dependency
+
+- PR #3 latest validated SHA at this checkpoint: `7d10fb6666515d5bf6816710566f5d276d0402dc`.
+- Security workflow PR-base filters now include `fix/admin-password-rotation`, so Gitleaks and both CodeQL languages run for child pull requests targeting PR #3.
+- PR #3 exact-head CI #45819559656: Ruff, 132 passed / 4 skipped, ML smoke 13, dependency audit PASS. Security #45819559546: Gitleaks and both CodeQL jobs PASS.
+- PR #4 `fix/backup-runner-secret-scope` → `fix/admin-password-rotation`, exact head `7e002e5e165da84779dba819d6e5f11abbb8aba2`: CI #45817693674 PASS (132/4, ML 13, pip-audit); exact Vercel Preview deployment dpl_M8BsQApGiBKFCw23w3okDAh91znA READY. Verify Gitleaks/CodeQL on PR #4 exact head before merge; the earlier scan results belong to PR #3 head, not PR #4.
+- PR #4 modifies only `.github/workflows/production-backup.yml`. The DB URI is parsed in the dump step and passed to libpq via environment variables, not command-line arguments. TLS is mandatory; unsupported query options fail closed; temporary connection file is 0600; dump directory 0700; dump uses umask 077 and the runner UID.
+- Production runtime and backup login checks passed for direct read queries. Preview runtime login also passed. A separate isolated restore-test role completed INSERT → UPDATE → DELETE smoke with no residual test row.
+- The Production snapshot/restore evidence remains the manual snapshot `snap-shiny-fire-bir6x6kk` and branch `br-little-sound-bipv6bjm`; no automatic/off-provider backup has been proven.
+- `NANOU_BACKUP_DATABASE_URL` is still required as a GitHub Actions secret. The available GitHub connector cannot write repository Actions secrets. Owner must provision this secret through GitHub's secret settings using the read-only `nanou_backup` connection; never paste the secret into chat, Git, shell history or logs.
+- Production remains on old deployment commit `db4fa6a7c059467b8728468425d63ce78414ef5d`; old `nanou_app` still owns database/tables. No ownership transfer or credential revocation until exact Production runtime deployment and backup/restore/rollback acceptance.
+- Keep all PRs Draft/Open and do not merge, promote, disable SSO, or upgrade until the required human acceptance and backup secret handoff are complete. No direct Production DDL or data writes during this checkpoint.
