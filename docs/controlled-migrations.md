@@ -1,51 +1,58 @@
 # Controlled PostgreSQL migrations
 
 The FastAPI runtime must use only `NANOU_RUNTIME_DATABASE_URL`. It must never
-run this migration command or receive migration credentials.
+invoke this command or receive migration credentials.
 
 ## Current safety boundary
 
-- The migration login is expected to be `nanou_migration_login`, with
-  `SET ROLE nanou_migration_owner` required for schema changes.
-- The runner uses an advisory transaction lock and applies pending SQL files
-  plus their ledger entries in one database transaction.
-- Each migration is immutable after application: its SHA-256 checksum is
-  stored and verified on subsequent runs.
-- Migration filenames must be `NNNN_description.sql`, sorted lexically.
-- The default is a dry-run listing. Applying requires an explicit
-  `--apply`, `NANOU_MIGRATION_DATABASE_URL`, and an explicit
-  `NANOU_MIGRATION_TARGET`.
-- `production` is deliberately rejected in this implementation. There is no
-  flag or environment override to bypass this guard.
-- No migration SQL is supplied by this runner. Schema changes must be authored,
-  reviewed and tested separately; it does not generate DDL from SQLAlchemy
-  metadata or attempt to baseline an existing database automatically.
+- The expected login is `nanou_migration_login`; schema changes require
+  `SET ROLE nanou_migration_owner`.
+- The runner uses a transaction-scoped advisory lock and applies pending SQL
+  files and their ledger entries in one transaction.
+- Each applied migration has an immutable SHA-256 checksum. A changed checksum
+  for an applied version blocks the run.
+- Migration filenames use `NNNN_description.sql`; empty, malformed, duplicate
+  and symlinked files are rejected.
+- Dry-run listing is the default. Applying requires `--apply`,
+  `NANOU_MIGRATION_DATABASE_URL`, and an explicit `NANOU_MIGRATION_TARGET`.
+- Production is hard-blocked. The executable path is pinned in code to the
+  isolated Neon Preview endpoint and database `nanou_preview`; changing this
+  allowlist requires a reviewed code change.
+- The runner does not generate DDL from SQLAlchemy metadata and does not
+  automatically baseline an existing database. No migration SQL is included.
 
-## Local / Preview usage
-
-Install the project dependencies, then set the target explicitly:
+## Preview dry run
 
 ```bash
 export NANOU_MIGRATION_TARGET=preview
 python scripts/db_migrate.py
 ```
 
-The command lists checksums only and does not connect to the database.
+This only lists migration names and checksums; it does not connect to Neon.
 
-For a reviewed migration on an isolated Preview database, provide its dedicated
-migration login URL through the secret environment variable and run:
+## Preview apply — currently blocked pending role provisioning
+
+The current Preview branch audit identified database `nanou_preview`, but
+`nanou_migration_login` and `nanou_migration_owner` were not present in
+`pg_roles`. Therefore do not run with `--apply` until those roles and their
+least-privilege grants are separately provisioned and verified on Preview.
+Do not substitute the app or runtime login.
+
+After that prerequisite, provide the dedicated Preview migration login URL
+through the protected `NANOU_MIGRATION_DATABASE_URL` environment variable
+and run:
 
 ```bash
 python scripts/db_migrate.py --apply
 ```
 
-Do not put the URL in shell history, command arguments, CI output, logs, Git,
-screenshots or chat. Prefer a short-lived CI secret or a local protected
-environment variable. Never reuse the Production migration URL in Preview.
+Never put database URLs in shell history, command arguments, CI output, logs,
+Git, screenshots or chat. Never reuse a Production database URL in Preview.
 
 ## Before Production support can be enabled
 
-A separate change and explicit approval are required. It must include a fresh
-backup/restore verification, tested forward and rollback SQL, a maintenance
-window, a reviewed migration diff, a Production-specific credential check,
-a tested recovery path, and a post-migration application acceptance test.
+A separate code change and explicit approval are required. It must include a
+fresh backup/restore verification, tested forward and rollback SQL, a
+maintenance window, a reviewed migration diff, Production-specific role and
+credential verification, a tested recovery path, and post-migration
+application acceptance tests.
