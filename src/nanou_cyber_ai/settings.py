@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("~/.local/share/nanou-cyber-defense-ai").expanduser())
     http_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
     runtime_database_url: SecretStr | None = None
+    audit_hmac_key: SecretStr | None = Field(default=None, min_length=32)
     database_url: SecretStr | None = None
     bootstrap_token: SecretStr | None = None
     session_cookie_name: str = Field(default="nanou_session", min_length=8, max_length=40)
