@@ -109,28 +109,37 @@ The same candidate adds purpose-separated keyed HMAC-SHA-256 fingerprints for IP
 These hardening changes remain in Draft PR #3 until the updated branch has passed its post-sync CI/security runs and the PRs are deliberately integrated. They are not represented as Production changes.
 
 
-## Latest candidate validation and deployment limit (2026-11-26)
+## Latest candidate validation and Preview status (2026-11-26)
 
 This section supersedes older PR candidate status in this runbook.
 
-Candidate head `125dc8c14acb3179ba320aee6ac4e1fbb6b777c0`, PR #3 → `feat/web-platform`:
-- GitHub Actions CI run [45793385104](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793385104): **PASS** — Ruff lint, Ruff format, pytest, ML smoke and dependency audit.
-- Pytest: **123 passed / 4 skipped** (includes seven PostgreSQL schema-policy/bootstrap tests).
-- ML smoke: **13 passed**.
-- pip-audit: **No known vulnerabilities found**.
-- Security run [45793385156](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793385156): **PASS** — Gitleaks no leaks; CodeQL Python and JavaScript/TypeScript completed successfully and uploaded SARIF.
-- PR #3 remains Draft/Open, targets `feat/web-platform`, is mergeable and unmerged. PR #1 remains Draft/Open to `main`.
+Current PR #3 head: `90439511a937d74ca3079feac32c4b3d3e90cd4a`, base PR #1 / `feat/web-platform` at `62f0b42bcec2a096186a84e18029048f3ce320da`. PR #3 remains Draft/Open, mergeable and unmerged; it is 59 commits ahead / 0 behind. PR #1 remains Draft/Open to `main`.
+
+Latest GitHub Actions validation on current head:
+- CI run [45793720638](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793720638): **PASS** — Ruff lint, Ruff format, **123 passed / 4 skipped**, ML smoke **13 passed**, pip-audit **no known vulnerabilities found**.
+- Security run [45793720747](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45793720747): **PASS** — Gitleaks no leaks; CodeQL Python and JavaScript/TypeScript passed and uploaded SARIF.
 
 ### Runtime role model proof
 
-The candidate now has no PostgreSQL DDL during application startup:
+The current candidate has no PostgreSQL DDL during application startup:
 - SQLite still initializes schema for local development/tests.
-- PostgreSQL startup checks the required `public` tables and columns, then uses DML to ensure the one-time bootstrap-state row. Missing tables/columns fail closed with a startup error.
-- Initial PostgreSQL schema creation is a separate command, `python -m nanou_cyber_ai.storage.bootstrap`, requiring the protected `NANOU_MIGRATION_DATABASE_URL` environment variable. This is an initial bootstrap only, not an ALTER/schema-upgrade system.
-- In the isolated Neon restore-test project, a `NOLOGIN` runtime probe role with SELECT/INSERT/UPDATE/DELETE and sequence privileges passed a `SET ROLE` capability check and a test INSERT→UPDATE→DELETE. It had no superuser, CREATEROLE, CREATEDB, BYPASSRLS, database/schema CREATE or TRUNCATE; no test row remained. This is a prototype validation, not a login role configured in Vercel or Production.
+- PostgreSQL startup checks required `public` tables and columns, then uses DML to ensure the one-time bootstrap-state row. Missing tables/columns fail closed with a startup error.
+- Initial PostgreSQL schema creation is a separate command, `python -m nanou_cyber_ai.storage.bootstrap`, requiring the protected `NANOU_MIGRATION_DATABASE_URL` environment variable. This creates missing initial tables only; it is not an ALTER/schema-upgrade system.
+- In the isolated Neon restore-test project, a `NOLOGIN` runtime probe role with SELECT/INSERT/UPDATE/DELETE and sequence privileges passed a `SET ROLE` capability check and INSERT→UPDATE→DELETE smoke. It had no superuser, CREATEROLE, CREATEDB, BYPASSRLS, database/schema CREATE or TRUNCATE; no test row remained. This is a prototype validation, not a login role configured in Vercel or Production.
 
-### Preview deployment status
+### Integrated Preview deployment
 
-The existing UI-only Preview at https://nanou-cyber-defense-90y9bz97o-nanou3.vercel.app/ remains the latest verified READY interface build. It is not the integrated PR #3 candidate head.
+A Vercel Git Preview for branch `fix/admin-password-rotation` is **READY**:
+- Deployment: `dpl_HSoSTJv8aFcudRrLBtJw7XskY2PW`.
+- URL: https://nanou-cyber-defense-ai-git-fix-admin-password-rotation-nanou3.vercel.app/
+- Deployed commit: `ad2f668c8323996a16366ade5b4f69f652f8d9e4`.
+- The current PR #3 head is 11 commits ahead. Comparing the deployed commit with current head shows only documentation, tests, and small non-runtime bootstrap CLI error-handling changes; the dashboard, API, auth, database runtime verification, CSS and JavaScript application source are unchanged.
+- Live Opera smoke checks on that Preview:
+  - `/ready`: `{"status":"ready","database":"postgresql"}`.
+  - `/api/auth/me`: `authenticated:false`, `user:null`, `bootstrap_required:false` in the signed-out browser.
+  - Unauthenticated `/api/admin/users`: denied with `Sign in with an approved account.`.
+  - Dashboard screenshot confirms the deep-black / emerald-cyan HUD, grouped menu, dimensional hero typography and shield graphic.
+- This is a protected Preview, not Production. Owner Admin login, password-change submission and live Viewer/Analyst acceptance remain unverified because the connected browser is signed out.
 
-A new Preview deployment for the current branch/head was blocked by Vercel with HTTP 402, resource `api-deployments-free-per-day`, message “more than 100” deployments and retry-after 86,400 seconds. A read-only Vercel query for commit `125dc8c` returned zero deployment records. No CLI bypass, plan upgrade or repeated deployment attempt was used. Treat the integrated password-rotation/database-policy build as **not yet Preview-live** until the limit resets or the owner resolves the team quota.
+Vercel returned HTTP 402 resource `api-deployments-free-per-day` when a forced API deployment was requested (more than 100 deployments and retry-after 86,400 seconds). The Git-linked Preview above was automatically built and is READY; a read-only lookup for the exact current head `9043951` returned zero deployments. No CLI bypass, plan upgrade or paid quota change was used. The current READY Preview is suitable for testing the unchanged application source, but it is not an exact build of the latest docs/tests HEAD.
+
