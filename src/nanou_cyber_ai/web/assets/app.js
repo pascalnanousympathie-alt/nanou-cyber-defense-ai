@@ -19,7 +19,7 @@ ru:["ЗАЩИЩЁННОЕ ПРОСТРАНСТВО","Главная","Анали
 };
 function translate(key){const i=I18N_KEYS.indexOf(key);const lang=document.documentElement.lang;return i>=0?(I18N[lang]||I18N.fr)[i]:key}
 let activeLocale = "fr";
-function applyLocale(locale){const lang=I18N[locale]?locale:"fr";activeLocale=lang;const values=I18N[lang];document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.querySelectorAll("[data-i18n]").forEach(el=>{const i=I18N_KEYS.indexOf(el.dataset.i18n);if(i>=0)el.textContent=values[i]});const select=byId("language-select");if(select&&select.value!==lang)select.value=lang;try{localStorage.setItem("nanou-locale",lang)}catch{/* private mode */}}
+function applyLocale(locale){const lang=I18N[locale]?locale:"fr";activeLocale=lang;const values=I18N[lang];document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.querySelectorAll("[data-i18n]").forEach(el=>{const i=I18N_KEYS.indexOf(el.dataset.i18n);if(i>=0)el.textContent=values[i]});const select=byId("language-select");if(select&&select.value!==lang)select.value=lang;}
 let csrfToken = "";
 let currentUser = null;
 let configuredMalwareModel = null;
