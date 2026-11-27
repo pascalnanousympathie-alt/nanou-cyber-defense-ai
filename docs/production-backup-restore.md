@@ -4,12 +4,12 @@
 
 This section supersedes earlier staged-cutover statements below.
 
-- Production database `nanou_cyber_defense` is now owned by NOLOGIN `nanou_migration_owner`. The same role owns all nine application tables and both sequences. The migration was tested on an isolated temporary branch, applied through Neon migration workflow, and the temporary branch was deleted after successful application.
-- Post-cutover checks confirm `nanou_migration_login` can `SET LOCAL ROLE nanou_migration_owner`; runtime has table DML and sequence SELECT/USAGE but no TRUNCATE/TRIGGER/REFERENCES; backup is SELECT-only on tables and has sequence SELECT without USAGE.
-- Legacy `nanou_app` owns zero current public objects but still has elevated attributes/memberships. Do not revoke, disable, drop or rotate its credential until a separate rollback and credential-retirement plan is reviewed and the application rollback path is established.
+- Production ownership transfer is **NOT COMPLETED**. The latest verified catalog state has `nanou_app` owning the Production database and all nine application tables. `nanou_migration_owner` is a prepared NOLOGIN role; `nanou_migration_login` can `SET ROLE` to it in a read-only probe. No Production ownership DDL or grants change was executed, and no temporary migration branch was deleted as part of this continuation. The Neon connector currently returns missing authentication credentials for direct catalog verification.
+- Staged-role checks confirm `nanou_migration_login` can `SET LOCAL ROLE nanou_migration_owner`; runtime has table DML and sequence SELECT/USAGE but no TRUNCATE/TRIGGER/REFERENCES; backup has SELECT on tables and sequence SELECT without USAGE. These grants do not mean ownership was transferred.
+- Legacy `nanou_app` still owns the Production database and all nine application tables and retains elevated attributes/memberships. Do not revoke, disable, drop or rotate its credential until a separate rollback and credential-retirement plan is reviewed and the application rollback path is established.
 - Vercel Production deployment `dpl_2gn4F1XNZazuevbDnbfAApW5xb1X` is READY on main commit `cdeae3e34937a8e687585725b3d09b58bafa2eec`; canonical `/ready` returned HTTP 200 with PostgreSQL ready.
-- PR #13 merged the backup schedule cron update to `43 2 * * *` UTC. Workflow is active, but a real scheduled run and artifact are NOT VERIFIED until the next scheduled time is observed. Manual post-cutover run `45946937978` completed successfully on main commit `cdeae3e`. Artifact `nanou-production-backup-45946937978` (23,362 bytes; SHA-256 `8396156f7b455887f8919ee5418e078738daf03a0a63b9fec49ff418061898ba`) passed sidecar checksum, authenticated decryption, `pg_restore --list`, and a full isolated PostgreSQL restore (9 tables / 60 columns; all row counts matched Production). Plaintext dump and disposable cluster were cleaned up.
-- Dependabot vulnerability alerts are enabled; queries for open, dismissed, fixed and auto-dismissed alerts returned empty lists.
+- PR #13 merged the cron update to `43 2 * * *` UTC. The workflow is active, but no real scheduled event has been observed after that change; the first expected run is 2026-11-28 02:43 UTC. Manual run `45946937978` completed successfully on main commit `cdeae3e` and produced artifact `nanou-production-backup-45946937978` (23,362 bytes). This confirms backup/artifact creation only. The separately verified artifact from run `45941044613` passed checksum, authenticated decryption, `pg_restore --list` and a full isolated local PostgreSQL restore with all 9 table row counts matching the read-only Production query.
+- Dependabot vulnerability alerts are enabled. Current inventory: 1 OPEN HIGH `signify` alert (`GHSA-p4hh-mq57-gq8x`, vulnerable `<0.9.2`) and zero dismissed/fixed/auto-dismissed alerts. PR #14 proposes the patched `signify==0.9.3` with passing CI/ML smoke/dependency-audit/security checks; it remains unmerged, so the alert is still open.
 - The private decryption key remains on the authorized Termux device with mode 600. Its independent offline second copy remains NOT VERIFIED because no accessible separate removable/offline destination is currently mounted. Never put the private key in Git, Vercel or chat.
 
 
@@ -84,13 +84,13 @@ Never restore directly over the Production database as a first validation. Resto
 
 Workflow: `.github/workflows/production-backup.yml`.
 
-- Runs daily at 02:17 UTC or via manual dispatch, only from `main`.
+- Runs daily at 02:43 UTC or via manual dispatch, only from `main`.
 - Uses the read-only `nanou_backup` connection.
 - Runs PostgreSQL 17 `pg_dump --format=custom --no-owner --no-privileges`, validates with `pg_restore --list`, encrypts the dump, writes SHA-256 and a manifest, then uploads only the encrypted artifact.
 - GitHub artifact retention is 30 days.
 - The workflow requires repository Actions secret `NANOU_BACKUP_DATABASE_URL`; it must contain the direct-host PostgreSQL URL for `nanou_backup`, not the runtime or owner credential.
 
-**Current status: TWO BACKUPS COMPLETED; SCHEDULE ACTIVE.** The repository Actions secret `NANOU_BACKUP_DATABASE_URL` is provisioned. PR #5 merged the workflow to `main`; its hard guard requires `refs/heads/main`. Two manual Production backups completed successfully on 2026-11-26, and both encrypted artifacts are retained for 30 days. The daily schedule at 02:17 UTC is enabled. An authenticated decrypt-and-restore rehearsal of the downloaded artifact is still outstanding. Never place the connection URI in source code, logs, or chat.
+**Current status: MANUAL BACKUPS SUCCEED; SCHEDULE DELIVERY NOT YET VERIFIED.** PR #13 has merged the daily cron update to `43 2 * * *` UTC. The workflow remains active and manual dispatch works. No `schedule` event after the change is currently visible; the next expected scheduled attempt is 2026-11-28 02:43 UTC. Manual run `45946937978` produced an encrypted artifact; run `45941044613` is the artifact with separately verified authenticated decrypt and isolated local restore. Never place the connection URI in source code, logs, or chat.
 
 ## Production cutover gates
 
