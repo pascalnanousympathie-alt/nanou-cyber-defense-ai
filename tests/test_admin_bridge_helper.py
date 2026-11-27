@@ -73,4 +73,7 @@ def test_http_redirects_are_rejected() -> None:
     handler = _HELPER.RejectRedirects()
     request = object()
     response = object()
-    assert handler.redirect_request(request, response, 302, "Found", {}, "https://evil.invalid") is None
+    assert (
+        handler.redirect_request(request, response, 302, "Found", {}, "https://evil.invalid")
+        is None
+    )
