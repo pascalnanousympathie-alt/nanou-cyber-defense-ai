@@ -11,11 +11,11 @@ from sqlalchemy import case, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from nanou_cyber_ai.storage.database import (
+    SecurityDatabase,
     api_keys,
     audit_events,
     auth_attempts,
     platform_state,
-    SecurityDatabase,
     sessions,
     users,
 )
