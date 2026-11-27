@@ -1286,3 +1286,127 @@ body[dir="rtl"] .sidebar{border-left:1px solid var(--border);border-right:0;left
 .mcp-hub{background:linear-gradient(145deg,rgba(8,29,35,.94),rgba(4,15,21,.98));border:1px solid rgba(104,242,202,.2);border-radius:16px;margin:22px 0;padding:20px;box-shadow:0 16px 42px rgba(0,0,0,.24),inset 0 1px rgba(230,255,248,.06)}.mcp-hub-heading{align-items:flex-start;display:flex;gap:16px;justify-content:space-between}.mcp-hub-heading h3{font-size:16px;margin:0}.mcp-hub-heading p:not(.eyebrow){color:#9cbdb3;font-size:10px;margin:6px 0 0}.mcp-status-pill{background:rgba(235,181,91,.1);border:1px solid rgba(235,181,91,.25);border-radius:20px;color:#f4ca8b;font-size:9px;font-weight:800;padding:6px 10px;white-space:nowrap}.mcp-mode-grid{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:18px}.mcp-mode-card{background:linear-gradient(145deg,rgba(17,49,53,.9),rgba(5,19,25,.94));border:1px solid rgba(105,240,202,.15);border-radius:13px;min-width:0;padding:15px}.mcp-mode-icon{align-items:center;background:rgba(89,244,198,.12);border:1px solid rgba(105,245,207,.2);border-radius:9px;color:#a4ffe2;display:flex;font-size:20px;height:37px;justify-content:center;width:37px}.mcp-mode-card strong{display:block;font-size:12px;margin-top:12px}.mcp-mode-card p{color:#9ab7af;font-size:10px;line-height:1.6;min-height:50px}.mcp-mode-card small{color:#8bf0cb;font-size:9px}.mcp-connectors{border-top:1px solid var(--border);margin-top:17px;padding-top:15px}.mcp-connectors h4{font-size:11px;margin:0 0 10px}.mcp-connector-list{display:flex;flex-wrap:wrap;gap:7px}.mcp-connector-list span{background:rgba(34,101,88,.18);border:1px solid rgba(107,238,201,.18);border-radius:8px;color:#c8f7e8;font-size:10px;font-weight:700;padding:7px 10px}@media(max-width:760px){.mcp-mode-grid{grid-template-columns:1fr}.mcp-mode-card p{min-height:0}.mcp-hub-heading{flex-direction:column}}
 
 .auth-locale-row{display:flex;justify-content:flex-end;margin:0 0 14px}.auth-locale-row .locale-control{box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+
+/* Luxury Google identity card. The interactive control itself remains Google's official GIS button. */
+.google-auth-block {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 430px;
+  overflow: hidden;
+  gap: 15px;
+  padding: 20px clamp(14px, 4vw, 24px) 17px;
+  border: 1px solid rgba(153, 255, 218, .38);
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 50% -18%, rgba(87, 255, 196, .2), transparent 64%),
+    linear-gradient(145deg, rgba(14, 42, 43, .98), rgba(4, 17, 23, .99) 72%);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .35), 0 0 0 1px rgba(235, 193, 117, .11),
+    0 0 34px rgba(56, 238, 177, .12), inset 0 1px rgba(255, 255, 255, .13);
+  transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+}
+.google-auth-block::before {
+  position: absolute;
+  z-index: -1;
+  inset: 5px;
+  border: 1px solid rgba(225, 195, 132, .15);
+  border-radius: 15px;
+  content: "";
+  pointer-events: none;
+}
+.google-auth-block::after {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 13%;
+  left: 13%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 168, .9), rgba(113, 255, 211, .85), transparent);
+  content: "";
+}
+.google-auth-block:hover {
+  border-color: rgba(170, 255, 225, .62);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, .39), 0 0 42px rgba(56, 238, 177, .17),
+    inset 0 1px rgba(255, 255, 255, .17);
+  transform: translateY(-2px);
+}
+.google-auth-heading,
+.google-account-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.google-auth-heading { width: 100%; }
+.google-auth-emblem {
+  display: inline-flex;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(241, 211, 153, .72);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #f4dfb4 0%, #c9a76a 44%, #765d38 100%);
+  box-shadow: 0 5px 0 rgba(76, 55, 29, .8), 0 9px 20px rgba(224, 183, 109, .16), inset 0 1px rgba(255, 255, 255, .8);
+  color: #14251f;
+  font-size: 17px;
+  font-weight: 950;
+  text-shadow: 0 1px rgba(255, 255, 255, .45);
+}
+.google-auth-brand,
+.google-account-brand > div { display: grid; gap: 3px; min-width: 0; text-align: left; }
+.google-auth-brand strong,
+.google-account-brand strong { color: #f0fff8; font-size: 13px; letter-spacing: .01em; }
+.google-auth-brand > span,
+.google-account-brand > div > span { color: #d9bd86; font-size: 8px; font-weight: 850; letter-spacing: .2em; }
+.google-auth-seal {
+  margin-left: auto;
+  padding: 5px 8px;
+  border: 1px solid rgba(116, 245, 197, .24);
+  border-radius: 999px;
+  background: rgba(66, 208, 151, .08);
+  color: #9af3d0;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+.google-button-slot {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.google-button-slot > div { max-width: 100%; }
+.google-button-slot iframe { max-width: 100%; }
+.google-auth-block .form-message {
+  max-width: 36rem;
+  margin: 0;
+  color: #a9c9be;
+  font-size: 10px;
+  line-height: 1.55;
+  text-align: center;
+}
+.google-account-link {
+  border-color: rgba(144, 245, 207, .3);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(14, 39, 41, .92), rgba(5, 19, 25, .96));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .2), inset 0 1px rgba(255, 255, 255, .08);
+}
+.google-account-brand .google-auth-emblem { width: 34px; height: 34px; flex-basis: 34px; border-radius: 10px; font-size: 15px; }
+.google-account-brand { flex: 1 1 180px; }
+.google-account-brand .form-message { font-size: 10px; line-height: 1.45; }
+@media (max-width: 440px) {
+  .google-auth-block { padding: 16px 12px 14px; border-radius: 16px; }
+  .google-auth-seal { padding: 4px 6px; font-size: 7px; }
+  .google-button-slot iframe { max-width: 100% !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .google-auth-block { transition: none; }
+  .google-auth-block:hover { transform: none; }
+}

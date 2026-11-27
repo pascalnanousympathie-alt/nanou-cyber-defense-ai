@@ -222,8 +222,9 @@ async function loadGoogleLinkStatus() {
         theme: "filled_black",
         size: "large",
         text: "continue_with",
-        shape: "rectangular",
-        width: 250,
+        shape: "pill",
+        logo_alignment: "left",
+        width: 300,
         click_listener: () => { googleCredentialAction = "link"; },
       });
       slot.dataset.rendered = "true";
@@ -263,8 +264,9 @@ async function loadAuthProviders() {
         theme: "filled_black",
         size: "large",
         text: "continue_with",
-        shape: "rectangular",
-        width: 290,
+        shape: "pill",
+        logo_alignment: "left",
+        width: 300,
         click_listener: () => { googleCredentialAction = "signin"; },
       });
       byId("google-auth-status").textContent = "Inscrivez-vous ou connectez-vous avec un compte Google vérifié.";

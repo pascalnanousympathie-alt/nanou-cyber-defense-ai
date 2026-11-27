@@ -327,12 +327,23 @@ def test_request_body_limit_rejects_chunked_body_without_content_length() -> Non
 def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     with TestClient(app) as client:
         response = client.get("/")
+        app_script = client.get("/assets/app.js")
+        stylesheet = client.get("/assets/app.css")
 
     assert response.status_code == 200
     assert '<body data-auth-state="checking">' in response.text
     assert 'id="login-form"' in response.text
     assert 'id="google-button-slot"' in response.text
+    assert 'class="google-auth-heading"' in response.text
+    assert 'class="google-auth-seal"' in response.text
     assert 'id="google-link-button-slot"' in response.text
+    assert app_script.status_code == 200
+    assert 'shape: "pill"' in app_script.text
+    assert 'logo_alignment: "left"' in app_script.text
+    assert 'width: 300' in app_script.text
+    assert stylesheet.status_code == 200
+    assert ".google-auth-block::before" in stylesheet.text
+    assert ".google-auth-seal" in stylesheet.text
     assert 'id="google-link-status"' in response.text
     assert 'id="register-open-link"' in response.text
     assert 'id="register-form" class="auth-form" hidden' in response.text
