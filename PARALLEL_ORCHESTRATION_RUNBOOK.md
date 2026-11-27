@@ -308,3 +308,32 @@ Use this section as the current execution baseline; older runbook statements abo
 ### Evidence discipline
 
 Record the exact commit SHA, run/deployment ID, event type, UTC timestamp, first failing step, artifact digest and observed result. A successful manual backup is not proof of a scheduled run; database ownership metadata is not proof of table ownership; a READY deployment is not by itself proof of RBAC acceptance.
+
+
+## Verification follow-up — 2026-11-27 11:34 UTC
+
+This follow-up supersedes the 11:17 UTC artifact-recovery and alert-state statements above. It does not change Production, roles, grants, secrets, SSO, workflows or deployments.
+
+### Exact current backup artifact — restore verified
+
+- Workflow run [45989048704](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45989048704) was a **manual workflow_dispatch**, not scheduled. It completed successfully on main 6e2a71495fa4292f32f5f7cd86886ce16769a249.
+- Artifact nanou-production-backup-45989048704, ID 15193675094, archive size 28,267 bytes, artifact SHA-256 d0d32cf417029848dae36469e4ee4ab6b0d23098d10c55a49817eb61a6611cbb, expires 2026-12-27 11:16 UTC.
+- Downloaded encrypted payload nanou-production-20261127T111645Z.ncdb: 27,583 bytes; payload SHA-256 c1e178663dc8fb1e4aab5d7b68af3b14088bafd9b208a9b773b381295f1d804a. Its sidecar checksum returned PASS.
+- The exact main-branch decrypt helper and crypto module were fetched and their Git blob hashes checked against main. Local private-key public fingerprint matched the pinned recipient fingerprint.
+- Authenticated AES-256-GCM/RSA-3072 decryption passed. A fresh isolated local PostgreSQL 18.2 cluster was created under the Nanou Cyber Defense AI private data directory; pg_restore with single-transaction, clean, if-exists, no-owner and no-privileges completed successfully. Restored schema: 9 tables / 60 columns.
+- This confirms authenticated decryption and a full isolated restore of this exact artifact. It does not compare row counts with a simultaneous live Production baseline; that comparison remains pending because the Neon SQL connector returned missing authentication credentials. It also does not prove scheduled delivery.
+- Temporary plaintext, isolated PostgreSQL cluster and socket directories were removed; post-cleanup inventory found zero remaining restore temp directories or socket directories. Existing LudoMada/local databases were not used or modified.
+
+### Dependabot and Code Scanning
+
+- Dependabot inventory: 0 open, 1 fixed, 0 dismissed, 0 auto-dismissed. Fixed record is alert #1, GHSA-p4hh-mq57-gq8x, package signify, severity HIGH, fixed_at=2026-11-27T10:50:17Z.
+- Code Scanning open-alert count: 0.
+- Current-main CI on exact SHA above: Ruff PASS, 94 files formatted, 155 passed / 4 skipped, ML smoke PASS, pip-audit: No known vulnerabilities found. Security: Gitleaks and CodeQL Python/JavaScript-TypeScript PASS.
+
+### Still pending
+
+- Backup workflow is active with cron 43 2 * * * UTC; scheduled-run query still returned 0. Next expected event is 2026-11-28 02:43 UTC / 05:43 Madagascar. The successful manual run above must not be treated as schedule proof.
+- The local recovery key remains mode 0600. Termux now has executable backup/restore helpers under ~/.local/bin/ (mode 0700). The backup helper encrypts the recovery key with AES-256-GCM and Scrypt, requires an owner-entered passphrase, and refuses Android emulated/shared storage. Syntax/help checks and refusal of /storage/emulated/0 passed. No removable medium is mounted, so no offline copy has been created yet.
+- Production still has one active approved Admin and no Viewer/Analyst test identities. CI covers Analyst/Viewer restrictions, but live RBAC acceptance remains pending owner-controlled identities; no synthetic Production accounts were created.
+- Neon project cold-resonance-28231813, default branch br-damp-fog-bi0lzjf4, reports READY and protected=false. The Neon SQL connector returned missing authentication credentials; only database-owner metadata was available. Do not infer table/sequence ownership, memberships or grants from metadata alone.
+- PR #17 remains Draft/Open. Do not merge until this follow-up is reviewed and its branch checks are green.
