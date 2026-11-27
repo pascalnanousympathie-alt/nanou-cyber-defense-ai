@@ -17,7 +17,8 @@ Do not use `nanou_app` as the long-term runtime or backup identity. It remains t
 - Restore drill branch: `prod-restore-drill-20261126` (`br-little-sound-bipv6bjm`).
 - Source and restored schema comparison: 9 application tables and 60 columns matched.
 - Snapshot row comparison covered all application tables; the observed non-zero counts included 2 audit events, 4 auth attempts and 1 platform_state row at snapshot time.
-- Restore branch is an isolated drill copy. It has since been used to validate NOLOGIN ownership, separate migration login, DML runtime privileges and default grants. It is not Production.
+- The retained Production restore branch `prod-restore-drill-20261126` (`br-little-sound-bipv6bjm`) is an isolated data-restore copy. A fresh read-only catalog check on 2026-11-27 showed `nanou_runtime_restore_probe` as DB/table owner, `nanou_migration_owner_probe` as NOLOGIN, and no default ACL rows. Its current state is not proof of a completed migration-login ownership cutover.
+- A separate Neon project `nanou-cyber-defense-restore-drill` (`curly-credit-07474065`, branch `restore-test`) contains a prototype fixture: `restore_owner` owns its `nanou_restore` DB/tables, and `nanou_runtime_probe` is NOLOGIN with default table-DML and sequence SELECT/USAGE grants. This validates a privilege pattern only; it is not the Production migration cutover.
 
 ## Encrypted backup file format
 
@@ -173,3 +174,11 @@ No Production ownership transfer, old-role deletion, merge to `main`, or Product
 - Restored the archive into a temporary, isolated local PostgreSQL 18.2 cluster on the Nanou Termux device. Result: **9 tables / 60 columns**, `users=0`, `audit_events=2`, `auth_attempts=4`, `auth_sessions=0`, `platform_state=1`. These counts match the documented snapshot-time evidence.
 - The temporary local PostgreSQL cluster was stopped and removed after the test. Production Neon was not used as the restore target and was not modified.
 - This proves authenticated decrypt and PostgreSQL archive restore locally. The same artifact was then restored with `pg_restore --single-transaction --clean --if-exists --no-owner --no-privileges` into isolated Neon branch `br-little-sound-bipv6bjm` (`prod-restore-drill-20261126`), database `nanou_restore_drill_20261126`, using `nanou_runtime_restore_probe`. Restore result: 9 tables / 60 columns and the same row counts listed above. The restore role is not superuser and has no CREATEROLE/BYPASSRLS; its CREATE privileges are confined to the isolated restore database. A read-only query against Production `br-damp-fog-bi0lzjf4` afterward returned the unchanged counts: users=0, audit_events=2, auth_attempts=4, auth_sessions=0, platform_state=1. Production was not used as the restore target. A second offline recovery copy of the private key remains outstanding.
+
+
+## Current Production migration-role evidence — 2026-11-27
+
+- `nanou_migration_login` successfully executed `SET LOCAL ROLE nanou_migration_owner` in a read-only Production transaction. The login role has no elevated attributes or direct public-schema CREATE; the effective NOLOGIN owner has public-schema CREATE and no elevated role flags.
+- Owner-role default ACLs are present for future tables/sequences: runtime receives table DML and sequence SELECT/USAGE; backup receives SELECT only.
+- All 9 current Production tables and the database remain owned by `nanou_app`. Runtime/backup aggregate grants are least-privilege as described above. No ownership transfer, production DDL, grant change, credential revocation or deployment was performed.
+- The full database/table/sequence ownership transfer, post-transfer smoke test and rollback window remain to be rehearsed on a suitable isolated copy before Production cutover.
