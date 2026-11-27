@@ -2,6 +2,18 @@
 
 Last verified: 2026-11-27 (UTC)
 
+## Current PR #18 OAuth Preview and security handoff — 2026-11-27
+
+- Work only in `feat/auth-google-category-home-20261127`; verified head `84437293a544496935f3fe09ed74cc6d972425aa`; PR #18 remains Draft/Open and unmerged.
+- CodeQL aggregate and both language analyzers pass. Alert #1 is dismissed as `false positive` with a reviewed rationale; do not re-open it or change HMAC/Argon2id without new evidence.
+- Exact READY Preview is `https://nanou-cyber-defense-7l9ujtif0-nanou3.vercel.app/` (deployment `dpl_J4oT2WsK37nuwjVZXuYHZ9PZ5v3s`). Keep Vercel SSO enabled.
+- Preview Neon project `young-snow-19049684`, branch `br-long-field-bianlzu3`, database `nanou_preview`: `public.google_identities` has been added. It is owned by `nanou_preview_app`; `nanou_preview_runtime` has table DML only (SELECT/INSERT/UPDATE/DELETE; no TRUNCATE). No roles or grants were changed. This Preview-specific migration method must not be copied to Production.
+- Preview API now reports Google disabled only because `NANOU_GOOGLE_CLIENT_ID` is missing. Vercel env inventory confirms that variable is absent; sensitive values were not decrypted.
+- To test Google on Preview, the owner must create/use a Google OAuth Web client, add this exact Authorized JavaScript origin: `https://nanou-cyber-defense-ai-git-feat-auth-google-categ-90207d-nanou3.vercel.app`, and set its public Client ID as Vercel `NANOU_GOOGLE_CLIENT_ID` for Preview only. Do not place a Google Client Secret in browser code. Use a separate Production OAuth client/Production-scoped variable only after release approval; Production origin is `https://nanou-cyber-defense-ai.vercel.app`.
+- After owner setup, verify `/api/auth/providers` returns `google.enabled=true`, test a new Google identity becomes inactive/unapproved Viewer, approve it from an authenticated Admin session, verify approved sign-in and logout/re-login, and test password-account linking requires explicit authenticated linking.
+- Production database migration/roles remain untouched. Production must use its dedicated reviewed migration login/owner and preserve the existing least-privilege runtime/backup ACLs; do not reuse `nanou_preview_app` for Production DDL.
+- Never request or display passwords, OTPs, OAuth secrets, database URLs, session tokens, HMAC keys or bootstrap tokens. Do not merge PR #18 or deploy Production without explicit approval.
+
 ## Latest verified continuation — 2026-11-27 (after Signify security fix)
 
 This addendum supersedes older main-commit, PR #14, deployment, and browser-session status statements below.

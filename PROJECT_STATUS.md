@@ -2,6 +2,22 @@
 
 Last verified: 2026-11-27 (UTC)
 
+## Current PR #18 Preview verification — 2026-11-27
+
+This addendum supersedes older PR #18, Google Sign-In, and branch-preview notes below. Production state is unchanged.
+
+- Repository: `pascalnanousympathie-alt/nanou-cyber-defense-ai`; branch `feat/auth-google-category-home-20261127`; source SHA at verification: `84437293a544496935f3fe09ed74cc6d972425aa`.
+- PR #18 is OPEN, Draft, and mergeable; it is not merged. The current source commit is identical to the remote branch. No merge or Production deployment was performed.
+- GitHub Code Scanning alert #1 (`py/weak-sensitive-data-hashing`) was dismissed as `false positive` with a 280-character rationale. The review confirmed `_hmac_fingerprint` receives only normalized email/IP identifiers; password create/change/verify paths use Argon2id. The alert is absent from the open-alert list for `refs/pull/18/merge`.
+- PR #18 required checks: 9/9 SUCCESS, including aggregate CodeQL, CodeQL Python, CodeQL JavaScript/TypeScript, Gitleaks, CI tests, dependency audit, ML smoke, Vercel and Preview comments. CI previously reported 163 passed / 4 skipped.
+- Vercel Preview deployment `dpl_J4oT2WsK37nuwjVZXuYHZ9PZ5v3s` is READY on the exact source SHA. Immutable URL: `https://nanou-cyber-defense-7l9ujtif0-nanou3.vercel.app/`; branch alias: `https://nanou-cyber-defense-ai-git-feat-auth-google-categ-90207d-nanou3.vercel.app/`.
+- Live Preview smoke: `/ready` HTTP 200 (`database=postgresql`); `/api/auth/me` HTTP 200 unauthenticated; `/api/admin/users` HTTP 401 unauthenticated. Locale runtime check: all 12 locales passed, no untranslated `data-i18n` values, language selectors synchronized, Arabic RTL passed; page restored to French.
+- Neon Preview only: project `young-snow-19049684`, branch `br-long-field-bianlzu3`, database `nanou_preview`. Table `public.google_identities` was created additively as `nanou_preview_app`, which owns `public.users` and already has the required schema/REFERENCES privileges. No role or grant was created or changed. The table has the FK to `users(id)` and unique `user_id`; owner is `nanou_preview_app`. `nanou_preview_runtime` has SELECT/INSERT/UPDATE/DELETE and no TRUNCATE. A no-row INSERT privilege probe and runtime SELECT passed; identity row count remains zero.
+- Vercel environment metadata was read without decrypting values. `NANOU_GOOGLE_CLIENT_ID` is absent. The live `/api/auth/providers` response after the Preview migration is HTTP 200 with `google.enabled=false`, reason `client_id_missing`; this proves the schema gate is clear and the remaining Google blocker is the OAuth Web Client ID.
+- Owner action still required: create/use a Google OAuth Web client, add the exact PR #18 Preview branch origin to Authorized JavaScript origins, then set `NANOU_GOOGLE_CLIENT_ID` on Vercel Preview only and redeploy Preview. Keep Production OAuth configuration separate until explicitly approved. No Google Client Secret is needed in the browser for this GIS ID-token flow.
+- Targeted local Google/Auth regressions: `6 passed, 31 deselected` using `python -m pytest` in `$HOME/.venvs/nanou-cyber-defense-termux`. An earlier direct `pytest` invocation used the global interpreter and failed collection because FastAPI was absent there; it was not a source-code test failure.
+- Production Neon, Production environment variables, Production schema, Production Vercel deployment, SSO and live data were not changed.
+
 ## Latest verified continuation — 2026-11-27 (after Signify security fix)
 
 This addendum supersedes older main-commit, PR #14, deployment, and browser-session status statements below.
