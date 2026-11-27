@@ -256,10 +256,14 @@ class AuthStore:
         return inspect(self.database.engine).has_table("google_identities", schema=schema)
 
     def get_user_by_google_subject(self, subject: str) -> dict[str, Any] | None:
+        identity_join = google_identities.join(
+            users,
+            google_identities.c.user_id == users.c.id,
+        )
         with self.database.engine.connect() as connection:
             row = connection.execute(
                 select(users)
-                .select_from(google_identities.join(users, google_identities.c.user_id == users.c.id))
+                .select_from(identity_join)
                 .where(google_identities.c.google_subject == subject)
             ).mappings().first()
         return public_user(row) if row is not None else None
