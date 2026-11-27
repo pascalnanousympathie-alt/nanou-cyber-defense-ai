@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-
 PATCH_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "patch_thrember_signify_compat.py"
 patch_features_source = runpy.run_path(str(PATCH_SCRIPT))["patch_features_source"]
 
