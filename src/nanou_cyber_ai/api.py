@@ -25,6 +25,7 @@ from nanou_cyber_ai.malware.feature_csv import prepare_feature_csv
 from nanou_cyber_ai.malware.inference import classify_features, load_verified_model
 from nanou_cyber_ai.mcp.registry import list_tools
 from nanou_cyber_ai.models import (
+    AdminPairingExchangeIn,
     AdminUserUpdateIn,
     AssistantChatIn,
     AttackScopeCreateIn,
@@ -42,7 +43,11 @@ from nanou_cyber_ai.models import (
 from nanou_cyber_ai.security.passwords import hash_password, verify_password
 from nanou_cyber_ai.settings import settings
 from nanou_cyber_ai.storage.attack_simulation import AttackSimulationStore
-from nanou_cyber_ai.storage.auth import AuthStore
+from nanou_cyber_ai.storage.auth import (
+    ADMIN_BRIDGE_TTL_SECONDS,
+    ADMIN_PAIRING_TTL_SECONDS,
+    AuthStore,
+)
 from nanou_cyber_ai.storage.database import SecurityDatabase, get_database
 from nanou_cyber_ai.storage.sqlite import MalwareMetadataStore
 
@@ -207,6 +212,31 @@ def require_roles(*allowed_roles: str):
         return user
 
     return dependency
+
+
+def require_admin_bridge(request: Request) -> dict:
+    authorization = request.headers.get("authorization", "")
+    scheme, separator, raw_token = authorization.partition(" ")
+    if (
+        not separator
+        or scheme.lower() != "bearer"
+        or not raw_token
+        or len(raw_token) > 256
+        or raw_token.strip() != raw_token
+    ):
+        raise HTTPException(status_code=401, detail="A read-only Admin bridge token is required.")
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    store = get_auth_store()
+    principal = store.get_admin_bridge_principal(token_hash)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="The Admin bridge token is invalid or expired.")
+    if not store.consume_api_key_request(
+        principal["api_key_id"],
+        maximum=30,
+        window_seconds=60,
+    ):
+        raise HTTPException(status_code=429, detail="Admin bridge request limit exceeded.")
+    return principal
 
 
 def _csrf_valid(request: Request) -> bool:
@@ -553,6 +583,104 @@ async def logout_account(request: Request, response: Response) -> dict[str, bool
         )
     _clear_session_cookie(request, response)
     return {"logged_out": True}
+
+
+@app.post("/api/auth/pairing")
+async def create_admin_pairing(
+    request: Request,
+    user: Annotated[dict, Depends(require_roles("admin"))],
+) -> dict:
+    store = get_auth_store()
+    _check_rate_limit(store, request, user["email"], "auth.admin_pairing.create")
+    raw_code = f"ncd_pair_{secrets.token_urlsafe(32)}"
+    try:
+        pairing = store.create_admin_pairing(
+            owner_user_id=user["id"],
+            token_prefix=raw_code[:20],
+            token_hash=hashlib.sha256(raw_code.encode("utf-8")).hexdigest(),
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        "pairing_code": raw_code,
+        "expires_at": pairing["expires_at"].isoformat(),
+        "expires_in_seconds": ADMIN_PAIRING_TTL_SECONDS,
+        "scope": "admin:bridge:read",
+        "shown_once": True,
+    }
+
+
+@app.post("/api/auth/pairing/exchange")
+async def exchange_admin_pairing(
+    item: AdminPairingExchangeIn,
+    request: Request,
+) -> dict:
+    store = get_auth_store()
+    pairing_fingerprint = hashlib.sha256(item.pairing_code.encode("utf-8")).hexdigest()
+    _check_rate_limit(store, request, pairing_fingerprint, "auth.admin_pairing.exchange")
+    raw_bridge_token = f"ncd_bridge_{secrets.token_urlsafe(32)}"
+    bridge = store.exchange_admin_pairing(
+        pairing_token_hash=hashlib.sha256(item.pairing_code.encode("utf-8")).hexdigest(),
+        bridge_token_prefix=raw_bridge_token[:20],
+        bridge_token_hash=hashlib.sha256(raw_bridge_token.encode("utf-8")).hexdigest(),
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    if bridge is None:
+        raise HTTPException(
+            status_code=401,
+            detail="The pairing code is invalid, expired, or already used.",
+        )
+    return {
+        "bridge_token": raw_bridge_token,
+        "user": bridge["user"],
+        "expires_at": bridge["expires_at"].isoformat(),
+        "expires_in_seconds": ADMIN_BRIDGE_TTL_SECONDS,
+        "scope": "admin:bridge:read",
+    }
+
+
+@app.get("/api/admin/bridge/me")
+async def admin_bridge_me(
+    user: Annotated[dict, Depends(require_admin_bridge)],
+) -> dict:
+    return {
+        key: user[key]
+        for key in ("id", "email", "display_name", "role", "is_approved", "is_active")
+    }
+
+
+@app.get("/api/admin/bridge/users")
+async def admin_bridge_users(
+    user: Annotated[dict, Depends(require_admin_bridge)],
+) -> list[dict]:
+    return get_auth_store().list_users()
+
+
+@app.get("/api/admin/bridge/audit")
+async def admin_bridge_audit(
+    user: Annotated[dict, Depends(require_admin_bridge)],
+    limit: int = Query(default=100, ge=1, le=100),
+) -> list[dict]:
+    return get_auth_store().list_audit_events(limit)
+
+
+@app.post("/api/admin/bridge/revoke")
+async def revoke_admin_bridge(
+    request: Request,
+    user: Annotated[dict, Depends(require_admin_bridge)],
+) -> dict[str, bool]:
+    authorization = request.headers.get("authorization", "")
+    _, _, raw_token = authorization.partition(" ")
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    revoked = get_auth_store().revoke_admin_bridge(
+        token_hash,
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return {"revoked": revoked}
 
 
 @app.get("/api/admin/users")

@@ -20,6 +20,11 @@ from nanou_cyber_ai.storage.database import (
     users,
 )
 
+ADMIN_PAIRING_TTL_SECONDS = 90
+ADMIN_BRIDGE_TTL_SECONDS = 15 * 60
+_ADMIN_PAIRING_SCOPE = '["admin:bridge:pair"]'
+_ADMIN_BRIDGE_SCOPE = '["admin:bridge:read"]'
+
 
 def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
@@ -321,8 +326,18 @@ class AuthStore:
                 .where(users.c.id == user_id)
                 .values(password_hash=password_hash, updated_at=now)
             )
-            # Password rotation invalidates all previously issued browser sessions.
+            # Password rotation invalidates all browser sessions and any short-lived
+            # Admin bridge/pairing credentials; ordinary Developer API keys are separate.
             connection.execute(delete(sessions).where(sessions.c.user_id == user_id))
+            connection.execute(
+                update(api_keys)
+                .where(
+                    api_keys.c.owner_user_id == user_id,
+                    api_keys.c.scopes.in_([_ADMIN_PAIRING_SCOPE, _ADMIN_BRIDGE_SCOPE]),
+                    api_keys.c.revoked_at.is_(None),
+                )
+                .values(revoked_at=now)
+            )
             self._audit(
                 connection,
                 actor_user_id=user_id,
@@ -465,11 +480,246 @@ class AuthStore:
             )
         return public_api_key(row)
 
+    def create_admin_pairing(
+        self,
+        *,
+        owner_user_id: str,
+        token_prefix: str,
+        token_hash: str,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        expires_at = now + timedelta(seconds=ADMIN_PAIRING_TTL_SECONDS)
+        key_id = uuid.uuid4().hex
+        with self.database.engine.begin() as connection:
+            owner = (
+                connection.execute(
+                    select(users).where(
+                        users.c.id == owner_user_id,
+                        users.c.role == "admin",
+                        users.c.is_approved.is_(True),
+                        users.c.is_active.is_(True),
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if owner is None:
+                raise ValueError("An active approved administrator is required.")
+            replaced = (
+                connection.execute(
+                    update(api_keys)
+                    .where(
+                        api_keys.c.owner_user_id == owner_user_id,
+                        api_keys.c.scopes.in_([_ADMIN_PAIRING_SCOPE, _ADMIN_BRIDGE_SCOPE]),
+                        api_keys.c.revoked_at.is_(None),
+                    )
+                    .values(revoked_at=now)
+                    .returning(api_keys.c.id)
+                )
+                .scalars()
+                .all()
+            )
+            for replaced_id in replaced:
+                self._audit(
+                    connection,
+                    actor_user_id=owner_user_id,
+                    action="auth.admin_bridge.replaced",
+                    target_type="admin-bridge",
+                    target_id=replaced_id,
+                    outcome="revoked",
+                    request_id=request_id,
+                    ip_digest=ip_digest,
+                )
+            active_count = connection.execute(
+                select(func.count())
+                .select_from(api_keys)
+                .where(
+                    api_keys.c.owner_user_id == owner_user_id,
+                    api_keys.c.revoked_at.is_(None),
+                    api_keys.c.expires_at > now,
+                )
+            ).scalar_one()
+            if int(active_count) >= 10:
+                raise ValueError("Too many active API credentials; revoke an unused key first.")
+            connection.execute(
+                insert(api_keys).values(
+                    id=key_id,
+                    owner_user_id=owner_user_id,
+                    name="Termux Admin pairing code",
+                    token_prefix=token_prefix,
+                    token_hash=token_hash,
+                    scopes=_ADMIN_PAIRING_SCOPE,
+                    created_at=now,
+                    expires_at=expires_at,
+                    request_count=0,
+                )
+            )
+            self._audit(
+                connection,
+                actor_user_id=owner_user_id,
+                action="auth.admin_bridge.pairing_created",
+                target_type="admin-bridge",
+                target_id=key_id,
+                outcome="success",
+                request_id=request_id,
+                ip_digest=ip_digest,
+            )
+        return {"id": key_id, "expires_at": expires_at}
+
+    def exchange_admin_pairing(
+        self,
+        *,
+        pairing_token_hash: str,
+        bridge_token_prefix: str,
+        bridge_token_hash: str,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> dict[str, Any] | None:
+        now = datetime.now(UTC)
+        bridge_expires_at = now + timedelta(seconds=ADMIN_BRIDGE_TTL_SECONDS)
+        bridge_key_id = uuid.uuid4().hex
+        with self.database.engine.begin() as connection:
+            consumed = (
+                connection.execute(
+                    update(api_keys)
+                    .where(
+                        api_keys.c.token_hash == pairing_token_hash,
+                        api_keys.c.scopes == _ADMIN_PAIRING_SCOPE,
+                        api_keys.c.revoked_at.is_(None),
+                        api_keys.c.expires_at > now,
+                        api_keys.c.request_count == 0,
+                    )
+                    .values(
+                        revoked_at=now,
+                        last_used_at=now,
+                        request_count=1,
+                    )
+                    .returning(api_keys.c.owner_user_id)
+                )
+                .mappings()
+                .first()
+            )
+            if consumed is None:
+                return None
+            owner_user_id = consumed["owner_user_id"]
+            owner = (
+                connection.execute(
+                    select(users).where(
+                        users.c.id == owner_user_id,
+                        users.c.role == "admin",
+                        users.c.is_approved.is_(True),
+                        users.c.is_active.is_(True),
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            if owner is None:
+                return None
+            connection.execute(
+                insert(api_keys).values(
+                    id=bridge_key_id,
+                    owner_user_id=owner_user_id,
+                    name="Termux Admin read-only bridge",
+                    token_prefix=bridge_token_prefix,
+                    token_hash=bridge_token_hash,
+                    scopes=_ADMIN_BRIDGE_SCOPE,
+                    created_at=now,
+                    expires_at=bridge_expires_at,
+                    request_count=0,
+                )
+            )
+            self._audit(
+                connection,
+                actor_user_id=owner_user_id,
+                action="auth.admin_bridge.exchanged",
+                target_type="admin-bridge",
+                target_id=bridge_key_id,
+                outcome="success",
+                request_id=request_id,
+                ip_digest=ip_digest,
+            )
+        return {
+            "id": bridge_key_id,
+            "user": public_user(owner),
+            "expires_at": bridge_expires_at,
+        }
+
+    def get_admin_bridge_principal(self, token_hash: str) -> dict[str, Any] | None:
+        now = datetime.now(UTC)
+        statement = (
+            select(
+                users,
+                api_keys.c.id.label("api_key_id"),
+                api_keys.c.name.label("api_key_name"),
+            )
+            .select_from(api_keys.join(users, api_keys.c.owner_user_id == users.c.id))
+            .where(
+                api_keys.c.token_hash == token_hash,
+                api_keys.c.scopes == _ADMIN_BRIDGE_SCOPE,
+                api_keys.c.revoked_at.is_(None),
+                api_keys.c.expires_at > now,
+                users.c.role == "admin",
+                users.c.is_active.is_(True),
+                users.c.is_approved.is_(True),
+            )
+        )
+        with self.database.engine.connect() as connection:
+            row = connection.execute(statement).mappings().first()
+        if row is None:
+            return None
+        principal = public_user(row)
+        principal["api_key_id"] = row["api_key_id"]
+        principal["api_key_name"] = row["api_key_name"]
+        return principal
+
+    def revoke_admin_bridge(
+        self,
+        token_hash: str,
+        *,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> bool:
+        now = datetime.now(UTC)
+        with self.database.engine.begin() as connection:
+            row = (
+                connection.execute(
+                    update(api_keys)
+                    .where(
+                        api_keys.c.token_hash == token_hash,
+                        api_keys.c.scopes == _ADMIN_BRIDGE_SCOPE,
+                        api_keys.c.revoked_at.is_(None),
+                    )
+                    .values(revoked_at=now)
+                    .returning(api_keys.c.owner_user_id, api_keys.c.id)
+                )
+                .mappings()
+                .first()
+            )
+            if row is None:
+                return False
+            self._audit(
+                connection,
+                actor_user_id=row["owner_user_id"],
+                action="auth.admin_bridge.revoked",
+                target_type="admin-bridge",
+                target_id=row["id"],
+                outcome="success",
+                request_id=request_id,
+                ip_digest=ip_digest,
+            )
+        return True
+
     def list_api_keys(self, owner_user_id: str) -> list[dict[str, Any]]:
         with self.database.engine.connect() as connection:
             rows = connection.execute(
                 select(api_keys)
-                .where(api_keys.c.owner_user_id == owner_user_id)
+                .where(
+                    api_keys.c.owner_user_id == owner_user_id,
+                    api_keys.c.scopes.notin_([_ADMIN_PAIRING_SCOPE, _ADMIN_BRIDGE_SCOPE]),
+                )
                 .order_by(api_keys.c.created_at.desc())
                 .limit(100)
             ).mappings()
