@@ -24,12 +24,13 @@ def test_web_platform_uses_restrictive_security_headers() -> None:
 
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
-    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+    assert response.headers["cross-origin-opener-policy"] == "same-origin-allow-popups"
     policy = response.headers["content-security-policy"]
     assert "script-src 'self' https://accounts.google.com/gsi/client" in policy
     assert "frame-src https://accounts.google.com/gsi/" in policy
     assert "connect-src 'self' https://accounts.google.com/gsi/" in policy
-    assert "style-src 'self'" in policy
+    assert "style-src 'self' https://accounts.google.com/gsi/style" in policy
     assert "object-src 'none'" in response.headers["content-security-policy"]
     assert response.headers["cache-control"] == "no-store"
 
@@ -329,6 +330,8 @@ def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     assert '<body data-auth-state="checking">' in response.text
     assert 'id="login-form"' in response.text
     assert 'id="google-button-slot"' in response.text
+    assert 'id="google-link-button-slot"' in response.text
+    assert 'id="google-link-status"' in response.text
     assert 'id="register-open-link"' in response.text
     assert 'id="register-form" class="auth-form" hidden' in response.text
     assert 'id="category-home" class="category-home" hidden' in response.text

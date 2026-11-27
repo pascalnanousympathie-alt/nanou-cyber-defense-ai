@@ -8,6 +8,7 @@ let adminUsersCache = [];
 let adminAuditCache = [];
 let currentCategory = "home";
 const loadedCategories = new Set();
+let googleCredentialAction = "signin";
 
 const canAnalyze = () => Boolean(currentUser && ["admin", "analyst"].includes(currentUser.role));
 
@@ -135,12 +136,20 @@ async function handleGoogleCredential(response) {
     byId("google-auth-status").textContent = "Tsy voaray ny Google credential. Avereno ny fidirana.";
     return;
   }
-  setMessage(byId("google-auth-status"), "Manamarina ny kaonty Google…");
+  const linking = googleCredentialAction === "link";
+  const status = linking ? byId("google-link-status") : byId("google-auth-status");
+  setMessage(status, linking ? "Mampifandray ny Google account…" : "Manamarina ny kaonty Google…");
   try {
-    const result = await apiRequest("/api/auth/google", {
+    const result = await apiRequest(linking ? "/api/auth/google/link" : "/api/auth/google", {
       method: "POST",
       body: { credential },
     });
+    if (linking) {
+      googleCredentialAction = "signin";
+      byId("google-link-status").textContent = "Google account tafifandray soa aman-tsara.";
+      await loadGoogleLinkStatus();
+      return;
+    }
     if (result.pending_approval) {
       byId("auth-message").textContent = result.message || "Voaray ny kaonty Google. Miandry fankatoavan'ny Administrator.";
       byId("google-auth-status").textContent = "Fangatahana voaray; mbola tsy afaka miditra raha tsy ankatoavin'ny Admin.";
@@ -148,7 +157,43 @@ async function handleGoogleCredential(response) {
     }
     await loadAuth();
   } catch (error) {
-    byId("google-auth-status").textContent = error.message || "Tsy nahomby ny fanamarinana Google.";
+    googleCredentialAction = "signin";
+    const status = linking ? byId("google-link-status") : byId("google-auth-status");
+    status.textContent = error.message || "Tsy nahomby ny fanamarinana Google.";
+  }
+}
+
+async function loadGoogleLinkStatus() {
+  if (!currentUser) return;
+  const slot = byId("google-link-button-slot");
+  try {
+    const status = await apiRequest("/api/auth/google/status");
+    if (!status.available) {
+      slot.hidden = true;
+      byId("google-link-status").textContent = "Mbola tsy napetraka ny Google identity migration ao amin'ny database.";
+      return;
+    }
+    if (status.linked) {
+      slot.hidden = true;
+      byId("google-link-status").textContent = "Google account efa tafifandray.";
+      return;
+    }
+    slot.hidden = false;
+    if (window.google?.accounts?.id && slot.dataset.rendered !== "true") {
+      window.google.accounts.id.renderButton(slot, {
+        type: "standard",
+        theme: "filled_black",
+        size: "large",
+        text: "continue_with",
+        shape: "rectangular",
+        width: 250,
+        click_listener: () => { googleCredentialAction = "link"; },
+      });
+      slot.dataset.rendered = "true";
+    }
+    byId("google-link-status").textContent = "Ampifandraiso ny Google mitovy amin'ny email an'ity kaonty ity.";
+  } catch (error) {
+    byId("google-link-status").textContent = error.message || "Tsy azo hamarinina ny Google link.";
   }
 }
 
@@ -158,7 +203,10 @@ async function loadAuthProviders() {
     const providers = await apiRequest("/api/auth/providers");
     const google = providers?.google;
     if (!google?.enabled || typeof google.client_id !== "string") {
-      byId("google-auth-status").textContent = "Google Sign-In mbola tsy voa-configurer: mila OAuth Web Client ID sy authorized origin ao amin'ny Google Cloud.";
+      byId("google-auth-status").textContent = google?.reason === "identity_storage_migration_required"
+        ? "Google Sign-In miandry ny database migration; mbola miasa ny fidirana amin'ny email sy tenimiafina."
+        : "Google Sign-In mbola tsy voa-configurer: mila OAuth Web Client ID sy authorized origin ao amin'ny Google Cloud.";
+      if (currentUser) loadGoogleLinkStatus();
       return;
     }
     const renderGoogleButton = () => {
@@ -172,15 +220,18 @@ async function loadAuthProviders() {
         auto_select: false,
         cancel_on_tap_outside: true,
       });
+      googleCredentialAction = "signin";
       window.google.accounts.id.renderButton(slot, {
         type: "standard",
         theme: "filled_black",
         size: "large",
-        text: "signup_with",
+        text: "continue_with",
         shape: "rectangular",
         width: 290,
+        click_listener: () => { googleCredentialAction = "signin"; },
       });
       byId("google-auth-status").textContent = "Misorata anarana na midira amin'ny kaonty Google voamarina.";
+      if (currentUser) loadGoogleLinkStatus();
     };
     if (window.google?.accounts?.id) {
       renderGoogleButton();

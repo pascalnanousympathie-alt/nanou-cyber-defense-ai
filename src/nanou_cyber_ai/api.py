@@ -347,15 +347,20 @@ async def secure_request_middleware(request: Request, call_next):
     response = rejection if rejection is not None else await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Referrer-Policy"] = (
+        "strict-origin-when-cross-origin" if request.url.path == "/" else "no-referrer"
+    )
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; "
-        "style-src 'self'; img-src 'self' data:; font-src 'self'; "
+        "style-src 'self' https://accounts.google.com/gsi/style; "
+        "img-src 'self' data:; font-src 'self'; "
         "connect-src 'self' https://accounts.google.com/gsi/; "
         "frame-src https://accounts.google.com/gsi/; object-src 'none'; "
         "base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     )
+    if request.url.path == "/":
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     if request.url.path == "/" or request.url.path.startswith("/api/"):
@@ -438,10 +443,19 @@ def _verify_google_identity(credential: str) -> dict[str, str]:
 
 @app.get("/api/auth/providers")
 async def auth_providers() -> dict:
+    store = get_auth_store()
+    schema_ready = store.google_identity_storage_available()
+    enabled = bool(settings.google_client_id and schema_ready)
+    reason = None
+    if not settings.google_client_id:
+        reason = "client_id_missing"
+    elif not schema_ready:
+        reason = "identity_storage_migration_required"
     return {
         "google": {
-            "enabled": bool(settings.google_client_id),
+            "enabled": enabled,
             "client_id": settings.google_client_id if settings.google_client_id else None,
+            "reason": reason,
         }
     }
 
@@ -452,19 +466,33 @@ async def google_sign_in(
     request: Request,
     response: Response,
 ) -> dict | JSONResponse:
-    identity = _verify_google_identity(item.credential)
     store = get_auth_store()
+    if not store.google_identity_storage_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Google identity storage migration is required before enabling Google Sign-In.",
+        )
+    identity = _verify_google_identity(item.credential)
     if store.bootstrap_available():
         raise HTTPException(
             status_code=409,
             detail="The initial administrator must be created before Google registration.",
         )
     _check_rate_limit(store, request, identity["email"], "auth.google")
-    user = store.get_user_by_email(identity["email"])
+    user = store.get_user_by_google_subject(identity["subject"])
 
     if user is None:
+        if store.get_user_by_email(identity["email"]) is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "An account with this email already exists. Sign in with your password "
+                    "and link Google from account settings."
+                ),
+            )
         try:
-            pending_user = store.register(
+            pending_user = store.register_google(
+                subject=identity["subject"],
                 email=identity["email"],
                 display_name=identity["display_name"],
                 password_hash=hash_password(secrets.token_urlsafe(48)),
@@ -509,6 +537,60 @@ async def google_sign_in(
     )
     public_user = {key: value for key, value in user.items() if key != "password_hash"}
     return {"authenticated": True, "user": public_user}
+
+
+@app.get("/api/auth/google/status")
+async def google_link_status(request: Request) -> dict[str, bool]:
+    user = _current_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    store = get_auth_store()
+    available = store.google_identity_storage_available()
+    return {
+        "available": available,
+        "linked": store.has_google_identity(user["id"]) if available else False,
+    }
+
+
+@app.post("/api/auth/google/link")
+async def link_google_account(
+    item: GoogleSignInIn,
+    request: Request,
+) -> dict[str, bool]:
+    user = _current_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    store = get_auth_store()
+    if not store.google_identity_storage_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Google identity storage migration is required before linking Google.",
+        )
+    identity = _verify_google_identity(item.credential)
+    if identity["email"] != user["email"].strip().lower():
+        raise HTTPException(
+            status_code=403,
+            detail="The verified Google email must match the signed-in account email.",
+        )
+    _check_rate_limit(store, request, user["email"], "auth.google.link")
+    try:
+        store.link_google_identity(
+            user_id=user["id"],
+            subject=identity["subject"],
+            email=identity["email"],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    store.record_event(
+        actor_user_id=user["id"],
+        action="auth.google_link",
+        target_type="user",
+        target_id=user["id"],
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return {"linked": True}
 
 
 @app.get("/api/auth/csrf")

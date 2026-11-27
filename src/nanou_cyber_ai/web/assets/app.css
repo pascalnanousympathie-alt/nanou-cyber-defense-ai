@@ -1264,3 +1264,7 @@ body[data-auth-state="authenticated"] [data-category-view][hidden] { display: no
   .category-grid { grid-template-columns: 1fr; }
   .category-card { min-height: 118px; padding: 15px; }
 }
+
+.google-account-link { align-items: center; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-bottom: 18px; padding: 14px; }
+.google-account-link strong { font-size: 12px; }
+.google-account-link .form-message { margin: 5px 0 0; }

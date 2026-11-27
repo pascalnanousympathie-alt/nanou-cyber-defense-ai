@@ -29,6 +29,10 @@ from sqlalchemy import (
 from sqlalchemy.exc import IntegrityError
 
 metadata = MetaData()
+# Optional Google identity storage has a separately reviewed PostgreSQL migration.
+# Keeping it outside the mandatory runtime schema lets password auth remain live
+# until the migration is safely applied to a hosted database.
+google_metadata = MetaData()
 
 users = Table(
     "users",
@@ -55,6 +59,22 @@ sessions = Table(
 )
 Index("ix_auth_sessions_user", sessions.c.user_id)
 Index("ix_auth_sessions_expiry", sessions.c.expires_at)
+
+users.to_metadata(google_metadata)
+google_identities = Table(
+    "google_identities",
+    google_metadata,
+    Column("google_subject", String(255), primary_key=True),
+    Column(
+        "user_id",
+        String(32),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    ),
+    Column("email_at_link", String(320), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+)
 
 api_keys = Table(
     "api_keys",
@@ -220,6 +240,7 @@ class SecurityDatabase:
         try:
             if self.mode == "sqlite":
                 metadata.create_all(self.engine)
+                google_metadata.create_all(self.engine)
             else:
                 self._verify_postgres_schema()
             self._ensure_bootstrap_state()
