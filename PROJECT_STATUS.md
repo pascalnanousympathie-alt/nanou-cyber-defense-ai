@@ -2,6 +2,19 @@
 
 Last verified: 2026-11-27 (UTC)
 
+## Current authoritative Production state — 2026-11-27 (supersedes older staged-cutover notes below)
+
+- Repository visibility is **public**. PR #13 (daily backup cron resynchronization) merged to `main` as `cdeae3e34937a8e687585725b3d09b58bafa2eec`; the workflow is active with cron `43 2 * * *` UTC. No scheduled event has run after the change yet; the first expected validation point is 2026-11-28 02:43 UTC. Manual dispatch remains available.
+- Vercel Production deployment `dpl_2gn4F1XNZazuevbDnbfAApW5xb1X` is READY on that exact `main` commit. Canonical `/ready` returned HTTP 200 and `{"status":"ready","database":"postgresql"}`.
+- Production Neon project `cold-resonance-28231813`, branch `br-damp-fog-bi0lzjf4`, database `nanou_cyber_defense`: ownership transfer is **APPLIED**. `nanou_migration_owner` now owns the database, all 9 application tables and both sequences (11 public objects total). A fresh post-cutover read showed zero public objects still owned by `nanou_app`.
+- Post-cutover role acceptance: `nanou_migration_login` successfully executes `SET LOCAL ROLE nanou_migration_owner`; `nanou_runtime` has SELECT/INSERT/UPDATE/DELETE on all 9 tables and SELECT/USAGE on both sequences, without TRUNCATE/TRIGGER/REFERENCES; `nanou_backup` has SELECT only on all 9 tables and sequence SELECT without sequence USAGE. Both logins were tested directly after cutover.
+- Legacy `nanou_app` still exists and retains elevated role attributes/memberships; it owns no current public tables/sequences or the database. Do not delete, disable or revoke it until a separately reviewed rollback/credential-retirement plan is completed.
+- Dependabot vulnerability alerts are enabled. Inventory queries for `open`, `dismissed`, `fixed` and `auto_dismissed` each returned an empty list at this verification time (zero alerts visible).
+- Owner browser profile is signed out: `/api/auth/me` returned `authenticated=false, bootstrap_required=false`; `/api/admin/users` returned 401 for the signed-out profile. Owner Admin browser acceptance and live Viewer/Analyst RBAC acceptance remain **PENDING OWNER SIGN-IN/TEST**. No credentials or bootstrap tokens are to be shared in chat.
+- Private backup key remains local on Termux with filesystem mode `600`; an independent offline second copy is still **NOT VERIFIED** because no accessible removable/offline destination was mounted. Do not copy the private key to ordinary internal shared storage.
+- Post-cutover manual backup dispatch `45946937978` was started on main commit `cdeae3e`; result is pending in the latest check. Scheduled automation is also pending its first scheduled event.
+
+
 ## Product scope
 
 Nanou Cyber Defense AI is a defensive cybersecurity web platform. Its current workflows include vulnerability intelligence (NVD/CVE and CISA KEV), scoped MCP tool inventory, account/RBAC governance, AI assistant read-only defensive commands, pre-extracted malware-feature CSV validation, and local defensive tabletop reports.
