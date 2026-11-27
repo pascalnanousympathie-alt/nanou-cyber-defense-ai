@@ -3,6 +3,7 @@
 let attackRole = null;
 let attackScopes = [];
 let attackReports = [];
+let attackCategoryActive = false;
 
 const attackById = (id) => document.getElementById(id);
 
@@ -299,15 +300,22 @@ function initializeAttackSimulation() {
     attackRole = event.detail?.role || null;
     attackById("attack-scope-form").hidden = attackRole !== "admin";
     attackById("attack-manager-panel").hidden = !["admin", "analyst"].includes(attackRole);
-    if (["admin", "analyst"].includes(attackRole)) {
-      loadAttackWorkspace();
-    } else {
+    if (!["admin", "analyst"].includes(attackRole)) {
+      attackCategoryActive = false;
       attackScopes = [];
       attackReports = [];
       attackById("attack-scope-list").replaceChildren();
       attackById("attack-report-list").replaceChildren();
       attackById("attack-scope-select").replaceChildren();
       attackById("attack-run-submit").disabled = true;
+    } else if (attackCategoryActive) {
+      loadAttackWorkspace();
+    }
+  });
+  window.addEventListener("nanou:category-changed", (event) => {
+    attackCategoryActive = event.detail?.category === "operations";
+    if (attackCategoryActive && ["admin", "analyst"].includes(attackRole)) {
+      loadAttackWorkspace();
     }
   });
 }

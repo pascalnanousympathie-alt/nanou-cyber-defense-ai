@@ -1,6 +1,7 @@
 "use strict";
 
 let latestDeveloperKey = "";
+let developerCategoryActive = false;
 
 function clearDeveloperSecrets() {
   latestDeveloperKey = "";
@@ -171,16 +172,19 @@ function initializeDeveloperCenter() {
   document.getElementById("developer-key-copy").addEventListener("click", copyDeveloperKey);
   document.getElementById("developer-key-reveal").addEventListener("click", revealDeveloperKey);
   document.getElementById("logout-button").addEventListener("click", clearDeveloperSecrets, true);
-  // The platform's existing loader remains the source of truth for RBAC and the session.
-  void (async () => {
-    try {
-      await loadAuth();
-      if (canAnalyze()) await loadDeveloperKeys();
-      else clearDeveloperSecrets();
-    } catch {
+  window.addEventListener("nanou:auth-changed", (event) => {
+    const role = event.detail?.role || null;
+    if (!role || !["admin", "analyst"].includes(role)) {
+      developerCategoryActive = false;
       clearDeveloperSecrets();
+      return;
     }
-  })();
+    if (developerCategoryActive) loadDeveloperKeys();
+  });
+  window.addEventListener("nanou:category-changed", (event) => {
+    developerCategoryActive = event.detail?.category === "operations";
+    if (developerCategoryActive && canAnalyze()) loadDeveloperKeys();
+  });
 }
 
 initializeDeveloperCenter();

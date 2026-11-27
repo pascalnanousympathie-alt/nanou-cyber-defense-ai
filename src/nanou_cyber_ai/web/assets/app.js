@@ -93,6 +93,9 @@ function showCategory(category) {
     if (active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
+  window.dispatchEvent(new CustomEvent("nanou:category-changed", {
+    detail: { category },
+  }));
   loadCategoryData(category);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -582,16 +585,14 @@ async function loadAuth() {
   try {
     const status = await apiRequest("/api/auth/me");
     currentUser = status.user || null;
+    currentCategory = "home";
+    loadedCategories.clear();
     if (currentUser) {
       setAuthPanels("account");
       byId("account-name").textContent = currentUser.display_name;
       byId("account-email").textContent = currentUser.email;
       byId("account-role").textContent = currentUser.role.toUpperCase();
       byId("auth-message").textContent = "Voaaro amin'ny session manokana ny fidirana. Mikatona ho azy rehefa lany daty.";
-      loadedCategories.clear();
-      renderRoleWorkspace();
-      updateRoleVisibility();
-      showCategory("home");
     } else if (status.bootstrap_required) {
       setAuthPanels("bootstrap");
       updateRoleVisibility();

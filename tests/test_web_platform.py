@@ -113,6 +113,7 @@ def test_role_based_workspace_and_navigation_are_scoped_by_role() -> None:
     assert "analyst: {" in script.text
     assert "viewer: {" in script.text
     assert "function updateRoleVisibility()" in script.text
+    assert 'new CustomEvent("nanou:category-changed"' in script.text
     assert "function renderRoleWorkspace()" in script.text
     assert 'byId("metadata-create-form").hidden = !canWriteMetadata;' in script.text
 
@@ -338,3 +339,17 @@ def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     assert 'data-open-category="malware"' in response.text
     assert 'data-open-category="assistant"' in response.text
     assert 'data-category-view="operations"' in response.text
+
+
+def test_operations_data_loads_only_when_its_category_is_opened() -> None:
+    with TestClient(app) as client:
+        developer = client.get("/assets/developer.js")
+        attack = client.get("/assets/attack-simulation.js")
+
+    assert developer.status_code == 200
+    assert attack.status_code == 200
+    assert 'event.detail?.category === "operations"' in developer.text
+    assert 'event.detail?.category === "operations"' in attack.text
+    assert "await loadAuth();" not in developer.text
+    assert "loadDeveloperKeys();" in developer.text
+    assert "loadAttackWorkspace();" in attack.text
