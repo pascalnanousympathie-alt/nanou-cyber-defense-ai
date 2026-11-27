@@ -1,6 +1,6 @@
 # Parallel Orchestration Runbook — Nanou Cyber Defense AI
 
-Last verified: 2026-11-26 (UTC)
+Last verified: 2026-11-27 (UTC)
 
 ## 1. Repository boundaries
 
@@ -190,3 +190,16 @@ Never bypass the stopped secret handoff by embedding credentials in shell histor
 - Production user count remains zero and bootstrap is not claimed. Owner Admin bootstrap plus live Viewer/Analyst registration, approval, RBAC and logout/re-login acceptance are still required. Keep Vercel SSO enabled.
 
 No Production ownership transfer, migration, credential retirement, new Production deployment, SSO removal, paid upgrade or public launch occurred in this continuation.
+
+## Current Production checkpoint — 2026-11-27
+
+The earlier historical statements in this runbook that Production had zero users and bootstrap was unclaimed are superseded by this checkpoint.
+
+- GitHub main is exactly a6e15da951641f2f6983c01afc8f8b0484fd3f31. PR #11 is merged; CI 45889588789 and Security 45889588961 completed successfully on the production source.
+- Vercel Production deployment dpl_2AxU3iCjEYUWkJRp4iSDrCwbWSur is READY on commit a6e15da. /health and /ready both returned HTTP 200; /ready identified PostgreSQL. Vercel SSO remains enabled.
+- Production Neon platform_state.bootstrap_claimed=true; there is exactly one active, approved Admin, one unexpired auth session, and one successful auth.bootstrap audit event. NANOU_BOOTSTRAP_TOKEN is a sensitive Production-only variable; no secret value was read.
+- nanou_runtime has least-privilege DML and sequence access; it has no TRUNCATE, schema CREATE or elevated role attributes. nanou_app remains the public-table owner and retains elevated flags/membership (neon_superuser, nanou_migration_owner). No Production ownership/grant/credential cutover was performed.
+- Opera Connector's current profile is signed out of the app (/api/auth/me: authenticated=false, bootstrap_required=false). The Admin API's 401 from that profile is expected. Do not interpret it as a broken Admin bootstrap.
+- Live Viewer/Analyst registration and approval, role-specific acceptance, owner-browser logout/re-login and password-change acceptance are still outstanding. Production must not be declared unrestricted-public-launch ready yet.
+- Encrypted backup/restore evidence remains the previously verified 2026-11-26 run history; the second offline private-key recovery copy is still NOT VERIFIED. Do not print or upload the private key.
+- Next safe sequence: complete account acceptance with identities controlled by the owner; verify alerting/monitoring and the backup recovery copy; prepare the database ownership cutover/rollback checklist. Production ownership transfer, legacy-role retirement or permission changes require explicit approval and a tested rollback window.
