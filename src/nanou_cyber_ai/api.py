@@ -479,7 +479,10 @@ async def google_sign_in(
                 "authenticated": False,
                 "pending_approval": True,
                 "user": pending_user,
-                "message": "Google account received. An administrator must approve this Viewer account.",
+                "message": (
+                    "Google account received. An administrator must "
+                    "approve this Viewer account."
+                ),
             },
         )
 

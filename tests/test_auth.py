@@ -878,7 +878,7 @@ def test_admin_bridge_is_revoked_when_owner_role_or_active_state_changes(tmp_pat
 
 
 
-def test_google_provider_is_disabled_until_a_web_client_id_is_configured(monkeypatch, tmp_path) -> None:
+def test_google_provider_disabled_without_client_id(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
     monkeypatch.setattr(settings, "google_client_id", None)
