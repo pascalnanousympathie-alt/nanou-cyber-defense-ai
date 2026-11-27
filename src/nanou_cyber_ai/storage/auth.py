@@ -327,9 +327,7 @@ class AuthStore:
                     ip_digest=ip_digest,
                 )
                 row = (
-                    connection.execute(select(users).where(users.c.id == user_id))
-                    .mappings()
-                    .one()
+                    connection.execute(select(users).where(users.c.id == user_id)).mappings().one()
                 )
         except IntegrityError as exc:
             raise ValueError(

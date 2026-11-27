@@ -1102,7 +1102,6 @@ def test_existing_password_account_requires_explicit_google_link(monkeypatch, tm
             assert linked_login.json()["user"]["role"] == "viewer"
 
 
-
 def test_google_provider_waits_for_optional_postgres_identity_migration(
     monkeypatch, tmp_path
 ) -> None:
