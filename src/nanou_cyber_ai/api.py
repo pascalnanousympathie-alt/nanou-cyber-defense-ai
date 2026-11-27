@@ -117,6 +117,7 @@ def _hmac_fingerprint(purpose: str, value: str) -> str:
     message = f"{purpose}:{value}".encode()
     # This keyed digest fingerprints email/IP identifiers only; account passwords
     # use Argon2id in security/passwords.py, so this is not password storage.
+
     # codeql[py/weak-sensitive-data-hashing]
     return hmac.new(_audit_hmac_key(), message, hashlib.sha256).hexdigest()
 
