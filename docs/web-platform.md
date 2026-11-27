@@ -49,6 +49,12 @@ The first account is created through one-time Administrator bootstrap. It requir
 
 Audit events cover bootstrap, registration, login/logout outcomes, rate-limit events, account changes, feature preparation, and successful inference. Raw IP addresses are not stored; only a digest is retained.
 
+## Admin-to-Termux read-only pairing
+
+An authenticated Admin may create a one-time Termux pairing code from the account-governance panel. The code expires after 90 seconds and is consumed atomically once. Exchange issues a separate admin:bridge:read bearer for 15 minutes; the token is hashed in the existing api_keys table, held only in the Termux helper's memory, and never exports the browser session cookie or password.
+
+The bridge exposes only Admin identity, user-list and audit-list reads, at 30 requests per minute. It cannot approve users, change roles, disable accounts, modify metadata, access Developer API functions, or perform arbitrary host operations. A new pairing revokes earlier bridge/pairing tokens for that Admin; password rotation and role/active changes also revoke the bridge. The local helper accepts only ping, whoami, users and audit over a 0600 Unix socket in a dedicated 0700 directory under the Termux home folder. See [Admin-to-Termux pairing](admin-session-pairing.md).
+
 ## Local development
 
 ~~~bash

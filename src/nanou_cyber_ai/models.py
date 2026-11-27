@@ -135,6 +135,16 @@ class AuthLoginIn(BaseModel):
         return normalized
 
 
+class AdminPairingExchangeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pairing_code: str = Field(
+        min_length=40,
+        max_length=160,
+        pattern=r"^ncd_pair_[A-Za-z0-9_-]+$",
+    )
+
+
 class AuthPasswordChangeIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
