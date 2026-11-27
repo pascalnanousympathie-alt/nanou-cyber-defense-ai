@@ -39,3 +39,15 @@ See [Attack Simulation Manager](attack-simulation.md) for roles, routes, and ope
 - Keep downloaded datasets in an ignored cache directory.
 - Verify checksums and upstream license terms before using any dataset.
 - Keep dataset provenance, feature version, label source and evaluation split in the experiment record.
+
+
+## Admin-to-Termux pairing
+
+- The owner first authorizes pairing from an already authenticated Admin browser session protected by CSRF and same-origin checks.
+- The 90-second random pairing code is stored only as a hash, expires, and is consumed atomically once.
+- Exchange creates a separate 15-minute, hashed admin:bridge:read credential; it is not a browser session and is not a generic Developer API token.
+- Only Admin identity, account-list and audit-list reads are reachable. No account mutation, approval, role assignment, API-key management, password change, bootstrap, arbitrary URL, shell or process access is exposed.
+- Normal Developer API keys retain their existing ncd_live_ prefix and scope allowlist; internal pairing and bridge rows are hidden from the Developer API key manager.
+- New pairing, password rotation and role/active changes revoke outstanding bridge credentials. Request rate limits and durable audit events apply.
+- Termux stores the bridge bearer only in process memory and exposes a fixed action allowlist through a 0600 Unix socket in a dedicated 0700 directory under the Termux home folder. Process exit requests revocation; server-side expiry remains the fallback.
+- No new Production table, database migration, Production deployment or secret value is required.

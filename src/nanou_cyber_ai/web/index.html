@@ -162,6 +162,19 @@
             <div><h4>Fitantanana mpampiasa</h4><p class="admin-subtitle">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
             <button id="refresh-admin" class="text-button" type="button">Havaozy</button>
           </div>
+          <div class="admin-bridge-panel">
+            <div class="workspace-heading">
+              <div><h4>Fampifandraisana Termux</h4><p class="admin-subtitle">Read-only Admin bridge · fampiasana tokana · 90 segondra.</p></div>
+            </div>
+            <p class="admin-subtitle">Mamorona code eto amin'ny navigateur efa tafiditra. Ampidiro ao amin'ny Termux ilay code rehefa angatahina. Tsy omena tenimiafina na cookie ny Termux.</p>
+            <div class="field"><button id="admin-bridge-create" class="button button-secondary" type="button">Hamorona pairing code</button></div>
+            <p id="admin-bridge-status" class="form-message" aria-live="polite"></p>
+            <div id="admin-bridge-code-wrap" class="admin-bridge-code-wrap" hidden>
+              <label for="admin-bridge-code">Pairing code (miseho indray mandeha)</label>
+              <code id="admin-bridge-code" class="admin-bridge-code"></code>
+              <button id="admin-bridge-copy" class="text-button" type="button">Adika ny code</button>
+            </div>
+          </div>
           <div class="admin-summary" aria-label="Famintinana ny kaonty">
             <article class="admin-summary-card"><span>Kaonty rehetra</span><strong id="admin-total-users">0</strong></article>
             <article class="admin-summary-card"><span>Mavitrika</span><strong id="admin-active-users">0</strong></article>

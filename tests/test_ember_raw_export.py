@@ -178,10 +178,10 @@ def test_official_thrember_feature_extractor_is_importable():
             pytest.skip("Install the optional pinned EMBER extractor to run this check.")
         raise
 
-    from signify.authenticode import SignedPEFile
+    from signify.authenticode.signed_file import SignedPEFile
     from thrember import PEFeatureExtractor
 
     assert callable(SignedPEFile)
-    assert hasattr(SignedPEFile, "iter_signed_datas")
+    assert hasattr(SignedPEFile, "iter_embedded_signatures")
     extractor = PEFeatureExtractor()
     assert extractor.dim >= 2000

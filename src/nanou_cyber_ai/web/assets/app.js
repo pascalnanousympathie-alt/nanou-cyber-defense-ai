@@ -694,6 +694,48 @@ function renderAudit(items) {
   }
 }
 
+async function createAdminPairing() {
+  const button = byId("admin-bridge-create");
+  const status = byId("admin-bridge-status");
+  button.disabled = true;
+  byId("admin-bridge-code-wrap").hidden = true;
+  byId("admin-bridge-code").textContent = "";
+  setMessage(status, "Mamorona pairing code voafetra…");
+  try {
+    const result = await apiRequest("/api/auth/pairing", { method: "POST" });
+    byId("admin-bridge-code").textContent = result.pairing_code;
+    byId("admin-bridge-code-wrap").hidden = false;
+    setMessage(
+      status,
+      "Vita. Adikao ary ampidiro ao amin'ny Termux ao anatin'ny " +
+        result.expires_in_seconds +
+        " segondra. Read-only mandritra ny 15 minitra ny bridge.",
+      "success",
+    );
+    window.clearTimeout(window.nanouAdminPairingExpiry);
+    window.nanouAdminPairingExpiry = window.setTimeout(() => {
+      byId("admin-bridge-code").textContent = "";
+      byId("admin-bridge-code-wrap").hidden = true;
+      setMessage(status, "Lany daty ny code. Mamoròna pairing code vaovao raha ilaina.");
+    }, result.expires_in_seconds * 1000);
+  } catch (error) {
+    setMessage(status, error.message || "Tsy afaka namorona pairing code.", "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyAdminPairingCode() {
+  const code = byId("admin-bridge-code").textContent;
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    setMessage(byId("admin-bridge-status"), "Voadika. Apetaho ao amin'ny Termux rehefa angatahina.", "success");
+  } catch (_error) {
+    setMessage(byId("admin-bridge-status"), "Tsy nahazo clipboard. Safidio ary adikao ilay code hita eo ambony.", "error");
+  }
+}
+
 async function loadAdminConsole() {
   if (currentUser?.role !== "admin") return;
   try {
@@ -918,6 +960,8 @@ byId("register-form").addEventListener("submit", submitRegistration);
 byId("logout-button").addEventListener("click", logoutAccount);
 byId("password-change-form").addEventListener("submit", submitPasswordChange);
 byId("refresh-admin").addEventListener("click", loadAdminConsole);
+byId("admin-bridge-create").addEventListener("click", createAdminPairing);
+byId("admin-bridge-copy").addEventListener("click", copyAdminPairingCode);
 byId("admin-user-search").addEventListener("input", () => renderAdminUsers(adminUsersCache));
 byId("admin-user-filter").addEventListener("change", () => renderAdminUsers(adminUsersCache));
 byId("audit-search").addEventListener("input", () => renderAudit(adminAuditCache));

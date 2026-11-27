@@ -39,6 +39,7 @@ Health: `GET /health`
 - `POST /api/auth/bootstrap` — one-time first Administrator setup (requires a private bootstrap token).
 - `POST /api/auth/register`, `/api/auth/login`, `/api/auth/logout` — account and session lifecycle.
 - `GET /api/admin/users`, `PATCH /api/admin/users/{id}`, `GET /api/admin/audit` — Admin-only RBAC and audit operations.
+- `POST /api/auth/pairing`, `POST /api/auth/pairing/exchange`, `/api/admin/bridge/*` — one-time, 15-minute, read-only Admin-to-Termux bridge (see `docs/admin-session-pairing.md`).
 - `GET /api/malware/metadata` — list stored metadata (authenticated account).
 - `POST /api/malware/metadata` — add a hash/label/feature-summary record (Admin/Analyst only; never a binary).
 
