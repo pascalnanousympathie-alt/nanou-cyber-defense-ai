@@ -18,7 +18,7 @@ import sys
 from http.cookiejar import CookieJar
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPCookieProcessor, Request, build_opener
+from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, Request, build_opener
 
 BASE_URL = "https://nanou-cyber-defense-ai.vercel.app"
 HOME = Path(os.environ.get("HOME", str(Path.home())))
@@ -26,6 +26,11 @@ SOCKET_DIR = HOME / ".local" / "run" / "nanou-cyber-admin"
 SOCKET_PATH = str(SOCKET_DIR / "bridge.sock")
 MAX_RESPONSE_BYTES = 1_000_000
 ALLOWED_ACTIONS = {"ping", "whoami", "users", "audit"}
+
+
+class RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        return None
 
 
 class ApiError(RuntimeError):
@@ -37,7 +42,7 @@ class ApiError(RuntimeError):
 class AdminBridgeApi:
     def __init__(self) -> None:
         self.cookies = CookieJar()
-        self.opener = build_opener(HTTPCookieProcessor(self.cookies))
+        self.opener = build_opener(HTTPCookieProcessor(self.cookies), RejectRedirects())
         self.csrf_token = ""
         self.bridge_token = ""
 
@@ -148,6 +153,8 @@ class AdminBridgeApi:
 
 
 class Handler(socketserver.StreamRequestHandler):
+    timeout = 5
+
     def handle(self) -> None:
         line = self.rfile.readline(4097)
         if not line or len(line) > 4096:
@@ -175,9 +182,22 @@ class Server(socketserver.UnixStreamServer):
 
 
 def prepare_socket_path() -> None:
-    parent = Path(SOCKET_PATH).parent
-    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(parent, 0o700)
+    private_directories = (
+        HOME / ".local",
+        HOME / ".local" / "run",
+        SOCKET_DIR,
+    )
+    for directory in private_directories:
+        try:
+            directory.mkdir(mode=0o700)
+        except FileExistsError:
+            pass
+        info = os.lstat(directory)
+        if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            raise RuntimeError("Refusing a symlink or non-directory in the private socket path")
+        if info.st_uid != os.getuid():
+            raise RuntimeError("The private socket directory is not owned by this Termux user")
+    os.chmod(SOCKET_DIR, 0o700)
     if not os.path.lexists(SOCKET_PATH):
         return
     mode = os.lstat(SOCKET_PATH).st_mode
@@ -222,11 +242,19 @@ def main() -> int:
 
     expires_at = pairing.get("expires_at", "unknown")
     pairing.pop("bridge_token", None)
+    server = None
     try:
         prepare_socket_path()
         server = Server(SOCKET_PATH, api)
         os.chmod(SOCKET_PATH, 0o600)
     except Exception as exc:
+        if server is not None:
+            server.server_close()
+        try:
+            if stat.S_ISSOCK(os.lstat(SOCKET_PATH).st_mode):
+                os.unlink(SOCKET_PATH)
+        except OSError:
+            pass
         api.revoke()
         print(f"Cannot create private local bridge: {exc}", file=sys.stderr)
         return 6

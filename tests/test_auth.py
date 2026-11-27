@@ -819,3 +819,59 @@ def test_admin_pairing_http_flow_is_one_time_read_only_and_revocable(monkeypatch
         assert revoked.status_code == 200
         assert revoked.json() == {"revoked": True}
         assert bridge_client.get("/api/admin/bridge/me", headers=headers).status_code == 401
+
+
+def test_admin_bridge_is_revoked_when_owner_role_or_active_state_changes(tmp_path) -> None:
+    database = SecurityDatabase(None, tmp_path)
+    store = AuthStore(database)
+    first_admin = _admin(store)
+    second_admin = store.register(
+        email="second-admin@example.test",
+        display_name="Second Admin",
+        password_hash="test-second-admin-hash",
+        request_id="test-second-admin-register",
+        ip_digest=None,
+    )
+    second_admin = store.update_user(
+        actor_user_id=first_admin["id"],
+        target_user_id=second_admin["id"],
+        role="admin",
+        is_active=True,
+        request_id="test-second-admin-approve",
+        ip_digest=None,
+    )
+    assert second_admin is not None
+
+    pairing_code = "ncd_pair_" + "r" * 43
+    bridge_token = "ncd_bridge_" + "s" * 43
+    pairing_hash = hashlib.sha256(pairing_code.encode()).hexdigest()
+    bridge_hash = hashlib.sha256(bridge_token.encode()).hexdigest()
+    store.create_admin_pairing(
+        owner_user_id=first_admin["id"],
+        token_prefix=pairing_code[:20],
+        token_hash=pairing_hash,
+        request_id="test-role-bridge-pair",
+        ip_digest=None,
+    )
+    bridge = store.exchange_admin_pairing(
+        pairing_token_hash=pairing_hash,
+        bridge_token_prefix=bridge_token[:20],
+        bridge_token_hash=bridge_hash,
+        request_id="test-role-bridge-exchange",
+        ip_digest=None,
+    )
+    assert bridge is not None
+    assert store.get_admin_bridge_principal(bridge_hash) is not None
+
+    demoted = store.update_user(
+        actor_user_id=second_admin["id"],
+        target_user_id=first_admin["id"],
+        role="viewer",
+        is_active=True,
+        request_id="test-admin-role-revocation",
+        ip_digest=None,
+    )
+    assert demoted is not None
+    assert demoted["role"] == "viewer"
+    assert store.get_admin_bridge_principal(bridge_hash) is None
+    database.close()
