@@ -1182,7 +1182,7 @@ async function runMalwareInference(event) {
   }
 }
 
-byId("language-select").addEventListener("change", event => applyLocale(event.target.value));
+for(const id of ["language-select","auth-language-select"]){byId(id).addEventListener("change", event => applyLocale(event.target.value));}
 let locale="fr";try{locale=localStorage.getItem("nanou-locale")||"fr"}catch{/* private mode */}applyLocale(locale);
 byId("cve-form").addEventListener("submit", searchCve);
 byId("refresh-kev").addEventListener("click", loadKev);
