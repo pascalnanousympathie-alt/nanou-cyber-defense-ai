@@ -66,8 +66,8 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
     assert "AI Chat Command Center" in response.text
     assert 'href="#vulnerabilities"' in response.text
     assert 'href="#malware-model"' in response.text
-    assert 'href="#metadata"' in response.text
-    assert 'href="#tools"' in response.text
+    assert 'id="metadata"' in response.text
+    assert 'id="tools"' in response.text
     assert 'class="theme-pill"' in response.text
     assert '<meta name="theme-color" content="#03070b">' in response.text
 
