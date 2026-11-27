@@ -12,7 +12,7 @@ Last verified: 2026-11-27 (UTC)
 - Dependabot vulnerability alerts are enabled. Inventory queries for `open`, `dismissed`, `fixed` and `auto_dismissed` each returned an empty list at this verification time (zero alerts visible).
 - Owner browser profile is signed out: `/api/auth/me` returned `authenticated=false, bootstrap_required=false`; `/api/admin/users` returned 401 for the signed-out profile. Owner Admin browser acceptance and live Viewer/Analyst RBAC acceptance remain **PENDING OWNER SIGN-IN/TEST**. No credentials or bootstrap tokens are to be shared in chat.
 - Private backup key remains local on Termux with filesystem mode `600`; an independent offline second copy is still **NOT VERIFIED** because no accessible removable/offline destination was mounted. Do not copy the private key to ordinary internal shared storage.
-- Post-cutover manual backup dispatch `45946937978` was started on main commit `cdeae3e`; result is pending in the latest check. Scheduled automation is also pending its first scheduled event.
+- Post-cutover manual backup run `45946937978` completed SUCCESS on main commit `cdeae3e`; encrypted artifact `nanou-production-backup-45946937978` (23,362 bytes, SHA-256 `8396156f7b455887f8919ee5418e078738daf03a0a63b9fec49ff418061898ba`) was created. Sidecar checksum, RSA-3072/AES-256-GCM authenticated decryption, `pg_restore --list`, and a full isolated PostgreSQL restore passed. Restored 9 tables / 60 columns and all 9 table row counts exactly matched the Production read-only `nanou_backup` query. The plaintext dump and disposable cluster were removed. Scheduled automation is still pending its first scheduled event.
 
 
 ## Product scope
