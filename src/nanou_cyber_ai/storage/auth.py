@@ -20,7 +20,6 @@ from nanou_cyber_ai.storage.database import (
     users,
 )
 
-
 ADMIN_PAIRING_TTL_SECONDS = 90
 ADMIN_BRIDGE_TTL_SECONDS = 15 * 60
 _ADMIN_PAIRING_SCOPE = '[\"admin:bridge:pair\"]'
