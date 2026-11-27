@@ -14,6 +14,12 @@ The optional Python MCP server currently uses the official Python SDK v2 over **
 6. **Connector adapters:** separate adapters for GitHub, Vercel, Gmail, Supabase, Firebase/Google Cloud, Microsoft 365 and PostgreSQL providers. Each adapter exposes a small, reviewed set of tools rather than generic arbitrary API or SQL access.
 7. **Tunnel/remote bridge:** prefer an outbound-initiated tunnel (for example, a Cloudflare Tunnel deployment) with TLS, service identity, short-lived credentials and explicit destination allowlists. Do not expose a raw local port or unauthenticated reverse proxy. A Vercel serverless function is not a persistent tunnel daemon; operate the tunnel agent in a separately managed container or owner-controlled host.
 
+## Protocol baseline (2026-07-28 specification)
+
+For the remote transport, target the MCP Streamable HTTP specification rather than inventing a proprietary tunnel protocol. The current specification uses one MCP endpoint accepting POST requests and JSON or request-scoped SSE responses; validate the Origin header and authenticate every request. Implement the matching protocol-version metadata and conformance tests, and retain stdio for local desktop clients. Check compatibility with older clients before adopting newer protocol revisions.
+
+For remote authorization, implement the MCP OAuth profile based on OAuth 2.1: HTTPS-only authorization/redirect endpoints, exact redirect URI allowlists, PKCE, protected-resource metadata, short-lived audience-bound access tokens, and token rotation. Never forward an incoming MCP bearer token to a provider API; the connector broker must use a separate provider-issued credential for that upstream service.
+
 ## Security invariants
 
 - OAuth consent is performed by the owner in the provider's own authorization page; never request provider passwords, MFA codes or recovery codes in this application.
