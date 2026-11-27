@@ -1,5 +1,18 @@
 # Production backup and restore
 
+## Current Production cutover state — 2026-11-27
+
+This section supersedes earlier staged-cutover statements below.
+
+- Production database `nanou_cyber_defense` is now owned by NOLOGIN `nanou_migration_owner`. The same role owns all nine application tables and both sequences. The migration was tested on an isolated temporary branch, applied through Neon migration workflow, and the temporary branch was deleted after successful application.
+- Post-cutover checks confirm `nanou_migration_login` can `SET LOCAL ROLE nanou_migration_owner`; runtime has table DML and sequence SELECT/USAGE but no TRUNCATE/TRIGGER/REFERENCES; backup is SELECT-only on tables and has sequence SELECT without USAGE.
+- Legacy `nanou_app` owns zero current public objects but still has elevated attributes/memberships. Do not revoke, disable, drop or rotate its credential until a separate rollback and credential-retirement plan is reviewed and the application rollback path is established.
+- Vercel Production deployment `dpl_2gn4F1XNZazuevbDnbfAApW5xb1X` is READY on main commit `cdeae3e34937a8e687585725b3d09b58bafa2eec`; canonical `/ready` returned HTTP 200 with PostgreSQL ready.
+- PR #13 merged the backup schedule cron update to `43 2 * * *` UTC. Workflow is active, but a real scheduled run and artifact are NOT VERIFIED until the next scheduled time is observed. A manual post-cutover run `45946937978` was dispatched on main and remains pending at the time this note was written.
+- Dependabot vulnerability alerts are enabled; queries for open, dismissed, fixed and auto-dismissed alerts returned empty lists.
+- The private decryption key remains on the authorized Termux device with mode 600. Its independent offline second copy remains NOT VERIFIED because no accessible separate removable/offline destination is currently mounted. Never put the private key in Git, Vercel or chat.
+
+
 ## Backup design
 
 The Production backup path is designed around three separate credentials:
