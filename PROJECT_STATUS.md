@@ -1,6 +1,36 @@
 # Project Status — Nanou Cyber Defense AI
 
-Last verified: 2026-11-26 (UTC)
+Last verified: 2026-11-27 (UTC)
+
+## Latest verified continuation — 2026-11-27 (after Signify security fix)
+
+This addendum supersedes older main-commit, PR #14, deployment, and browser-session status statements below.
+
+- PR #14 (`fix(security): patch Signify dependency and EMBER compatibility`) is **MERGED** into `main` as `93c6c67af35251889c94975814e8d7edadbc44ae`. Main now declares `ember-extract = ["signify==0.9.3"]`; the EMBER2024 compatibility patch and regression tests are included.
+- Exact merge-candidate CI run [45985042915](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45985042915) passed: Ruff lint/format, **155 passed / 4 skipped**, ML smoke **13 passed** with `EMBER_SIGNIFY_COMPAT_PASS`, and dependency audit **No known vulnerabilities found**.
+- Exact merge-candidate Security run [45985042891](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45985042891) passed: Gitleaks, CodeQL Python, and CodeQL JavaScript/TypeScript.
+- Main push CI [45985294426](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45985294426) and Security [45985295324](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45985295324) also completed with all jobs successful on merge commit `93c6c67`.
+- Vercel Production deployment `dpl_CuAyxdFkCHFCjMbw4XtctPMs1WgP` is **READY** on that exact main commit. Authenticated Opera smoke checks after alias assignment returned `/health` HTTP 200, `/ready` HTTP 200 with PostgreSQL, and `/api/auth/me` authenticated as active Admin. Vercel SSO remains enabled.
+- The previous pre-merge Dependabot inventory showed one OPEN HIGH Signify alert (`GHSA-p4hh-mq57-gq8x`, affected versions below 0.9.2). After the merge, the connected GitHub alert-list endpoint was not available, so the alert's current state is **NOT VERIFIED**; do not claim that GitHub has closed it until the dependency graph/alert page is checked. The source pin is fixed and both dependency-audit runs reported no known vulnerabilities.
+- Production backup scheduling remains **NOT VERIFIED**: cron is `43 2 * * *` UTC; the next expected event is 2026-11-28 02:43 UTC. Require a real `schedule` event and encrypted artifact before marking it PASS.
+- The independent offline second copy of the backup private key remains **NOT VERIFIED**; no separate removable/offline destination was mounted. The primary local key remains mode 600.
+- The owner Opera Admin session is currently authenticated and verified. Only one Admin account is present; separate Viewer/Analyst live RBAC acceptance remains pending.
+- The read-only Opera-to-Termux Admin bridge was verified in this session: `ping`, `whoami`, `users`, and `audit` passed; local directory/socket permissions are 0700/0600. The bridge remains session-bound and requires Opera to stay open and signed in.
+
+
+## Current authoritative Production state — 2026-11-27 (supersedes older staged-cutover notes below)
+
+- Repository visibility is **public**. PR #13 (daily backup cron resynchronization) merged to `main` as `cdeae3e34937a8e687585725b3d09b58bafa2eec`; the workflow is active with cron `43 2 * * *` UTC. No scheduled event has run after the change yet; the first expected validation point is 2026-11-28 02:43 UTC. Manual dispatch remains available.
+- Vercel Production deployment `dpl_2gn4F1XNZazuevbDnbfAApW5xb1X` is READY on that exact `main` commit. Canonical `/ready` returned HTTP 200 and `{"status":"ready","database":"postgresql"}`. Main `settings.py` prefers `NANOU_RUNTIME_DATABASE_URL` and returns no DB URL on Vercel/AWS Lambda if it is missing; Vercel metadata confirms the Production-only sensitive `NANOU_RUNTIME_DATABASE_URL` variable exists (value intentionally not decrypted).
+- Production ownership transfer is **APPLIED and directly verified** on Neon main (`br-damp-fog-bi0lzjf4`, database `nanou_cyber_defense`). A fresh read-only catalog query using the explicitly selected `nanou_app` connection confirmed `nanou_migration_owner` owns the database, all 9 application tables and both sequences (11 public objects total). `nanou_app` owns none of these objects. The earlier SQL errors occurred only when the Neon query omitted the DB role; explicit `role_name` connections work.
+- Post-cutover role checks: in a READ ONLY transaction, `nanou_migration_login` successfully executed `SET LOCAL ROLE nanou_migration_owner` (`session_user=nanou_migration_login`, `current_user=nanou_migration_owner`); the owner role is NOLOGIN/non-elevated and has database/public-schema CREATE, while the login has neither directly. `nanou_runtime` has SELECT/INSERT/UPDATE/DELETE on each of 9 tables, no TRUNCATE/TRIGGER/REFERENCES, and SELECT/USAGE (not UPDATE) on both sequences; database CREATE and public-schema CREATE are false. `nanou_backup` has SELECT only on all 9 tables and SELECT (not USAGE/UPDATE) on both sequences.
+- Separate rehearsal branch `prod-role-transfer-rehearsal-20261126` (`br-morning-art-bi0ubfr1`) remains present and is not the Production database: in that branch `nanou_migration_owner` owns the 9 tables and 2 sequences, but `nanou_app` still owns the database. Do not confuse this rehearsal branch with the completed Production cutover.
+- Legacy `nanou_app` remains login-enabled and retains elevated CREATEROLE/CREATEDB/REPLICATION/BYPASSRLS attributes and memberships (including `neon_superuser` and `nanou_migration_owner`), but the fresh catalog confirms it owns no current database, table or sequence. Do not disable or revoke it until a separate rollback and credential-retirement plan is reviewed and the application rollback path is established.
+- Dependabot vulnerability alerts are enabled. Current state-filtered inventory: 1 OPEN HIGH alert for `signify` (`GHSA-p4hh-mq57-gq8x`, vulnerable range `<0.9.2`), and 0 `dismissed`, `fixed` or `auto_dismissed`. PR #14 upgrades to `signify==0.9.3` and its CI, ML smoke, dependency audit and security scans pass on head `9ce497a`; the alert remains OPEN until the fix is merged and GitHub refreshes the dependency graph.
+- Owner browser profile is signed out: `/api/auth/me` returned `authenticated=false, bootstrap_required=false`; `/api/admin/users` returned 401 for the signed-out profile. Owner Admin browser acceptance and live Viewer/Analyst RBAC acceptance remain **PENDING OWNER SIGN-IN/TEST**. No credentials or bootstrap tokens are to be shared in chat.
+- Private backup key remains local on Termux with filesystem mode `600`; an independent offline second copy is still **NOT VERIFIED** because no accessible removable/offline destination was mounted. Do not copy the private key to ordinary internal shared storage.
+- Manual backup run `45946937978` completed SUCCESS on main commit `cdeae3e`; artifact `nanou-production-backup-45946937978` (23,362 bytes) exists. This run proves backup workflow/artifact creation only; it is not evidence of an ownership cutover or of a restore test for this specific artifact. The separately verified run `45941044613` passed checksum, authenticated decryption, `pg_restore --list`, and a full isolated local PostgreSQL restore with the 9 table row counts matching the Production read-only query. No scheduled `schedule` event has yet been observed after PR #13; first expected run is 2026-11-28 02:43 UTC.
+
 
 ## Product scope
 
@@ -108,7 +138,7 @@ No Production launch, merge to main, SSO removal, paid plan upgrade, public rele
 
 - Production manual snapshot exists: `prod-pre-hardening-2026-11-26` (`snap-shiny-fire-bir6x6kk`) from Production branch `main`.
 - Isolated restore branch: `prod-restore-drill-20261126` (`br-little-sound-bipv6bjm`). Source/restore comparison showed 9 application tables and 60 columns; row-count comparison matched at snapshot time.
-- The restore branch was used to validate NOLOGIN ownership transfer, separate migration login, future default grants and runtime DML after ownership transfer. The test branch was modified for the drill; Production `main` was not.
+- The retained `prod-restore-drill-20261126` branch is verified as a restored data copy, but a fresh 2026-11-27 catalog read shows `nanou_runtime_restore_probe` as database/table owner, `nanou_migration_owner_probe` as NOLOGIN, and no default-ACL rows. Do not cite its current state as proof of a full `nanou_migration_login` ownership cutover.
 - New encrypted backup tools use RSA-3072 OAEP-SHA256 + AES-256-GCM, authenticated decryption and bounded streaming. Public key: `backups/production-backup-public.pem`; private key remains local on Termux with mode 600 and is not in Git.
 - `.github/workflows/production-backup.yml` is staged, but scheduled backup is **BLOCKED / NOT ACTIVE** until Actions secret `NANOU_BACKUP_DATABASE_URL` is provisioned. No cleartext dump was uploaded; no automated backup artifact or automated restore has yet been proven. See `docs/production-backup-restore.md`.
 
@@ -119,7 +149,7 @@ Production Neon project `cold-resonance-28231813`, default branch `main`, databa
 - `nanou_runtime`: login role tested against all 9 tables / 60 columns. SELECT/INSERT/UPDATE/DELETE and sequence access work. No SUPERUSER, CREATEROLE, CREATEDB, BYPASSRLS, database CREATE, schema CREATE or TRUNCATE. Disposable DML probe was deleted; zero leftovers.
 - `nanou_backup`: login role with SELECT only on all 9 tables and SELECT on both sequences; INSERT/UPDATE/DELETE/TRUNCATE/CREATE are not granted. Current snapshot data was readable (0 users, 2 audit events, 0 auth sessions).
 - `nanou_migration_owner`: NOLOGIN; no SUPERUSER/CREATEROLE/CREATEDB/BYPASSRLS. Has the public-schema CREATE privilege required for controlled schema ownership/migrations. Default privileges are prepared: runtime receives table DML and sequence usage; backup receives SELECT only.
-- `nanou_migration_login`: separate login with no SUPERUSER/CREATEROLE/CREATEDB/BYPASSRLS and no direct public-schema CREATE. Its membership permits `SET ROLE nanou_migration_owner` only when performing reviewed migrations. A create/drop table smoke test passed under that role.
+- `nanou_migration_login`: login role with no SUPERUSER/CREATEROLE/CREATEDB/REPLICATION/BYPASSRLS and no direct public-schema CREATE. A read-only 2026-11-27 connection test successfully executed `SET LOCAL ROLE nanou_migration_owner`; the effective role was NOLOGIN, non-elevated, and had public-schema USAGE/CREATE. No DDL was executed in this check; do not treat it as a create/drop smoke test.
 - Legacy `nanou_app` still owns the Production database and current tables at this staged point. The new owner role and grants are prepared but ownership has **not** yet been transferred on Production. Do not delete or revoke the legacy role until the new runtime candidate is deployed, verified, and the rollback window is closed.
 - Vercel Production environment now has a separate `NANOU_RUNTIME_DATABASE_URL` for `nanou_runtime` and a separate `NANOU_AUDIT_HMAC_KEY`; the old `NANOU_DATABASE_URL` remains unchanged for the transition/rollback. Secret values are never printed. Production has not yet been redeployed against the new runtime role.
 
@@ -165,3 +195,82 @@ No data was migrated or deleted on Production; no Production ownership transfer,
 - Production user count remains zero and bootstrap is not claimed. Owner Admin bootstrap plus live Viewer/Analyst registration, approval, RBAC and logout/re-login acceptance are still required. Keep Vercel SSO enabled.
 
 No Production ownership transfer, migration, credential retirement, new Production deployment, SSO removal, paid upgrade or public launch occurred in this continuation.
+
+## Production verification — 2026-11-27 (current evidence)
+
+This section supersedes older statements above that Production had zero users or that the first-admin bootstrap was still pending.
+
+### Source, CI and deployment
+
+- main was checked against commit a6e15da951641f2f6983c01afc8f8b0484fd3f31; GitHub compare returned identical.
+- PR #11 is merged. CI run 45889588789 completed successfully: Ruff lint/format, test job, dependency audit and ML smoke all passed.
+- Security run 45889588961 completed successfully: CodeQL Python, CodeQL JavaScript/TypeScript and Gitleaks full-history/ref scan all passed.
+- Current Vercel Production deployment dpl_2AxU3iCjEYUWkJRp4iSDrCwbWSur is READY on main commit a6e15da. Build log ended with “Deployment completed”.
+- Live checks through the connected Opera browser: /health returned HTTP 200 (status=ok); /ready returned HTTP 200 (status=ready, database=postgresql).
+- Vercel SSO protection remains enabled for all deployment types.
+
+### Bootstrap and account state — Production Neon
+
+Read-only verification against Production project cold-resonance-28231813, branch br-damp-fog-bi0lzjf4, database nanou_cyber_defense:
+
+- platform_state.bootstrap_claimed=true.
+- Exactly one user exists; role aggregate shows one admin with is_approved=true and is_active=true.
+- One authentication session exists and is not expired. No session token, token hash, password hash or account email was retrieved.
+- Audit aggregate records one auth.bootstrap event with outcome success.
+- Vercel NANOU_BOOTSTRAP_TOKEN metadata is sensitive/secret and Production-only. Its value was not decrypted or read. Production NANOU_RUNTIME_DATABASE_URL and NANOU_AUDIT_HMAC_KEY are also present as sensitive Production variables; values were not read.
+
+### Runtime role and remaining database hardening
+
+- Main's current settings code prioritizes NANOU_RUNTIME_DATABASE_URL and fails closed on serverless hosting if it is absent.
+- nanou_runtime has login enabled and no SUPERUSER, CREATEROLE, CREATEDB, REPLICATION or BYPASSRLS attributes. It has SELECT/INSERT/UPDATE/DELETE on application tables, but no TRUNCATE or public-schema CREATE.
+- nanou_app still owns the public application tables and retains CREATEROLE, CREATEDB, REPLICATION and BYPASSRLS attributes; it is still a member of neon_superuser and nanou_migration_owner. nanou_migration_owner is NOLOGIN and has no elevated role attributes.
+- Do not transfer Production ownership, revoke the legacy role, or change grants until the reviewed cutover/rollback plan is explicitly approved and the live application role is confirmed throughout the rollback window.
+
+### RBAC acceptance and current browser context
+
+- Source tests cover one-time bootstrap, pending Viewer registration, approval/role changes, session revocation, protection of the last active Admin, Viewer read-only permissions, Admin-only audit access, CSRF and logout.
+- Production currently contains only the Admin account. Separate live Viewer and Analyst registration/approval and end-to-end role acceptance are NOT VERIFIED.
+- The Opera Connector browser profile used for this verification is signed out of the application: /api/auth/me returned authenticated=false, bootstrap_required=false; /api/admin/users returned 401. This is expected for that signed-out profile and does not invalidate the Production Admin bootstrap verified in Neon. The user must sign in using their own browser/profile; credentials must not be shared in chat.
+- Admin logout/re-login, password-change acceptance, and live role-specific UI/API tests remain pending.
+
+### Backup and operational gates
+
+- Previously verified encrypted Production backup runs 45850155507 and 45852927966 succeeded; the latter's encrypted artifact was checksum-verified and restored to isolated local PostgreSQL and an isolated Neon restore branch. These results are historical evidence from 2026-11-26, not a fresh backup run in this verification.
+- A second offline recovery copy of the private backup key remains NOT VERIFIED. Keep the private key off Git and out of chat.
+- Production remains deployed and healthy, but unrestricted public-launch readiness is NOT VERIFIED. Remaining gates include live Viewer/Analyst acceptance, confirmed Admin session acceptance in the owner's browser, an independent security review/CodeQL alert inspection, backup-key recovery copy, monitoring/incident-response acceptance, and controlled database-role ownership cutover.
+
+
+## Latest runtime-role and backup automation verification — 2026-11-27
+
+- Production deployment `dpl_2AxU3iCjEYUWkJRp4iSDrCwbWSur` remains READY on main commit `a6e15da951641f2f6983c01afc8f8b0484fd3f31`.
+- The deployed settings code prioritizes the dedicated `NANOU_RUNTIME_DATABASE_URL` and fails closed on serverless hosting when it is absent. Vercel metadata confirms the sensitive Production runtime URL exists; its value was not decrypted.
+- Live `/ready` returned PostgreSQL-ready. A read-only database activity query immediately afterward observed an idle PgBouncer connection for `nanou_runtime`, directly confirming that the deployed app exercised the restricted runtime login.
+- Fresh PostgreSQL role metadata: `nanou_runtime` has no elevated role flags and no membership in `neon_superuser` or `nanou_migration_owner`; `nanou_backup` is also restricted. The legacy `nanou_app` still has CREATEROLE, CREATEDB, REPLICATION, BYPASSRLS and elevated role memberships and remains in place as database/table owner. No grants, ownership, credentials or Production deployment were changed.
+- Backup automation gap: workflow YAML includes the daily 02:17 UTC cron and manual dispatch, but GitHub Actions main-branch history through 2026-11-27T04:34Z shows only successful manual backups `45850155507` and `45852927966` on 2026-11-26; no scheduled run for 2026-11-27 is evidenced. Workflow enabled/disabled state was not independently proven. Mark scheduled backup as NOT VERIFIED until a scheduled run and resulting encrypted artifact are confirmed.
+- The two earlier manual backup artifacts remain successfully checksum-verified and restored to isolated local PostgreSQL and isolated Neon restore branch. A second offline recovery copy of the private key remains NOT VERIFIED.
+- Current runtime error query found no clusters in the preceding 24 hours; production error/fatal log query found no records in its 50-minute window.
+- Remaining operational gates: diagnose/confirm scheduled backup execution; verify the separate private-key recovery copy; complete owner Admin-browser and Viewer/Analyst RBAC acceptance; inspect CodeQL alerts; prepare and approve the controlled database ownership cutover/rollback. No Production ownership/grant changes or launch/merge occurred.
+
+
+## Encrypted backup full-restore and scheduler follow-up — 2026-11-27
+
+- GitHub Actions backup run [45941044613](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45941044613) completed successfully on main commit `a6e15da951641f2f6983c01afc8f8b0484fd3f31`. The read-only `nanou_backup` preflight, `pg_dump`, RSA-3072 OAEP-SHA256 + AES-256-GCM encryption and artifact upload all passed.
+- Artifact `nanou-production-backup-45941044613` (ID `15172521803`) has GitHub ZIP SHA-256 `be57978e1000edbc00a35111eef4ed23b89e69664ac62f617222a6fe36612380`, size 22,702 bytes, and expires 2026-12-27. Its encrypted payload sidecar checksum returned `OK`.
+- The artifact was authenticated-decrypted on the authorized Nanou Termux device using the existing private key (mode 600); `pg_restore --list` passed. A separate disposable PostgreSQL cluster on port 55440 then completed a full `pg_restore --exit-on-error --single-transaction --clean --if-exists --no-owner --no-privileges` restore.
+- Restored counts matched a read-only Production count query across all nine tables at verification time: `api_keys=0`, `attack_scopes=0`, `attack_simulations=0`, `audit_events=3`, `auth_attempts=2`, `auth_sessions=1`, `malware_metadata=0`, `platform_state=1`, `users=1`.
+- The first disposable restore attempt hit the standard pre-existing `public` schema collision in the template database. It was corrected by restoring with `--clean --if-exists` in the isolated disposable database; no Production connection or object was changed.
+- Cleanup verified: the temporary restore directory was absent, no PostgreSQL process remained on port 55440, and the pre-existing Termux PostgreSQL service remained online at its original port 5432 and original data directory.
+- Backup automation: GitHub reports workflow `Production database backup` as `active`; repository default branch is `main`, and the workflow file is on `main`. The scheduled-event run list is still empty, while manual dispatch succeeds. Latest workflow-file commit was authored by the same currently authenticated repository account on 2026-11-26. Public-repository 60-day inactivity auto-disable is inconsistent with the recent repository activity, but no schedule event is evidenced for 2026-11-27.
+- GitHub documents that scheduled runs can be delayed/dropped under Actions load, and that schedules may stop while manual dispatch still works if the workflow-associated actor is suspended/deprovisioned. The connected account is authenticated now; we cannot independently verify GitHub's historical schedule actor state. See [GitHub scheduled workflow troubleshooting](https://docs.github.com/en/actions/how-tos/troubleshoot-workflows) and [schedule event reference](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
+- Recovery-key copy: the original private key remains on the Nanou device with mode 600 and its existing public-key fingerprint had previously matched. Scoped shared-storage inventory found no matching PEM in the shared backup/Download paths and exposed only Android emulated/self storage roots; no separate offline recovery copy or removable destination is verified. Do not copy the private key into ordinary shared storage.
+- Code Scanning query returned 0 open alerts. Dependabot alert listing remains inaccessible through the connected GitHub permissions; do not infer zero Dependabot alerts.
+
+
+## Production migration-role verification — 2026-11-27 (read-only)
+
+- Current Production catalog shows `nanou_migration_owner` is NOLOGIN, has no SUPERUSER/CREATEROLE/CREATEDB/REPLICATION/BYPASSRLS, and has public-schema USAGE/CREATE.
+- `nanou_migration_login` is login-enabled, has no elevated flags and no direct public-schema CREATE. Its `pg_auth_members` membership has `set_option=true` for `nanou_migration_owner`.
+- A connection using `nanou_migration_login` successfully ran `SET LOCAL ROLE nanou_migration_owner` inside a read-only transaction. Session login remained `nanou_migration_login`; effective role was `nanou_migration_owner`.
+- Production default ACLs owned by `nanou_migration_owner` are present: new tables grant `nanou_runtime` DML and `nanou_backup` SELECT; new sequences grant `nanou_runtime` SELECT/USAGE and `nanou_backup` SELECT.
+- Aggregate privilege check over all 9 Production tables and 2 sequences: `nanou_runtime` has DML and sequence access but no TRUNCATE/TRIGGER/REFERENCES excess; `nanou_backup` has SELECT-only table access. `nanou_app` still owns the database and all 9 tables and retains elevated role attributes/memberships.
+- This is role/membership/default-ACL preparation evidence, not ownership-transfer evidence. No Production DDL, owner change, grant change, credential retirement or deployment was performed. The complete ownership cutover and rollback window remain outstanding.
