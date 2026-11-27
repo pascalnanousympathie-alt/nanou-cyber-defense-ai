@@ -340,7 +340,7 @@ def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     assert app_script.status_code == 200
     assert 'shape: "pill"' in app_script.text
     assert 'logo_alignment: "left"' in app_script.text
-    assert 'width: 300' in app_script.text
+    assert "width: 300" in app_script.text
     assert stylesheet.status_code == 200
     assert ".google-auth-block::before" in stylesheet.text
     assert ".google-auth-seal" in stylesheet.text
