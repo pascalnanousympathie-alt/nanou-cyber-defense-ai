@@ -338,7 +338,7 @@ def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     assert 'id="language-select"' in response.text
     assert 'data-i18n="registerLink"' in response.text
     assert 'id="mcp-hub-title"' in response.text
-    assert 'Architecture en préparation' in response.text
+    assert "Architecture en préparation" in response.text
     assert 'data-open-category="threat"' in response.text
     assert 'data-open-category="malware"' in response.text
     assert 'data-open-category="assistant"' in response.text
