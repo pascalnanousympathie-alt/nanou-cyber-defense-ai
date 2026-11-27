@@ -140,7 +140,7 @@ Production is blocked until:
 - `nanou_runtime`: login role tested on Production branch, can SELECT/INSERT/UPDATE/DELETE and use sequences; cannot CREATE/TRUNCATE, CREATEROLE, CREATEDB, BYPASSRLS or bypass RLS.
 - `nanou_backup`: read-only login; SELECT on all nine tables and sequence state; no DML or TRUNCATE.
 - `nanou_migration_owner`: NOLOGIN, no CREATEROLE/CREATEDB/BYPASSRLS, public schema CREATE capability and default grants prepared for runtime DML + backup SELECT.
-- `nanou_migration_login`: separate login; no direct schema CREATE or elevated role attributes; membership grants SET ROLE to migration owner for reviewed DDL. Create/drop table smoke test passed.
+- `nanou_migration_login`: login role with no elevated flags and no direct schema CREATE. Read-only Production test on 2026-11-27 successfully executed `SET LOCAL ROLE nanou_migration_owner`; no DDL was run, so this does not prove a create/drop migration smoke test.
 - Production database and current tables remain owned by `nanou_app` until deployment cutover. Do not transfer ownership or delete legacy role before current Production app has switched to `NANOU_RUNTIME_DATABASE_URL` and rollback is verified.
 - Vercel Production has staged `NANOU_RUNTIME_DATABASE_URL` and a distinct `NANOU_AUDIT_HMAC_KEY`; legacy `NANOU_DATABASE_URL` is unchanged. Secret values must not be displayed.
 - Preview uses its own Neon project and `nanou_preview_runtime`. After grants were applied by the existing table owner, Preview /ready returned PostgreSQL ready, auth/me was signed out with bootstrap already claimed, and unauthenticated Admin endpoint correctly returned 401.
@@ -226,3 +226,12 @@ The earlier historical statements in this runbook that Production had zero users
 - The cron line currently remains `17 2 * * *` UTC on `main`. No main-branch cron change was made in this update. A separate PR is being prepared to shift the minute and resynchronize the schedule; it must be merged to `main` by an authorized owner before its new schedule can take effect.
 - The private recovery key remains only on the authorized Termux device (mode 600). No second offline copy or removable storage destination was found in the scoped shared-storage inventory. The internal shared-storage area is not an acceptable substitute for an offline recovery copy.
 - Code Scanning reports 0 open alerts; Dependabot alert visibility is BLOCKED by GitHub permission scope. Do not claim a clean Dependabot inventory.
+
+
+## Production migration-role state — 2026-11-27
+
+- Verified read-only: `nanou_migration_login` can `SET LOCAL ROLE nanou_migration_owner`; effective owner role is NOLOGIN and non-elevated, with public-schema USAGE/CREATE.
+- Verified read-only: owner-role default ACLs grant future table DML to `nanou_runtime`, table SELECT to `nanou_backup`, sequence SELECT/USAGE to runtime, and sequence SELECT to backup.
+- Verified read-only: runtime grants cover all 9 Production tables and 2 sequences without TRUNCATE/TRIGGER/REFERENCES; backup is SELECT-only for tables.
+- Current ownership is unchanged: `nanou_app` still owns the Production database and all 9 public tables. No Production ownership/grant/credential changes were made.
+- Correction: the retained `prod-restore-drill-20261126` copy currently has a runtime restore probe as DB/table owner and no default ACL rows; do not cite that copy as current proof of full migration-owner ownership transfer. The separate `nanou-cyber-defense-restore-drill` project is a runtime-grant prototype, not a Production cutover rehearsal.
