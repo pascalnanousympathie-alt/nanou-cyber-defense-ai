@@ -4,7 +4,6 @@ import importlib
 import importlib.util
 from pathlib import Path
 
-
 _SUBSTITUTIONS = (
     (
         "from signify.authenticode import SignedPEFile",
