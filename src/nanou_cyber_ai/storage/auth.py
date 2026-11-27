@@ -22,8 +22,8 @@ from nanou_cyber_ai.storage.database import (
 
 ADMIN_PAIRING_TTL_SECONDS = 90
 ADMIN_BRIDGE_TTL_SECONDS = 15 * 60
-_ADMIN_PAIRING_SCOPE = '[\"admin:bridge:pair\"]'
-_ADMIN_BRIDGE_SCOPE = '[\"admin:bridge:read\"]'
+_ADMIN_PAIRING_SCOPE = '["admin:bridge:pair"]'
+_ADMIN_BRIDGE_SCOPE = '["admin:bridge:read"]'
 
 
 def _as_utc(value: datetime) -> datetime:

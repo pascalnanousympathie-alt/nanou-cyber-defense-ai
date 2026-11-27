@@ -606,13 +606,16 @@ def test_admin_pairing_store_consumes_once_and_restricts_scope(tmp_path) -> None
             .where(api_keys.c.token_hash == expired_hash)
             .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
         )
-    assert store.exchange_admin_pairing(
-        pairing_token_hash=expired_hash,
-        bridge_token_prefix="ncd_bridge_expired",
-        bridge_token_hash=hashlib.sha256(b"ncd_bridge_expired").hexdigest(),
-        request_id="pairing-expired-exchange",
-        ip_digest=None,
-    ) is None
+    assert (
+        store.exchange_admin_pairing(
+            pairing_token_hash=expired_hash,
+            bridge_token_prefix="ncd_bridge_expired",
+            bridge_token_hash=hashlib.sha256(b"ncd_bridge_expired").hexdigest(),
+            request_id="pairing-expired-exchange",
+            ip_digest=None,
+        )
+        is None
+    )
 
     pairing_code = "ncd_pair_" + "p" * 43
     bridge_token = "ncd_bridge_" + "b" * 43
@@ -638,13 +641,16 @@ def test_admin_pairing_store_consumes_once_and_restricts_scope(tmp_path) -> None
     assert exchanged is not None
     assert exchanged["user"]["role"] == "admin"
     assert exchanged["expires_at"] > datetime.now(UTC)
-    assert store.exchange_admin_pairing(
-        pairing_token_hash=pairing_hash,
-        bridge_token_prefix=bridge_token[:20],
-        bridge_token_hash=bridge_hash,
-        request_id="pairing-replay",
-        ip_digest=None,
-    ) is None
+    assert (
+        store.exchange_admin_pairing(
+            pairing_token_hash=pairing_hash,
+            bridge_token_prefix=bridge_token[:20],
+            bridge_token_hash=bridge_hash,
+            request_id="pairing-replay",
+            ip_digest=None,
+        )
+        is None
+    )
 
     principal = store.get_admin_bridge_principal(bridge_hash)
     assert principal is not None
@@ -668,13 +674,16 @@ def test_admin_pairing_store_consumes_once_and_restricts_scope(tmp_path) -> None
         ip_digest=None,
     )
     assert store.get_admin_bridge_principal(bridge_hash) is None
-    assert store.exchange_admin_pairing(
-        pairing_token_hash=pairing_hash,
-        bridge_token_prefix=bridge_token[:20],
-        bridge_token_hash=bridge_hash,
-        request_id="pairing-old-code",
-        ip_digest=None,
-    ) is None
+    assert (
+        store.exchange_admin_pairing(
+            pairing_token_hash=pairing_hash,
+            bridge_token_prefix=bridge_token[:20],
+            bridge_token_hash=bridge_hash,
+            request_id="pairing-old-code",
+            ip_digest=None,
+        )
+        is None
+    )
 
     second_exchange = store.exchange_admin_pairing(
         pairing_token_hash=second_pairing_hash,
@@ -685,20 +694,26 @@ def test_admin_pairing_store_consumes_once_and_restricts_scope(tmp_path) -> None
     )
     assert second_exchange is not None
     assert store.get_admin_bridge_principal(second_bridge_hash) is not None
-    assert store.change_password(
-        user_id=admin["id"],
-        password_hash="new-test-password-hash",
-        request_id="pairing-password-rotation",
-        ip_digest=None,
-    ) is True
+    assert (
+        store.change_password(
+            user_id=admin["id"],
+            password_hash="new-test-password-hash",
+            request_id="pairing-password-rotation",
+            ip_digest=None,
+        )
+        is True
+    )
     assert store.get_admin_bridge_principal(second_bridge_hash) is None
-    assert store.exchange_admin_pairing(
-        pairing_token_hash=second_pairing_hash,
-        bridge_token_prefix=second_bridge_token[:20],
-        bridge_token_hash=second_bridge_hash,
-        request_id="pairing-password-replay",
-        ip_digest=None,
-    ) is None
+    assert (
+        store.exchange_admin_pairing(
+            pairing_token_hash=second_pairing_hash,
+            bridge_token_prefix=second_bridge_token[:20],
+            bridge_token_hash=second_bridge_hash,
+            request_id="pairing-password-replay",
+            ip_digest=None,
+        )
+        is None
+    )
     assert {event["action"] for event in store.list_audit_events()} >= {
         "auth.admin_bridge.pairing_created",
         "auth.admin_bridge.exchanged",
@@ -708,9 +723,7 @@ def test_admin_pairing_store_consumes_once_and_restricts_scope(tmp_path) -> None
     database.close()
 
 
-def test_admin_pairing_http_flow_is_one_time_read_only_and_revocable(
-    monkeypatch, tmp_path
-) -> None:
+def test_admin_pairing_http_flow_is_one_time_read_only_and_revocable(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "runtime_database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
