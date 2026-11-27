@@ -1,6 +1,6 @@
 # Project Status — Nanou Cyber Defense AI
 
-Last verified: 2026-11-26 (UTC)
+Last verified: 2026-11-27 (UTC)
 
 ## Product scope
 
@@ -165,3 +165,46 @@ No data was migrated or deleted on Production; no Production ownership transfer,
 - Production user count remains zero and bootstrap is not claimed. Owner Admin bootstrap plus live Viewer/Analyst registration, approval, RBAC and logout/re-login acceptance are still required. Keep Vercel SSO enabled.
 
 No Production ownership transfer, migration, credential retirement, new Production deployment, SSO removal, paid upgrade or public launch occurred in this continuation.
+
+## Production verification — 2026-11-27 (current evidence)
+
+This section supersedes older statements above that Production had zero users or that the first-admin bootstrap was still pending.
+
+### Source, CI and deployment
+
+- main was checked against commit a6e15da951641f2f6983c01afc8f8b0484fd3f31; GitHub compare returned identical.
+- PR #11 is merged. CI run 45889588789 completed successfully: Ruff lint/format, test job, dependency audit and ML smoke all passed.
+- Security run 45889588961 completed successfully: CodeQL Python, CodeQL JavaScript/TypeScript and Gitleaks full-history/ref scan all passed.
+- Current Vercel Production deployment dpl_2AxU3iCjEYUWkJRp4iSDrCwbWSur is READY on main commit a6e15da. Build log ended with “Deployment completed”.
+- Live checks through the connected Opera browser: /health returned HTTP 200 (status=ok); /ready returned HTTP 200 (status=ready, database=postgresql).
+- Vercel SSO protection remains enabled for all deployment types.
+
+### Bootstrap and account state — Production Neon
+
+Read-only verification against Production project cold-resonance-28231813, branch br-damp-fog-bi0lzjf4, database nanou_cyber_defense:
+
+- platform_state.bootstrap_claimed=true.
+- Exactly one user exists; role aggregate shows one admin with is_approved=true and is_active=true.
+- One authentication session exists and is not expired. No session token, token hash, password hash or account email was retrieved.
+- Audit aggregate records one auth.bootstrap event with outcome success.
+- Vercel NANOU_BOOTSTRAP_TOKEN metadata is sensitive/secret and Production-only. Its value was not decrypted or read. Production NANOU_RUNTIME_DATABASE_URL and NANOU_AUDIT_HMAC_KEY are also present as sensitive Production variables; values were not read.
+
+### Runtime role and remaining database hardening
+
+- Main's current settings code prioritizes NANOU_RUNTIME_DATABASE_URL and fails closed on serverless hosting if it is absent.
+- nanou_runtime has login enabled and no SUPERUSER, CREATEROLE, CREATEDB, REPLICATION or BYPASSRLS attributes. It has SELECT/INSERT/UPDATE/DELETE on application tables, but no TRUNCATE or public-schema CREATE.
+- nanou_app still owns the public application tables and retains CREATEROLE, CREATEDB, REPLICATION and BYPASSRLS attributes; it is still a member of neon_superuser and nanou_migration_owner. nanou_migration_owner is NOLOGIN and has no elevated role attributes.
+- Do not transfer Production ownership, revoke the legacy role, or change grants until the reviewed cutover/rollback plan is explicitly approved and the live application role is confirmed throughout the rollback window.
+
+### RBAC acceptance and current browser context
+
+- Source tests cover one-time bootstrap, pending Viewer registration, approval/role changes, session revocation, protection of the last active Admin, Viewer read-only permissions, Admin-only audit access, CSRF and logout.
+- Production currently contains only the Admin account. Separate live Viewer and Analyst registration/approval and end-to-end role acceptance are NOT VERIFIED.
+- The Opera Connector browser profile used for this verification is signed out of the application: /api/auth/me returned authenticated=false, bootstrap_required=false; /api/admin/users returned 401. This is expected for that signed-out profile and does not invalidate the Production Admin bootstrap verified in Neon. The user must sign in using their own browser/profile; credentials must not be shared in chat.
+- Admin logout/re-login, password-change acceptance, and live role-specific UI/API tests remain pending.
+
+### Backup and operational gates
+
+- Previously verified encrypted Production backup runs 45850155507 and 45852927966 succeeded; the latter's encrypted artifact was checksum-verified and restored to isolated local PostgreSQL and an isolated Neon restore branch. These results are historical evidence from 2026-11-26, not a fresh backup run in this verification.
+- A second offline recovery copy of the private backup key remains NOT VERIFIED. Keep the private key off Git and out of chat.
+- Production remains deployed and healthy, but unrestricted public-launch readiness is NOT VERIFIED. Remaining gates include live Viewer/Analyst acceptance, confirmed Admin session acceptance in the owner's browser, an independent security review/CodeQL alert inspection, backup-key recovery copy, monitoring/incident-response acceptance, and controlled database-role ownership cutover.
