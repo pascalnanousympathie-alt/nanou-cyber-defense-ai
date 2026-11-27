@@ -35,7 +35,7 @@
 
       <div class="sidebar-bottom">
         <span class="status-led"></span>
-        <div><strong>Defensive mode</strong><small>Famakafakana sy fiarovana ihany</small></div>
+        <div><strong data-i18n="defensiveMode">Defensive mode</strong><small data-i18n="defensiveModeSub">Famakafakana sy fiarovana ihany</small></div>
       </div>
     </aside>
 
@@ -47,7 +47,7 @@
         </div>
         <div class="topbar-actions"><label class="locale-control" for="language-select"><span aria-hidden="true">◎</span><span class="sr-only">Langue</span><select id="language-select" aria-label="Langue"><option value="fr" selected>Français</option><option value="en">English</option><option value="mg">Malagasy</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="ar">العربية</option><option value="zh">中文</option><option value="ja">日本語</option><option value="hi">हिन्दी</option><option value="ru">Русский</option></select></label>
 
-          <div class="theme-pill" aria-label="Affichage noir professionnel"><span aria-hidden="true">◐</span><span>Noir profond</span></div>
+          <div class="theme-pill" aria-label="Affichage noir professionnel"><span aria-hidden="true">◐</span><span data-i18n="theme">Noir profond</span></div>
           <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
             <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
           </div>
@@ -58,11 +58,11 @@
       <section class="hero-card" data-category-view="home">
         <div class="hero-copy">
           <span class="hero-kicker">NANOÛ // CYBER DEFENSE AI</span>
-          <h2>Fantaro aloha ny loza.<br><em>Arovy ny rafitrao.</em></h2>
-          <p>Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
+          <h2><span data-i18n="heroTitle">Fantaro aloha ny loza.</span><br><em data-i18n="heroEmphasis">Arovy ny rafitrao.</em></h2>
+          <p data-i18n="heroDescription">Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
           <div class="hero-actions">
-            <a class="primary-link" href="#vulnerabilities">Hanomboka hijery <span aria-hidden="true">→</span></a>
-            <a class="hero-secondary-link" href="#kev">Hizaha ny CISA KEV <span aria-hidden="true">↗</span></a>
+            <a class="primary-link" href="#vulnerabilities"><span data-i18n="heroStart">Hanomboka hijery</span> <span aria-hidden="true">→</span></a>
+            <a class="hero-secondary-link" href="#kev"><span data-i18n="heroKev">Hizaha ny CISA KEV</span> <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="hero-graphic" aria-hidden="true">
@@ -73,7 +73,7 @@
           <span class="graphic-node node-two"></span>
           <span class="graphic-node node-three"></span>
         </div>
-        <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina <span class="hero-foot-divider">•</span> Defensive operations only</div>
+        <div class="hero-foot"><span class="hero-foot-dot"></span> <span data-i18n="heroFoot">Fiarovana azo arahina sy azo hamarinina</span> <span class="hero-foot-divider">•</span> Defensive operations only</div>
       </section>
 
 
@@ -86,13 +86,13 @@
         <div id="auth-message" class="auth-message" role="status" aria-live="polite">Vérification de la sécurité et du compte…</div>
 
         <div id="bootstrap-panel" class="auth-form-grid" hidden>
-          <div class="auth-intro"><strong>Configuration initiale — Administrateur</strong><p>Seul le premier compte peut obtenir le rôle Administrateur. Saisissez votre mot de passe ici ; il ne sera jamais affiché dans les journaux.</p></div>
+          <div class="auth-intro"><strong data-i18n="initialAdmin">Configuration initiale — Administrateur</strong><p data-i18n="initialAdminHelp">Seul le premier compte peut obtenir le rôle Administrateur. Saisissez votre mot de passe ici ; il ne sera jamais affiché dans les journaux.</p></div>
           <form id="bootstrap-form" class="auth-form">
-            <div class="field"><label for="bootstrap-name">Nom complet</label><input id="bootstrap-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="bootstrap-name" data-i18n="fullName">Nom complet</label><input id="bootstrap-name" minlength="2" maxlength="100" autocomplete="name" required></div>
             <div class="field"><label for="bootstrap-email">Email</label><input id="bootstrap-email" type="email" maxlength="320" autocomplete="email" required></div>
-            <div class="field"><label for="bootstrap-password">Mot de passe administrateur (12 caractères minimum)</label><input id="bootstrap-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><label for="bootstrap-token">Token bootstrap manokana</label><input id="bootstrap-token" type="password" minlength="32" maxlength="256" autocomplete="off" required><small class="field-hint">NANOU_BOOTSTRAP_TOKEN napetraky ny tompon'andraikitra ao amin'ny hosting secret manager. Aza zaraina na tehirizina amin'ny navigateur.</small></div>
-            <div class="field"><button class="button button-primary" type="submit">Créer le compte administrateur</button></div>
+            <div class="field"><label for="bootstrap-password" data-i18n="bootstrapPassword">Mot de passe administrateur (12 caractères minimum)</label><input id="bootstrap-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><label for="bootstrap-token" data-i18n="bootstrapToken">Token bootstrap manokana</label><input id="bootstrap-token" type="password" minlength="32" maxlength="256" autocomplete="off" required><small class="field-hint" data-i18n="bootstrapTokenHint">NANOU_BOOTSTRAP_TOKEN napetraky ny tompon'andraikitra ao amin'ny hosting secret manager. Aza zaraina na tehirizina amin'ny navigateur.</small></div>
+            <div class="field"><button class="button button-primary" type="submit" data-i18n="createAdmin">Créer le compte administrateur</button></div>
           </form>
         </div>
 
@@ -109,13 +109,13 @@
           </div>
           <p class="auth-switch-line"><a id="register-open-link" href="#inscription" data-i18n="registerLink">Pas encore de compte ? Créer un compte détaillé</a></p>
           <form id="register-form" class="auth-form" hidden>
-            <strong>Inscription détaillée</strong>
-            <p>Les nouveaux comptes reçoivent le rôle Viewer et nécessitent l’approbation d’un administrateur.</p>
-            <div class="field"><label for="register-name">Nom complet</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <strong data-i18n="registerTitle">Inscription détaillée</strong>
+            <p data-i18n="registerHelp">Les nouveaux comptes reçoivent le rôle Viewer et nécessitent l’approbation d’un administrateur.</p>
+            <div class="field"><label for="register-name" data-i18n="fullName">Nom complet</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
             <div class="field"><label for="register-email">Email</label><input id="register-email" type="email" maxlength="320" autocomplete="email" required></div>
             <div class="field"><label for="register-password">Mot de passe (12 caractères minimum)</label><input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><button class="button button-secondary" type="submit">Envoyer la demande</button></div>
-            <p class="auth-switch-line"><a id="register-back-link" href="#login">Efa manana kaonty? Hiverina amin'ny fidirana</a></p>
+            <div class="field"><button class="button button-secondary" type="submit" data-i18n="sendRequest">Envoyer la demande</button></div>
+            <p class="auth-switch-line"><a id="register-back-link" href="#login" data-i18n="backToLogin">Efa manana kaonty? Hiverina amin'ny fidirana</a></p>
           </form>
         </div>
 
@@ -127,35 +127,34 @@
           <div class="account-summary">
             <div><strong id="account-name">—</strong><span id="account-email">—</span></div>
             <span id="account-role" class="role-pill">viewer</span>
-            <button id="logout-button" class="button button-secondary" type="button">Se déconnecter</button>
+            <button id="logout-button" class="button button-secondary" type="button" data-i18n="logout">Se déconnecter</button>
           </div>
           <form id="password-change-form" class="auth-form account-password-form">
-            <strong>Hanova tenimiafina</strong>
-            <p>Confirmez le mot de passe actuel et choisissez un nouveau mot de passe d'au moins 12 caractères. Toutes les anciennes sessions seront révoquées.</p>
-            <div class="field"><label for="current-password">Mot de passe actuel</label><input id="current-password" type="password" minlength="1" maxlength="128" autocomplete="current-password" required></div>
-            <div class="field"><label for="new-password">Nouveau mot de passe</label><input id="new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><label for="confirm-password">Avereno ny tenimiafina vaovao</label><input id="confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><button class="button button-secondary" type="submit">Enregistrer le nouveau mot de passe</button></div>
+            <strong data-i18n="passwordChangeTitle">Hanova tenimiafina</strong>
+            <p data-i18n="passwordChangeHelp">Confirmez le mot de passe actuel et choisissez un nouveau mot de passe d'au moins 12 caractères. Toutes les anciennes sessions seront révoquées.</p>
+            <div class="field"><label for="current-password" data-i18n="currentPassword">Mot de passe actuel</label><input id="current-password" type="password" minlength="1" maxlength="128" autocomplete="current-password" required></div>
+            <div class="field"><label for="new-password" data-i18n="newPassword">Nouveau mot de passe</label><input id="new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><label for="confirm-password" data-i18n="confirmPassword">Avereno ny tenimiafina vaovao</label><input id="confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-secondary" type="submit" data-i18n="savePassword">Enregistrer le nouveau mot de passe</button></div>
             <p id="password-change-status" class="form-message" aria-live="polite"></p>
           </form>
         </div>
 
         <div id="admin-panel" class="admin-panel" hidden>
           <div class="workspace-heading">
-            <div><h4>Fitantanana mpampiasa</h4><p class="admin-subtitle">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
-            <button id="refresh-admin" class="text-button" type="button">Havaozy</button>
+            <div><h4 data-i18n="userManagement">Fitantanana mpampiasa</h4><p class="admin-subtitle" data-i18n="userManagementHelp">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
+            <button id="refresh-admin" class="text-button" type="button" data-i18n="refresh">Havaozy</button>
           </div>
           <div class="admin-bridge-panel">
             <div class="workspace-heading">
-              <div><h4>Fampifandraisana Termux</h4><p class="admin-subtitle">Read-only Admin bridge · fampiasana tokana · 90 segondra.</p></div>
+              <div><h4 data-i18n="termuxBridgeTitle">Fampifandraisana Termux</h4><p class="admin-subtitle" data-i18n="termuxBridgeHelp">Read-only Admin bridge · fampiasana tokana · 90 segondra.</p></div>
             </div>
-            <p class="admin-subtitle">Mamorona code eto amin'ny navigateur efa tafiditra. Ampidiro ao amin'ny Termux ilay code rehefa angatahina. Tsy omena tenimiafina na cookie ny Termux.</p>
-            <div class="field"><button id="admin-bridge-create" class="button button-secondary" type="button">Hamorona pairing code</button></div>
+            <div class="field"><button id="admin-bridge-create" class="button button-secondary" type="button" data-i18n="createPairing">Hamorona pairing code</button></div>
             <p id="admin-bridge-status" class="form-message" aria-live="polite"></p>
             <div id="admin-bridge-code-wrap" class="admin-bridge-code-wrap" hidden>
-              <label for="admin-bridge-code">Pairing code (miseho indray mandeha)</label>
+              <label for="admin-bridge-code" data-i18n="pairingLabel">Pairing code (miseho indray mandeha)</label>
               <code id="admin-bridge-code" class="admin-bridge-code"></code>
-              <button id="admin-bridge-copy" class="text-button" type="button">Adika ny code</button>
+              <button id="admin-bridge-copy" class="text-button" type="button" data-i18n="copyCode">Adika ny code</button>
             </div>
           </div>
           <div class="admin-summary" aria-label="Famintinana ny kaonty">
@@ -171,7 +170,7 @@
           <p id="admin-user-result-count" class="admin-result-count" aria-live="polite">Miandry ny lisitry ny kaonty…</p>
           <div id="admin-users" class="admin-users" aria-live="polite"></div>
           <div class="workspace-heading list-heading">
-            <div><h4>Audit log</h4><p class="admin-subtitle">Hetsika voarakitra sy valin'ny asa farany.</p></div>
+            <div><h4 data-i18n="auditLogTitle">Audit log</h4><p class="admin-subtitle" data-i18n="auditLogSub">Hetsika voarakitra sy valin'ny asa farany.</p></div>
           </div>
           <div class="audit-toolbar">
             <div class="field"><label for="audit-search">Karoka hetsika</label><input id="audit-search" type="search" placeholder="Action, target na request ID…" autocomplete="off"></div>
@@ -209,13 +208,13 @@
       </section>
 
       <section id="category-home" class="category-home" hidden aria-labelledby="category-home-title">
-        <div class="category-heading"><div><p class="eyebrow">SECURE WORKSPACE</p><h2 id="category-home-title" data-i18n="choose">Que souhaitez-vous ouvrir ?</h2><p data-i18n="chooseSub">Choisissez une catégorie pour accéder à ses outils et détails.</p></div></div>
+        <div class="category-heading"><div><p class="eyebrow" data-i18n="categoryEyebrow">SECURE WORKSPACE</p><h2 id="category-home-title" data-i18n="choose">Que souhaitez-vous ouvrir ?</h2><p data-i18n="chooseSub">Choisissez une catégorie pour accéder à ses outils et détails.</p></div></div>
         <div class="category-grid">
-          <button class="category-card" type="button" data-open-category="threat"><span class="category-symbol">◈</span><strong data-i18n="threat">Threat Intelligence</strong><span>CVE, NVD et CISA KEV</span><small>Recherche et suivi des vulnérabilités</small></button>
-          <button class="category-card" type="button" data-open-category="malware"><span class="category-symbol">✳</span><strong data-i18n="malware">IA et analyse de malwares</strong><span>Modèles ML et métadonnées</span><small>Analyse de caractéristiques statiques et de hachages</small></button>
-          <button class="category-card" type="button" data-open-category="assistant"><span class="category-symbol">✧</span><strong data-i18n="assistant">Assistant et outils</strong><span>Assistant Nanou et MCP</span><small>Outils défensifs et intégrations contrôlées</small></button>
-          <button class="category-card" type="button" data-open-category="operations" data-role-visibility="admin,analyst"><span class="category-symbol">⛨</span><strong data-i18n="operations">Opérations et développement</strong><span>Simulation et centre développeur</span><small>Outils selon les autorisations du rôle</small></button>
-          <button class="category-card" type="button" data-open-category="account"><span class="category-symbol">♙</span><strong data-i18n="account">Compte et gouvernance</strong><span>Profil, sécurité et rôles</span><small>Mot de passe, sessions et administration</small></button>
+          <button class="category-card" type="button" data-open-category="threat"><span class="category-symbol">◈</span><strong data-i18n="threat">Threat Intelligence</strong><span data-i18n="categoryThreatMeta">CVE, NVD et CISA KEV</span><small data-i18n="categoryThreatDescription">Recherche et suivi des vulnérabilités</small></button>
+          <button class="category-card" type="button" data-open-category="malware"><span class="category-symbol">✳</span><strong data-i18n="malware">IA et analyse de malwares</strong><span data-i18n="categoryMalwareMeta">Modèles ML et métadonnées</span><small data-i18n="categoryMalwareDescription">Analyse de caractéristiques statiques et de hachages</small></button>
+          <button class="category-card" type="button" data-open-category="assistant"><span class="category-symbol">✧</span><strong data-i18n="assistant">Assistant et outils</strong><span data-i18n="categoryAssistantMeta">Assistant Nanou et MCP</span><small data-i18n="categoryAssistantDescription">Outils défensifs et intégrations contrôlées</small></button>
+          <button class="category-card" type="button" data-open-category="operations" data-role-visibility="admin,analyst"><span class="category-symbol">⛨</span><strong data-i18n="operations">Opérations et développement</strong><span data-i18n="categoryOperationsMeta">Simulation et centre développeur</span><small data-i18n="categoryOperationsDescription">Outils selon les autorisations du rôle</small></button>
+          <button class="category-card" type="button" data-open-category="account"><span class="category-symbol">♙</span><strong data-i18n="account">Compte et gouvernance</strong><span data-i18n="categoryAccountMeta">Profil, sécurité et rôles</span><small data-i18n="categoryAccountDescription">Mot de passe, sessions et administration</small></button>
         </div>
       </section>
       <div id="category-backbar" class="category-backbar" hidden><button id="category-back-button" class="button button-secondary" type="button">← Miverina amin'ny sokajy</button><span id="category-current-title"></span></div>

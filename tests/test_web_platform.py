@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 from nanou_cyber_ai.api import app
@@ -368,9 +370,68 @@ def test_global_locale_catalog_and_premium_mcp_hub_styles() -> None:
         home = client.get("/")
 
     assert script.status_code == stylesheet.status_code == home.status_code == 200
-    for locale in ("fr", "en", "mg", "es", "pt", "de", "it", "ar", "zh", "ja", "hi", "ru"):
+    locales = (
+        "fr",
+        "en",
+        "mg",
+        "es",
+        "pt",
+        "de",
+        "it",
+        "ar",
+        "zh",
+        "ja",
+        "hi",
+        "ru",
+    )
+    for locale in locales:
         assert f"{locale}:[" in script.text
+
+    base_match = re.search(r"const I18N_KEYS = \[(.*?)\];", script.text, re.S)
+    extra_match = re.search(r"const I18N_EXTRA = \{(.*?)\n\};", script.text, re.S)
+    assert base_match is not None and extra_match is not None
+    base_keys = set(re.findall(r'"([A-Za-z][A-Za-z0-9]*)"', base_match.group(1)))
+    base_catalog_match = re.search(r"const I18N = \{(.*?)\n\};", script.text, re.S)
+    assert base_catalog_match is not None
+    base_catalogs = {}
+    for line in base_catalog_match.group(1).splitlines():
+        locale_match = re.match(r"\s*([a-z]{2}):\[(.*)\],?\s*$", line)
+        if locale_match:
+            base_catalogs[locale_match.group(1)] = re.findall(
+                r'"(?:\\.|[^"\\])*"', locale_match.group(2)
+            )
+    assert set(base_catalogs) == set(locales)
+    assert all(len(values) == len(base_keys) == 21 for values in base_catalogs.values())
+
+    extra_catalogs = {}
+    for line in extra_match.group(1).splitlines():
+        locale_match = re.match(r"\s*([a-z]{2}): \{(.*)\},?\s*$", line)
+        if locale_match:
+            extra_catalogs[locale_match.group(1)] = set(
+                re.findall(r"([A-Za-z][A-Za-z0-9]*):\"", locale_match.group(2))
+            )
+    assert set(extra_catalogs) == set(locales)
+    expected_extra_keys = extra_catalogs["fr"]
+    assert len(expected_extra_keys) == 48
+    assert all(keys == expected_extra_keys for keys in extra_catalogs.values())
+
+    html_keys = set(re.findall(r'data-i18n="([A-Za-z][A-Za-z0-9]*)"', home.text))
+    assert html_keys <= base_keys | expected_extra_keys
+    required_html_keys = {
+        "heroTitle",
+        "heroDescription",
+        "registerTitle",
+        "passwordChangeTitle",
+        "userManagement",
+        "categoryThreatDescription",
+        "categoryMalwareDescription",
+        "categoryAssistantDescription",
+        "categoryOperationsDescription",
+        "categoryAccountDescription",
+    }
+    assert required_html_keys <= html_keys
     assert 'applyLocale("fr")' in script.text
+    assert '"#language-select,#auth-language-select"' in script.text
     assert "localStorage" not in script.text
     assert 'lang="fr"' in home.text
     assert 'id="language-select"' in home.text
