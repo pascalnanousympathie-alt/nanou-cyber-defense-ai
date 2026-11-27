@@ -50,14 +50,20 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
     assert response.status_code == 200
     assert '<html lang="mg" data-theme="dark">' in response.text
     assert 'aria-label="Navigation principale"' in response.text
-    assert 'class="nav-group-label">Threat intelligence</span>' in response.text
-    assert 'class="nav-group-label">STATIC ANALYSIS LAB</span>' in response.text
-    assert 'class="nav-group-label">Accès &amp; gouvernance</span>' in response.text
-    assert 'class="nav-group-label">DEFENSIVE SIMULATIONS</span>' in response.text
+    assert 'data-category-target="home">' in response.text
+    assert 'data-category-target="threat">' in response.text
+    assert 'data-category-target="malware">' in response.text
+    assert 'data-category-target="assistant">' in response.text
+    assert 'data-category-target="operations" data-role-visibility="admin,analyst"' in response.text
+    assert 'data-category-target="account">' in response.text
+    assert 'data-category-view="threat"' in response.text
+    assert 'data-category-view="malware"' in response.text
+    assert 'data-category-view="assistant"' in response.text
+    assert 'data-category-view="operations"' in response.text
+    assert 'data-category-view="account"' in response.text
     assert "Tabletop simulation" in response.text
-    assert "Assistant workspace" in response.text
+    assert "AI Chat Command Center" in response.text
     assert 'href="#vulnerabilities"' in response.text
-    assert 'href="#kev"' in response.text
     assert 'href="#malware-model"' in response.text
     assert 'href="#metadata"' in response.text
     assert 'href="#tools"' in response.text
@@ -91,7 +97,10 @@ def test_role_based_workspace_and_navigation_are_scoped_by_role() -> None:
         script = client.get("/assets/app.js")
 
     assert home.status_code == 200
-    assert 'id="role-workspace" data-role-visibility="authenticated"' in home.text
+    assert (
+        'id="role-workspace" data-category-view="account" '
+        'data-role-visibility="authenticated"'
+    ) in home.text
     assert 'data-role-visibility="admin,analyst"' in home.text
     assert 'data-role-visibility="admin"' in home.text
     assert 'data-role-visibility="authenticated"' in home.text
@@ -200,7 +209,10 @@ def test_attack_simulation_manager_assets_and_local_only_contract() -> None:
         stylesheet = client.get("/assets/attack-simulation.css")
 
     assert home.status_code == 200
-    assert 'href="#attack-simulation" data-role-visibility="admin,analyst"' in home.text
+    assert (
+        'href="#attack-simulation" data-category-target="operations" '
+        'data-role-visibility="admin,analyst"'
+    ) in home.text
     assert 'id="attack-manager-panel"' in home.text
     assert 'id="attack-scope-form"' in home.text
     assert 'id="attack-run-form"' in home.text
