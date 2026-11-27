@@ -49,7 +49,7 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
         response = client.get("/")
 
     assert response.status_code == 200
-    assert '<html lang="mg" data-theme="dark">' in response.text
+    assert '<html lang="fr" data-theme="dark">' in response.text
     assert 'aria-label="Navigation principale"' in response.text
     assert 'data-category-target="home">' in response.text
     assert 'data-category-target="threat">' in response.text
@@ -335,6 +335,10 @@ def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     assert 'id="register-open-link"' in response.text
     assert 'id="register-form" class="auth-form" hidden' in response.text
     assert 'id="category-home" class="category-home" hidden' in response.text
+    assert 'id="language-select"' in response.text
+    assert 'data-i18n="registerLink"' in response.text
+    assert 'id="mcp-hub-title"' in response.text
+    assert 'Architecture en préparation' in response.text
     assert 'data-open-category="threat"' in response.text
     assert 'data-open-category="malware"' in response.text
     assert 'data-open-category="assistant"' in response.text
@@ -353,3 +357,23 @@ def test_operations_data_loads_only_when_its_category_is_opened() -> None:
     assert "await loadAuth();" not in developer.text
     assert "loadDeveloperKeys();" in developer.text
     assert "loadAttackWorkspace();" in attack.text
+
+
+def test_global_locale_catalog_and_premium_mcp_hub_styles() -> None:
+    with TestClient(app) as client:
+        script = client.get("/assets/app.js")
+        stylesheet = client.get("/assets/app.css")
+        home = client.get("/")
+
+    assert script.status_code == stylesheet.status_code == home.status_code == 200
+    for locale in ("fr", "en", "mg", "es", "pt", "de", "it", "ar", "zh", "ja", "hi", "ru"):
+        assert f"{locale}:[" in script.text
+    assert 'localStorage.getItem("nanou-locale")||"fr"' in script.text
+    assert 'lang="fr"' in home.text
+    assert 'id="language-select"' in home.text
+    assert ".locale-control" in stylesheet.text
+    assert ".category-card:hover" in stylesheet.text
+    assert "perspective:1200px" in stylesheet.text
+    assert "transform-style:preserve-3d" in stylesheet.text
+    assert ".mcp-mode-grid" in stylesheet.text
+    assert "prefers-reduced-motion:reduce" in stylesheet.text
