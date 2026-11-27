@@ -337,6 +337,7 @@ def test_login_first_google_signup_link_and_category_home_are_served() -> None:
     assert 'id="category-home" class="category-home" hidden' in response.text
     assert 'id="language-select"' in response.text
     assert 'id="auth-language-select"' in response.text
+    assert 'id="auth-language-select"' in response.text
     assert 'data-i18n="registerLink"' in response.text
     assert 'id="mcp-hub-title"' in response.text
     assert "Architecture en préparation" in response.text
@@ -369,7 +370,8 @@ def test_global_locale_catalog_and_premium_mcp_hub_styles() -> None:
     assert script.status_code == stylesheet.status_code == home.status_code == 200
     for locale in ("fr", "en", "mg", "es", "pt", "de", "it", "ar", "zh", "ja", "hi", "ru"):
         assert f"{locale}:[" in script.text
-    assert 'localStorage.getItem("nanou-locale")||"fr"' in script.text
+    assert 'applyLocale("fr")' in script.text
+    assert "localStorage" not in script.text
     assert 'lang="fr"' in home.text
     assert 'id="language-select"' in home.text
     assert 'id="auth-language-select"' in home.text

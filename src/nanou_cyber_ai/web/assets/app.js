@@ -18,7 +18,8 @@ hi:["सुरक्षित कार्यक्षेत्र","होम",
 ru:["ЗАЩИЩЁННОЕ ПРОСТРАНСТВО","Главная","Аналитика угроз","ИИ и вредоносное ПО","Ассистент и инструменты","Операции и разработка","Аккаунт","ЦЕНТР ИНФОРМАЦИОННОЙ БЕЗОПАСНОСТИ","Центр киберзащиты","Вход в аккаунт","Защищённый аккаунт, отзыв сессий и доступ по ролям.","Войти","Электронная почта","Пароль","Войти","Что вы хотите открыть?","Выберите категорию, чтобы открыть инструменты и сведения.","Центр разработчика","Доступные инструменты MCP","Зарегистрированные инструменты с ограниченными правами.","Нет аккаунта? Создать подробную учётную запись"]
 };
 function translate(key){const i=I18N_KEYS.indexOf(key);const lang=document.documentElement.lang;return i>=0?(I18N[lang]||I18N.fr)[i]:key}
-function applyLocale(locale){const lang=I18N[locale]?locale:"fr";const values=I18N[lang];document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.querySelectorAll("[data-i18n]").forEach(el=>{const i=I18N_KEYS.indexOf(el.dataset.i18n);if(i>=0)el.textContent=values[i]});const select=byId("language-select");if(select&&select.value!==lang)select.value=lang;try{localStorage.setItem("nanou-locale",lang)}catch{/* private mode */}}
+let activeLocale = "fr";
+function applyLocale(locale){const lang=I18N[locale]?locale:"fr";activeLocale=lang;const values=I18N[lang];document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.querySelectorAll("[data-i18n]").forEach(el=>{const i=I18N_KEYS.indexOf(el.dataset.i18n);if(i>=0)el.textContent=values[i]});const select=byId("language-select");if(select&&select.value!==lang)select.value=lang;try{localStorage.setItem("nanou-locale",lang)}catch{/* private mode */}}
 let csrfToken = "";
 let currentUser = null;
 let configuredMalwareModel = null;
@@ -1183,7 +1184,7 @@ async function runMalwareInference(event) {
 }
 
 for(const id of ["language-select","auth-language-select"]){byId(id).addEventListener("change", event => applyLocale(event.target.value));}
-let locale="fr";try{locale=localStorage.getItem("nanou-locale")||"fr"}catch{/* private mode */}applyLocale(locale);
+applyLocale("fr");
 byId("cve-form").addEventListener("submit", searchCve);
 byId("refresh-kev").addEventListener("click", loadKev);
 byId("bootstrap-form").addEventListener("submit", submitBootstrap);
