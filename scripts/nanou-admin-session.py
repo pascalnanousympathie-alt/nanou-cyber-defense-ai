@@ -206,7 +206,7 @@ def main() -> int:
         pairing = api.pair(pairing_code)
     except ApiError as exc:
         print(
-            f"Pairing failed: HTTP {exc.status}. Jereo raha lany daty na efa nampiasaina ilay code.",
+            f"Pairing HTTP {exc.status}; code mety lany daty na efa nampiasaina.",
             file=sys.stderr,
         )
         return 3

@@ -4,8 +4,8 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
-from sqlalchemy import update
 from pydantic import SecretStr
+from sqlalchemy import update
 from starlette.requests import Request
 
 from nanou_cyber_ai.api import _ip_digest, _rate_fingerprints, app
