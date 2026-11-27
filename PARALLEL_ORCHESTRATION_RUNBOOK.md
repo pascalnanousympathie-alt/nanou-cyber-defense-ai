@@ -267,3 +267,73 @@ The earlier historical statements in this runbook that Production had zero users
 - Verified read-only: runtime grants cover all 9 Production tables and 2 sequences without TRUNCATE/TRIGGER/REFERENCES; backup is SELECT-only for tables.
 - Current ownership is unchanged: `nanou_app` still owns the Production database and all 9 public tables. No Production ownership/grant/credential changes were made.
 - Correction: the retained `prod-restore-drill-20261126` copy currently has a runtime restore probe as DB/table owner and no default ACL rows; do not cite that copy as current proof of full migration-owner ownership transfer. The separate `nanou-cyber-defense-restore-drill` project is a runtime-grant prototype, not a Production cutover rehearsal.
+
+
+
+## Operational snapshot and next gates — 2026-11-27 11:17 UTC
+
+Use this section as the current execution baseline; older runbook statements above are historical where they disagree.
+
+### Current confirmed state
+
+1. GitHub `main` is `6e2a71495fa4292f32f5f7cd86886ce16769a249`. PR #16 merged a single pinned-action change: `actions/upload-artifact` v7.0.2 at full SHA `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (Node.js 24). Its exact PR head passed CI/Security and Vercel Preview before merge.
+2. Vercel Production deployment `dpl_9DDJZhMbCLKbsrSPvSUHkqoEjsu1` is READY on that main SHA. Direct browser checks: `/health` HTTP 200 and `/ready` HTTP 200 with PostgreSQL ready. No runtime errors were found in the inspected 30-minute window.
+3. Dependabot and Code Scanning each returned zero open alerts in the latest GitHub CLI inventory. Re-run the inventory after any dependency change.
+4. Admin bridge read-only checks pass through the existing Nanou Desktop Commander/Opera session. Preserve SSO; do not copy browser cookies, Admin passwords or bridge tokens into chat, logs or shell history.
+
+### Backup schedule and recovery gates
+
+- Production backup workflow: active; cron `43 2 * * * UTC`. No scheduled run was found as of 2026-11-27 11:17 UTC. PR #13 was merged after the 2026-11-27 02:43 UTC scheduled minute; next expected event is 2026-11-28 02:43 UTC (05:43 Madagascar). Verify the actual event and artifact; do not substitute a manual dispatch for schedule evidence.
+- Manual backup run `45989048704` on current main completed successfully using upload-artifact v7.0.2. Artifact ID `15193675094`, 28,267 bytes, expires 2026-12-27 11:16 UTC. GitHub ZIP digest and payload sidecar checksum passed; authenticated decryption/full restore for this exact artifact is still NOT VERIFIED.
+- Do not claim complete backup readiness until the current artifact is authenticated-decrypted and restored into a disposable isolated PostgreSQL target, with row counts/ordered digests compared to a consistent baseline and all plaintext/temp data cleaned up.
+- A second independent offline copy of the private recovery key remains NOT VERIFIED. Verify a separate removable/offline medium; do not copy the private key to ordinary shared storage or upload it to GitHub.
+
+### Neon Production controls
+
+- Neon database metadata reports `nanou_cyber_defense` owner `nanou_migration_owner`. This does not prove table/sequence owners. SQL catalog verification is currently blocked by missing database authentication in the connected Neon SQL tool; do not infer table ownership, membership or grants until read-only SQL evidence is available.
+- Production default branch `br-damp-fog-bi0lzjf4` remains `protected=false`. Enabling protection was rejected by Neon with HTTP 422 due to the Free-plan protected-branch limit. Do not upgrade the plan or unprotect another branch to bypass this limit.
+- Do not change Production roles, owners, grants, passwords or database data until exact role/object inventory, current backup restore, forward/rollback plan and owner authorization are all verified.
+
+### RBAC acceptance
+
+- Production currently has one active/approved Admin and no Viewer/Analyst test users. Complete live Viewer/Analyst acceptance only with identities controlled by the owner. Do not invent mailboxes or create synthetic Production identities. Verify approval, read/write restrictions, Admin-only actions, session revocation after role changes, logout/re-login and audit evidence.
+
+### Stale branch handling
+
+- PR #3: 3 ahead / 121 behind current main; remaining unique changes are documentation/security-workflow only and branch is stacked. Do not merge directly.
+- PR #4: 0 ahead / 116 behind; no unique commit relative to current main. Do not merge.
+- PR #9: 42 ahead / 203 behind; contains an isolated Preview migration runner but is stale. Do not merge its old branch. If migration tooling remains necessary, create a clean branch from current main, review membership and transaction-safety guards, keep Production hard-blocked and run the full CI/Security/Preview suite.
+- PR #2 is a separate Draft; keep separate from this operational/security work.
+
+### Evidence discipline
+
+Record the exact commit SHA, run/deployment ID, event type, UTC timestamp, first failing step, artifact digest and observed result. A successful manual backup is not proof of a scheduled run; database ownership metadata is not proof of table ownership; a READY deployment is not by itself proof of RBAC acceptance.
+
+
+## Verification follow-up — 2026-11-27 11:34 UTC
+
+This follow-up supersedes the 11:17 UTC artifact-recovery and alert-state statements above. It does not change Production, roles, grants, secrets, SSO, workflows or deployments.
+
+### Exact current backup artifact — restore verified
+
+- Workflow run [45989048704](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45989048704) was a **manual workflow_dispatch**, not scheduled. It completed successfully on main 6e2a71495fa4292f32f5f7cd86886ce16769a249.
+- Artifact nanou-production-backup-45989048704, ID 15193675094, archive size 28,267 bytes, artifact SHA-256 d0d32cf417029848dae36469e4ee4ab6b0d23098d10c55a49817eb61a6611cbb, expires 2026-12-27 11:16 UTC.
+- Downloaded encrypted payload nanou-production-20261127T111645Z.ncdb: 27,583 bytes; payload SHA-256 c1e178663dc8fb1e4aab5d7b68af3b14088bafd9b208a9b773b381295f1d804a. Its sidecar checksum returned PASS.
+- The exact main-branch decrypt helper and crypto module were fetched and their Git blob hashes checked against main. Local private-key public fingerprint matched the pinned recipient fingerprint.
+- Authenticated AES-256-GCM/RSA-3072 decryption passed. A fresh isolated local PostgreSQL 18.2 cluster was created under the Nanou Cyber Defense AI private data directory; pg_restore with single-transaction, clean, if-exists, no-owner and no-privileges completed successfully. Restored schema: 9 tables / 60 columns.
+- This confirms authenticated decryption and a full isolated restore of this exact artifact. It does not compare row counts with a simultaneous live Production baseline; that comparison remains pending because the Neon SQL connector returned missing authentication credentials. It also does not prove scheduled delivery.
+- Temporary plaintext, isolated PostgreSQL cluster and socket directories were removed; post-cleanup inventory found zero remaining restore temp directories or socket directories. Existing LudoMada/local databases were not used or modified.
+
+### Dependabot and Code Scanning
+
+- Dependabot inventory: 0 open, 1 fixed, 0 dismissed, 0 auto-dismissed. Fixed record is alert #1, GHSA-p4hh-mq57-gq8x, package signify, severity HIGH, fixed_at=2026-11-27T10:50:17Z.
+- Code Scanning open-alert count: 0.
+- Current-main CI on exact SHA above: Ruff PASS, 94 files formatted, 155 passed / 4 skipped, ML smoke PASS, pip-audit: No known vulnerabilities found. Security: Gitleaks and CodeQL Python/JavaScript-TypeScript PASS.
+
+### Still pending
+
+- Backup workflow is active with cron 43 2 * * * UTC; scheduled-run query still returned 0. Next expected event is 2026-11-28 02:43 UTC / 05:43 Madagascar. The successful manual run above must not be treated as schedule proof.
+- The local recovery key remains mode 0600. Termux now has executable backup/restore helpers under ~/.local/bin/ (mode 0700). The backup helper encrypts the recovery key with AES-256-GCM and Scrypt, requires an owner-entered passphrase, and refuses Android emulated/shared storage. Syntax/help checks and refusal of /storage/emulated/0 passed. No removable medium is mounted, so no offline copy has been created yet.
+- Production still has one active approved Admin and no Viewer/Analyst test identities. CI covers Analyst/Viewer restrictions, but live RBAC acceptance remains pending owner-controlled identities; no synthetic Production accounts were created.
+- Neon project cold-resonance-28231813, default branch br-damp-fog-bi0lzjf4, reports READY and protected=false. The Neon SQL connector returned missing authentication credentials; only database-owner metadata was available. Do not infer table/sequence ownership, memberships or grants from metadata alone.
+- PR #17 remains Draft/Open. Do not merge until this follow-up is reviewed and its branch checks are green.
