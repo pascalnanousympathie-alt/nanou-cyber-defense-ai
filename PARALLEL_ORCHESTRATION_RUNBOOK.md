@@ -14,7 +14,7 @@ This live-state addendum supersedes older staged-state notes later in this file.
 - Dependabot vulnerability alerts enabled; all four state-filtered inventory queries returned zero alerts.
 - Owner browser Admin acceptance and Viewer/Analyst live RBAC acceptance are pending because the inspected Opera app profile is signed out. Never enter or request credentials or bootstrap token in chat.
 - Private backup key is on Termux with mode 600. Independent offline second copy remains NOT VERIFIED until a separate removable/offline destination is mounted and checked.
-- Post-cutover manual backup run `45946937978` is in progress/pending latest poll. A successful manual backup is not a substitute for verifying the daily schedule.
+- Post-cutover manual backup run `45946937978` completed SUCCESS. The 23,362-byte encrypted artifact has SHA-256 `8396156f7b455887f8919ee5418e078738daf03a0a63b9fec49ff418061898ba`; checksum, authenticated decrypt, archive list and full isolated restore passed (9 tables / 60 columns; row counts match Production). The plaintext dump and temporary cluster were removed. This does not substitute for a real scheduled run.
 
 
 ## 1. Repository boundaries
