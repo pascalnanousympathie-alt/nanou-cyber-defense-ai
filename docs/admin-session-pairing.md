@@ -16,12 +16,6 @@ Install/run the helper from a repository checkout:
 python3 scripts/nanou-admin-session.py
 ~~~
 
-The installed device-local helper may also be invoked as:
-
-~~~bash
-python3 "$HOME/.local/bin/nanou-admin-session"
-~~~
-
 The pairing code is entered through getpass; it is not an argument, environment variable, file, or chat message. The helper does not print the bearer token or write it to disk.
 
 ## Token lifecycle and restrictions
