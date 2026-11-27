@@ -2,6 +2,21 @@
 
 Last verified: 2026-11-27 (UTC)
 
+## Current verified Production state — 2026-11-27
+
+This live-state addendum supersedes older staged-state notes later in this file.
+
+- Repository visibility is public. PR #13 is merged; `main` is at `cdeae3e34937a8e687585725b3d09b58bafa2eec`. Backup workflow remains active with UTC cron `43 2 * * *`. Verify the first scheduled event at 2026-11-28 02:43 UTC; do not mark schedule delivery PASS before a real `schedule` run and encrypted artifact are observed.
+- Vercel Production deployment `dpl_2gn4F1XNZazuevbDnbfAApW5xb1X` is READY on that commit; canonical `/ready` returns HTTP 200 with PostgreSQL ready.
+- Production database, all nine tables and both sequences are owned by NOLOGIN `nanou_migration_owner`. The `nanou_migration_login` is not elevated and must `SET ROLE nanou_migration_owner` for migrations.
+- Direct post-cutover checks: runtime SELECT/INSERT/UPDATE/DELETE and sequence SELECT/USAGE PASS; runtime TRUNCATE/TRIGGER/REFERENCES absent. Backup SELECT on all nine tables and sequence SELECT PASS; backup DML and sequence USAGE absent.
+- Legacy `nanou_app` owns zero current public objects but still has elevated attributes/memberships. Do not delete, disable or revoke it before a separate, reviewed rollback and credential-retirement plan.
+- Dependabot vulnerability alerts enabled; all four state-filtered inventory queries returned zero alerts.
+- Owner browser Admin acceptance and Viewer/Analyst live RBAC acceptance are pending because the inspected Opera app profile is signed out. Never enter or request credentials or bootstrap token in chat.
+- Private backup key is on Termux with mode 600. Independent offline second copy remains NOT VERIFIED until a separate removable/offline destination is mounted and checked.
+- Post-cutover manual backup run `45946937978` is in progress/pending latest poll. A successful manual backup is not a substitute for verifying the daily schedule.
+
+
 ## 1. Repository boundaries
 
 Repository: pascalnanousympathie-alt/nanou-cyber-defense-ai.
