@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/assets/attack-simulation.css">
   <script src="/assets/app.js" defer></script>
 </head>
-<body>
+<body data-auth-state="checking">
   <div class="app-shell">
     <aside class="sidebar" aria-label="Fikarohana">
       <a class="brand" href="/" aria-label="Nanou Cyber Defense — pejy fandraisana">
@@ -25,41 +25,12 @@
 
       <div class="nav-caption">SECURE WORKSPACE</div>
       <nav class="side-nav" aria-label="Navigation principale">
-        <div class="nav-group">
-          <span class="nav-group-label">Vue générale</span>
-          <a class="nav-link active" href="#overview" aria-current="page"><span aria-hidden="true">◈</span> Topimaso</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">Accès &amp; gouvernance</span>
-          <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty sy rôles</a>
-          <a class="nav-link" href="#account" data-role-visibility="admin"><span aria-hidden="true">⚙</span> Fitantanana sy audit</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">AI WORKSPACE</span>
-          <a class="nav-link" href="#assistant-chat" data-role-visibility="authenticated"><span aria-hidden="true">✧</span> Assistant workspace</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">Threat intelligence</span>
-          <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE · NVD</a>
-          <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">STATIC ANALYSIS LAB</span>
-          <a class="nav-link" href="#malware-model" data-role-visibility="admin,analyst"><span aria-hidden="true">✳</span> Static feature analysis</a>
-          <a class="nav-link" href="#metadata" data-role-visibility="authenticated"><span aria-hidden="true">⬡</span> Hash &amp; threat metadata</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">DEFENSIVE SIMULATIONS</span>
-          <a class="nav-link" href="#attack-simulation" data-role-visibility="admin,analyst"><span aria-hidden="true">◉</span> Tabletop simulation</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">Intégrations</span>
-          <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">DEVELOPER CONSOLE</span>
-          <a class="nav-link" href="#developer" data-role-visibility="admin,analyst"><span aria-hidden="true">⌘</span> Developer Center</a>
-        </div>
+        <div class="nav-group"><a class="nav-link active" href="#overview" data-category-target="home"><span aria-hidden="true">⌂</span> Accueil</a></div>
+        <div class="nav-group"><a class="nav-link" href="#vulnerabilities" data-category-target="threat"><span aria-hidden="true">◈</span> Threat Intelligence</a></div>
+        <div class="nav-group"><a class="nav-link" href="#malware-model" data-category-target="malware"><span aria-hidden="true">✳</span> AI &amp; Malware</a></div>
+        <div class="nav-group"><a class="nav-link" href="#assistant-chat" data-category-target="assistant"><span aria-hidden="true">✧</span> Assistant &amp; Tools</a></div>
+        <div class="nav-group"><a class="nav-link" href="#attack-simulation" data-category-target="operations" data-role-visibility="admin,analyst"><span aria-hidden="true">⛨</span> Operations &amp; Developer</a></div>
+        <div class="nav-group"><a class="nav-link" href="#account" data-category-target="account"><span aria-hidden="true">♙</span> Kaonty</a></div>
       </nav>
 
       <div class="sidebar-bottom">
@@ -83,7 +54,7 @@
         </div>
       </header>
 
-      <section class="hero-card">
+      <section class="hero-card" data-category-view="home">
         <div class="hero-copy">
           <span class="hero-kicker">NANOÛ // CYBER DEFENSE AI</span>
           <h2>Fantaro aloha ny loza.<br><em>Arovy ny rafitrao.</em></h2>
@@ -105,7 +76,7 @@
       </section>
 
 
-      <section class="panel auth-panel" id="account">
+      <section class="panel auth-panel" id="account" data-category-view="account">
         <div class="panel-heading">
           <div><span class="panel-icon auth-icon">♙</span><div><h3>Kaonty sy fidirana</h3><p>Kaonty manokana, session azo esorina ary andraikitra voafetra.</p></div></div>
           <span id="auth-state-pill" class="count-pill">Manamarina…</span>
@@ -130,13 +101,19 @@
             <div class="field"><label for="login-password">Tenimiafina</label><input id="login-password" type="password" maxlength="128" autocomplete="current-password" required></div>
             <div class="field"><button class="button button-primary" type="submit">Hiditra amin'ny kaonty</button></div>
           </form>
-          <form id="register-form" class="auth-form">
-            <strong>Hangataka kaonty</strong>
+          <div id="google-auth-block" class="google-auth-block">
+            <div id="google-button-slot" class="google-button-slot"></div>
+            <p id="google-auth-status" class="form-message" role="status" aria-live="polite">Mampiditra ny safidy Google…</p>
+          </div>
+          <p class="auth-switch-line"><a id="register-open-link" href="#inscription">Tsy mbola manana kaonty? Hisoratra anarana amin'ny antsipiriany</a></p>
+          <form id="register-form" class="auth-form" hidden>
+            <strong>Inscription détaillée</strong>
             <p>Ny kaonty vaovao dia Viewer ary miandry fankatoavan'ny Administrator.</p>
             <div class="field"><label for="register-name">Anarana</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
             <div class="field"><label for="register-email">Email</label><input id="register-email" type="email" maxlength="320" autocomplete="email" required></div>
             <div class="field"><label for="register-password">Tenimiafina (12+ caractères)</label><input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
             <div class="field"><button class="button button-secondary" type="submit">Handefa fangatahana</button></div>
+            <p class="auth-switch-line"><a id="register-back-link" href="#login">Efa manana kaonty? Hiverina amin'ny fidirana</a></p>
           </form>
         </div>
 
@@ -198,7 +175,7 @@
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Toe-draharaha ankapobeny">
+      <section class="metrics-grid" data-category-view="home" aria-label="Toe-draharaha ankapobeny">
         <article class="metric-card">
           <div class="metric-icon icon-blue">⌁</div>
           <div class="metric-label">API</div>
@@ -225,7 +202,19 @@
         </article>
       </section>
 
-      <section class="panel role-workspace" id="role-workspace" data-role-visibility="authenticated" hidden aria-labelledby="role-workspace-title">
+      <section id="category-home" class="category-home" hidden aria-labelledby="category-home-title">
+        <div class="category-heading"><div><p class="eyebrow">SECURE WORKSPACE</p><h2 id="category-home-title">Inona no sehatra tianao hosokafana?</h2><p>Safidio ny sokajy; ao anatiny no ahitana ny antsipiriany sy ny fitaovana.</p></div></div>
+        <div class="category-grid">
+          <button class="category-card" type="button" data-open-category="threat"><span class="category-symbol">◈</span><strong>Threat Intelligence</strong><span>CVE, NVD ary CISA KEV</span><small>Fikarohana sy fanaraha-maso ny faharefoana</small></button>
+          <button class="category-card" type="button" data-open-category="malware"><span class="category-symbol">✳</span><strong>AI &amp; Malware Analysis</strong><span>Modely ML sy metadata</span><small>Static feature analysis sy hash intelligence</small></button>
+          <button class="category-card" type="button" data-open-category="assistant"><span class="category-symbol">✧</span><strong>Assistant &amp; Tools</strong><span>Nanou Assistant sy MCP</span><small>Baiko fiarovana voafetra sy integrations</small></button>
+          <button class="category-card" type="button" data-open-category="operations" data-role-visibility="admin,analyst"><span class="category-symbol">⛨</span><strong>Operations &amp; Developer</strong><span>Simulation sy Developer Center</span><small>Fitaovana voafetra araka ny rôle</small></button>
+          <button class="category-card" type="button" data-open-category="account"><span class="category-symbol">♙</span><strong>Kaonty &amp; Gouvernance</strong><span>Profil, fiarovana sy rôles</span><small>Tenimiafina, session ary fitantanana Admin</small></button>
+        </div>
+      </section>
+      <div id="category-backbar" class="category-backbar" hidden><button id="category-back-button" class="button button-secondary" type="button">← Miverina amin'ny sokajy</button><span id="category-current-title"></span></div>
+
+      <section class="panel role-workspace" id="role-workspace" data-category-view="account" data-role-visibility="authenticated" hidden aria-labelledby="role-workspace-title">
         <div class="role-workspace-heading">
           <div>
             <p class="eyebrow">ROLE-BASED WORKSPACE</p>
@@ -238,11 +227,11 @@
         <p id="role-workspace-guidance" class="role-workspace-guidance"></p>
       </section>
 
-      <section class="section-heading" id="assistant-chat" data-role-visibility="authenticated">
+      <section class="section-heading" id="assistant-chat" data-role-visibility="authenticated" data-category-view="assistant">
         <div><p class="eyebrow">DEFENSIVE AI OPERATIONS</p><h2>AI Chat Command Center</h2></div>
         <span class="section-tag">Guarded tool execution</span>
       </section>
-      <section class="panel assistant-panel" data-role-visibility="authenticated">
+      <section class="panel assistant-panel" data-role-visibility="authenticated" data-category-view="assistant">
         <div class="assistant-heading">
           <div class="assistant-avatar" aria-hidden="true">N</div>
           <div class="assistant-title">
@@ -283,11 +272,11 @@
         <p class="data-note">Tsy mitahiry ny chat history ao amin'ny navigateur na database ity pejy ity. Tsy misy saram-LLM amin'ny Local command mode. Raha voa-configurer ny AI provider, ny hafatra dia alefa aminy ary mety hisy sara araka ny modely sy ny token ampiasaina; aza mandefa secrets na angona saro-pady.</p>
       </section>
 
-      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst">
+      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst" data-category-view="operations">
         <div><p class="eyebrow">AUTHORIZED RED TEAM · TABLETOP</p><h2>Attack Simulation Manager</h2></div>
         <span class="section-tag">Local-only · 0 network requests</span>
       </section>
-      <section class="panel attack-manager-panel" id="attack-manager-panel" data-role-visibility="admin,analyst">
+      <section class="panel attack-manager-panel" id="attack-manager-panel" data-role-visibility="admin,analyst" data-category-view="operations">
         <div class="attack-safety-banner">
           <span class="attack-safety-mark" aria-hidden="true">✓</span>
           <div><strong>Simulation locale et non intrusive</strong><p>Produit des scénarios, contrôles à vérifier, mapping MITRE ATT&amp;CK et recommandations. Tsy manao scan, exploit, payload, credential test, malware execution na network request.</p></div>
@@ -338,12 +327,12 @@
         <p class="data-note">MITRE ATT&amp;CK IDs dia threat-reference mapping fotsiny. Ny SOC detection rules dia soso-kevitra mbola tsy deployed na enabled. Ny checklist rehetra dia <strong>requires manual validation</strong>; tsy lazaina ho vulnerability hita raha tsy misy porofo voamarina.</p>
       </section>
 
-      <section class="section-heading" id="vulnerabilities">
+      <section class="section-heading" id="vulnerabilities" data-category-view="threat">
         <div><p class="eyebrow">VULNERABILITY INTELLIGENCE</p><h2>Fikarohana CVE</h2></div>
         <span class="section-tag">NVD · Read-only</span>
       </section>
 
-      <section class="content-grid">
+      <section class="content-grid" data-category-view="threat">
         <article class="panel cve-panel">
           <div class="panel-heading">
             <div><span class="panel-icon">⌕</span><div><h3>Jereo ny CVE</h3><p>Mitadiava vulnerability amin'ny ID CVE.</p></div></div>
@@ -373,11 +362,11 @@
       </section>
 
 
-      <section class="section-heading" id="malware-model" data-role-visibility="admin,analyst">
+      <section class="section-heading" id="malware-model" data-role-visibility="admin,analyst" data-category-view="malware">
         <div><p class="eyebrow">STATIC FEATURE CLASSIFIER</p><h2>AI malware feature analysis</h2></div>
         <span class="section-tag">Model integrity check</span>
       </section>
-      <section class="panel inference-panel" id="malware-analysis-panel" data-role-visibility="admin,analyst">
+      <section class="panel inference-panel" id="malware-analysis-panel" data-role-visibility="admin,analyst" data-category-view="malware">
         <div class="metadata-intro">
           <div class="metadata-mark model-mark">✳</div>
           <div><h3>Famakafakana amin'ny modely ML</h3><p>Vector numérique efa nalaina mialoha ihany no raisina; tsy mandray APK na binary.</p></div>
@@ -416,11 +405,11 @@
         <p class="data-note">Ny valiny dia tombana avy amin'ny static features, fa tsy porofo fa voa-infecté ny fitaovana. Tsy tokony hampiasaina ho fanapahan-kevitra mandeha ho azy ny threshold 0.5 raha tsy voamarina amin'ny validation set misaraka.</p>
       </section>
 
-      <section class="section-heading" id="metadata" data-role-visibility="authenticated">
+      <section class="section-heading" id="metadata" data-role-visibility="authenticated" data-category-view="malware">
         <div><p class="eyebrow">MALWARE INTELLIGENCE</p><h2>Metadata voaaro</h2></div>
         <span class="section-tag">Multi-user RBAC</span>
       </section>
-      <section class="panel metadata-panel" data-role-visibility="authenticated">
+      <section class="panel metadata-panel" data-role-visibility="authenticated" data-category-view="malware">
         <div class="metadata-intro">
           <div class="metadata-mark">⬡</div>
           <div><h3>Rakitra famantarana malware</h3><p>SHA-256, label ary loharano ihany. Tsy misy APK, executable na payload alefa eto.</p></div>
@@ -442,11 +431,11 @@
         </div>
       </section>
 
-      <section class="section-heading" id="developer" data-role-visibility="admin,analyst">
+      <section class="section-heading" id="developer" data-role-visibility="admin,analyst" data-category-view="operations">
         <div><p class="eyebrow">DEVELOPER &amp; AI INTEGRATION</p><h2>Developer Center</h2></div>
         <span class="section-tag">REST API v1 · Read-only</span>
       </section>
-      <section class="panel developer-panel" data-role-visibility="admin,analyst">
+      <section class="panel developer-panel" data-role-visibility="admin,analyst" data-category-view="operations">
         <div class="developer-intro">
           <div><div class="developer-badges"><span>Bearer auth</span><span>Scoped keys</span><span>OpenAPI / AI</span></div>
           <h3>Fampifandraisana lavitra sy AI</h3>
@@ -494,11 +483,11 @@
         <p class="data-note">Aza apetraka amin'ny JavaScript public, APK, URL, logs na repository ny token. Ampiasao amin'ny backend/server-side na secret vault an'ny AI ihany.</p>
       </section>
 
-      <section class="section-heading" id="tools">
+      <section class="section-heading" id="tools" data-category-view="assistant">
         <div><p class="eyebrow">CONTROLLED INTEGRATIONS</p><h2>Fitaovana MCP</h2></div>
         <span class="section-tag">Scoped access</span>
       </section>
-      <section class="panel tools-panel">
+      <section class="panel tools-panel" data-category-view="assistant">
         <div class="panel-heading">
           <div><span class="panel-icon green-icon">⛨</span><div><h3>Fitaovana azo ampiasaina</h3><p>Fitaovana voasoratra anarana sy voafetra amin'ny alalana.</p></div></div>
           <span id="tools-count" class="count-pill">—</span>

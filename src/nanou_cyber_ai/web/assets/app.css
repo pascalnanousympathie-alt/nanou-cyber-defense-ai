@@ -1213,3 +1213,54 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-bridge-code-wrap { display: grid; gap: 8px; margin-top: 10px; }
 .admin-bridge-code-wrap label { color: var(--muted); font-size: 9px; font-weight: 700; }
 .admin-bridge-code { background: #080c12; border: 1px solid var(--border); border-radius: 7px; color: #a6f0c8; display: block; font-size: 11px; overflow-wrap: anywhere; padding: 11px; user-select: all; }
+
+
+/* Authentication-first entry and category-based workspace navigation. */
+body[data-auth-state="checking"] .sidebar,
+body[data-auth-state="anonymous"] .sidebar,
+body[data-auth-state="bootstrap"] .sidebar { display: none; }
+body[data-auth-state="checking"] .main-content > :not(.auth-panel),
+body[data-auth-state="anonymous"] .main-content > :not(.auth-panel),
+body[data-auth-state="bootstrap"] .main-content > :not(.auth-panel) { display: none !important; }
+body[data-auth-state="checking"] .main-content,
+body[data-auth-state="anonymous"] .main-content,
+body[data-auth-state="bootstrap"] .main-content {
+  align-items: center; display: flex; justify-content: center; margin: 0 auto;
+  min-height: 100vh; padding: 28px 16px; width: 100%;
+}
+body[data-auth-state="checking"] .auth-panel,
+body[data-auth-state="anonymous"] .auth-panel,
+body[data-auth-state="bootstrap"] .auth-panel {
+  margin: 0; max-width: 560px; width: 100%;
+}
+body[data-auth-state="checking"] .auth-panel .panel-heading,
+body[data-auth-state="anonymous"] .auth-panel .panel-heading,
+body[data-auth-state="bootstrap"] .auth-panel .panel-heading { margin-bottom: 8px; }
+body[data-auth-state="checking"] .auth-form-grid,
+body[data-auth-state="anonymous"] .auth-form-grid,
+body[data-auth-state="bootstrap"] .auth-form-grid { grid-template-columns: minmax(0, 1fr); }
+body[data-auth-state="authenticated"] .auth-panel[data-category-view],
+body[data-auth-state="authenticated"] [data-category-view][hidden] { display: none !important; }
+.category-home { margin: 22px 0 34px; }
+.category-heading { margin-bottom: 17px; }
+.category-heading .eyebrow { margin: 0 0 5px; }
+.category-heading h2 { font-size: clamp(20px, 2.5vw, 27px); letter-spacing: -.65px; margin: 0; }
+.category-heading p:last-child { color: var(--muted); font-size: 11px; margin: 7px 0 0; }
+.category-grid { display: grid; gap: 13px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.category-card { align-items: flex-start; background: linear-gradient(145deg, #151515, #0d0d0d); border: 1px solid var(--border); border-radius: 12px; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 7px; min-height: 145px; padding: 19px; text-align: left; transition: border-color .18s ease, transform .18s ease, background .18s ease; }
+.category-card:hover { background: #191919; border-color: rgba(143,216,193,.48); transform: translateY(-2px); }
+.category-card strong { font-size: 14px; }
+.category-card > span:not(.category-symbol) { color: #c4c4c4; font-size: 11px; }
+.category-card small { color: #898989; font-size: 10px; line-height: 1.5; }
+.category-symbol { align-items: center; background: rgba(143,216,193,.1); border: 1px solid rgba(143,216,193,.16); border-radius: 8px; color: #9ae2c8; display: flex; font-size: 19px; height: 34px; justify-content: center; margin-bottom: 2px; width: 34px; }
+.category-backbar { align-items: center; display: flex; gap: 13px; margin: 0 0 20px; }
+.category-backbar span { color: #a4a4a4; font-size: 12px; font-weight: 700; }
+.google-auth-block { background: #0c0c0c; border: 1px solid var(--border); border-radius: 9px; display: grid; gap: 8px; justify-items: center; padding: 14px; }
+.google-button-slot { min-height: 40px; }
+.google-auth-block .form-message { margin: 0; text-align: center; }
+.auth-switch-line { color: #a5a5a5; font-size: 10px; margin: 0; text-align: center; }
+.auth-switch-line a { color: #9adcc7; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 760px) {
+  .category-grid { grid-template-columns: 1fr; }
+  .category-card { min-height: 118px; padding: 15px; }
+}

@@ -125,3 +125,12 @@ The follow-up `fix/admin-password-rotation` branch adds `POST /api/auth/password
 The candidate also uses purpose-separated HMAC-SHA-256 values for audit IP and email/IP rate-limit fingerprints. A dedicated `NANOU_AUDIT_HMAC_KEY` can be configured as a 64–128 character hosting secret; until configured, hosted environments derive a separate key from their environment-specific PostgreSQL secret, while local development uses a process-local random key. Key rotation changes the fingerprints and restarts rate-limit windows.
 
 The candidate enforces a 2 MiB request-body ceiling at the ASGI receive stream so both declared and chunked request bodies are bounded without pre-consuming the body. PR #3 remains Draft/Open until post-sync CI and security checks pass.
+
+
+## Google Sign-In and registration
+
+Google Identity Services is enabled only when `NANOU_GOOGLE_CLIENT_ID` contains the Web application OAuth client ID created in Google Cloud. Add the exact production origin `https://nanou-cyber-defense-ai.vercel.app` to the OAuth client's Authorized JavaScript origins, then set the public client ID as a Vercel environment variable for the intended deployment environments and redeploy through the reviewed release process. Do not put a client secret in browser code; this flow verifies Google ID tokens on the server using Google's signing keys and the configured audience.
+
+A first Google sign-in creates an inactive, unapproved Viewer request. An existing Google account can establish a session only when that local account is already approved and active. Google identity never creates an Admin or bypasses the existing RBAC approval process. If the client ID is absent, the login page explains that Google OAuth setup is still required and password login remains available.
+
+The public entry page shows login first. Detailed password registration is available through its explicit link. After authentication, the dashboard shows broad categories; each category loads its detail panels on demand. `GET /api/auth/providers` exposes only whether the provider is enabled and the public OAuth client ID; `POST /api/auth/google` requires the same-origin CSRF token and never stores the raw Google credential.

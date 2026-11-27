@@ -6,6 +6,8 @@ let currentUser = null;
 let configuredMalwareModel = null;
 let adminUsersCache = [];
 let adminAuditCache = [];
+let currentCategory = "home";
+const loadedCategories = new Set();
 
 const canAnalyze = () => Boolean(currentUser && ["admin", "analyst"].includes(currentUser.role));
 
@@ -49,12 +51,160 @@ function updateRoleVisibility() {
   const activeRoles = currentUser ? [currentUser.role, "authenticated"] : ["public"];
   document.querySelectorAll("[data-role-visibility]").forEach((element) => {
     const allowedRoles = element.dataset.roleVisibility.split(",").map((role) => role.trim());
-    element.hidden = !allowedRoles.some((role) => activeRoles.includes(role));
+    const allowed = allowedRoles.some((role) => activeRoles.includes(role));
+    element.dataset.roleAllowed = String(allowed);
+    element.hidden = !allowed;
   });
   document.querySelectorAll(".nav-group").forEach((group) => {
     const links = Array.from(group.querySelectorAll(".nav-link"));
     if (links.length) group.hidden = !links.some((link) => !link.hidden);
   });
+  if (currentUser) showCategory(currentCategory);
+}
+
+const CATEGORY_TITLES = {
+  home: "Accueil",
+  threat: "Threat Intelligence",
+  malware: "AI & Malware Analysis",
+  assistant: "Assistant & Tools",
+  operations: "Operations & Developer",
+  account: "Kaonty & Gouvernance",
+};
+
+function showCategory(category) {
+  if (!currentUser) return;
+  if (!Object.hasOwn(CATEGORY_TITLES, category)) category = "home";
+  if (category === "operations" && !canAnalyze()) category = "home";
+  currentCategory = category;
+  const home = byId("category-home");
+  home.hidden = category !== "home";
+  const backbar = byId("category-backbar");
+  backbar.hidden = category === "home";
+  byId("category-current-title").textContent = CATEGORY_TITLES[category] || "";
+
+  document.querySelectorAll("[data-category-view]").forEach((element) => {
+    const roleAllowed = element.dataset.roleAllowed !== "false";
+    element.hidden = element.dataset.categoryView !== category || !roleAllowed;
+  });
+  document.querySelectorAll("[data-category-target]").forEach((link) => {
+    const active = link.dataset.categoryTarget === category;
+    link.classList.toggle("active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  loadCategoryData(category);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function loadCategoryData(category) {
+  if (loadedCategories.has(category)) return;
+  loadedCategories.add(category);
+  if (category === "home") {
+    await loadHealth();
+  } else if (category === "threat") {
+    await Promise.all([loadHealth(), loadKev()]);
+  } else if (category === "malware") {
+    await Promise.all([loadMalwareModelStatus(), loadMetadata()]);
+  } else if (category === "assistant") {
+    await loadTools();
+  } else if (category === "account" && currentUser?.role === "admin") {
+    await loadAdminConsole();
+  }
+}
+
+function openRegistrationDetails(event) {
+  event.preventDefault();
+  byId("login-form").hidden = true;
+  byId("register-form").hidden = false;
+  byId("google-auth-block").hidden = true;
+  byId("register-open-link").hidden = true;
+  byId("auth-message").textContent = "Fenoy eto ny fisoratana anarana amin'ny antsipiriany. Viewer no andraikitra voalohany ary mila fankatoavan'ny Admin.";
+}
+
+function closeRegistrationDetails(event) {
+  event.preventDefault();
+  byId("register-form").hidden = true;
+  byId("login-form").hidden = false;
+  byId("google-auth-block").hidden = false;
+  byId("register-open-link").hidden = false;
+}
+
+async function handleGoogleCredential(response) {
+  const credential = response?.credential;
+  if (typeof credential !== "string" || credential.length < 20 || credential.length > 16384) {
+    byId("google-auth-status").textContent = "Tsy voaray ny Google credential. Avereno ny fidirana.";
+    return;
+  }
+  setMessage(byId("google-auth-status"), "Manamarina ny kaonty Google…");
+  try {
+    const result = await apiRequest("/api/auth/google", {
+      method: "POST",
+      body: { credential },
+    });
+    if (result.pending_approval) {
+      byId("auth-message").textContent = result.message || "Voaray ny kaonty Google. Miandry fankatoavan'ny Administrator.";
+      byId("google-auth-status").textContent = "Fangatahana voaray; mbola tsy afaka miditra raha tsy ankatoavin'ny Admin.";
+      return;
+    }
+    await loadAuth();
+  } catch (error) {
+    byId("google-auth-status").textContent = error.message || "Tsy nahomby ny fanamarinana Google.";
+  }
+}
+
+async function loadAuthProviders() {
+  const slot = byId("google-button-slot");
+  try {
+    const providers = await apiRequest("/api/auth/providers");
+    const google = providers?.google;
+    if (!google?.enabled || typeof google.client_id !== "string") {
+      byId("google-auth-status").textContent = "Google Sign-In mbola tsy voa-configurer: mila OAuth Web Client ID sy authorized origin ao amin'ny Google Cloud.";
+      return;
+    }
+    const renderGoogleButton = () => {
+      if (!window.google?.accounts?.id) {
+        byId("google-auth-status").textContent = "Tsy tafiditra ny Google Identity Services.";
+        return;
+      }
+      window.google.accounts.id.initialize({
+        client_id: google.client_id,
+        callback: handleGoogleCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      window.google.accounts.id.renderButton(slot, {
+        type: "standard",
+        theme: "filled_black",
+        size: "large",
+        text: "signup_with",
+        shape: "rectangular",
+        width: 290,
+      });
+      byId("google-auth-status").textContent = "Misorata anarana na midira amin'ny kaonty Google voamarina.";
+    };
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+      return;
+    }
+    let script = document.querySelector('script[data-google-identity="true"]');
+    if (!script) {
+      script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleIdentity = "true";
+      script.onload = renderGoogleButton;
+      script.onerror = () => {
+        byId("google-auth-status").textContent = "Tsy afaka nampiditra Google Identity Services.";
+      };
+      document.head.append(script);
+    } else {
+      script.addEventListener("load", renderGoogleButton, { once: true });
+    }
+  } catch (error) {
+    slot.replaceChildren();
+    byId("google-auth-status").textContent = error.message || "Tsy azo nohamarinina ny Google provider.";
+  }
 }
 
 function renderRoleWorkspace() {
@@ -347,8 +497,13 @@ async function loadTools() {
 }
 
 function setAuthPanels(mode) {
+  document.body.dataset.authState = currentUser ? "authenticated" : mode === "bootstrap" ? "bootstrap" : "anonymous";
   byId("bootstrap-panel").hidden = mode !== "bootstrap";
   byId("login-panel").hidden = mode !== "login";
+  byId("register-form").hidden = true;
+  byId("login-form").hidden = false;
+  byId("google-auth-block").hidden = false;
+  byId("register-open-link").hidden = false;
   byId("account-panel").hidden = mode !== "account";
   byId("admin-panel").hidden = mode !== "account" || currentUser?.role !== "admin";
   const badge = byId("user-badge");
@@ -382,13 +537,17 @@ async function loadAuth() {
       byId("account-email").textContent = currentUser.email;
       byId("account-role").textContent = currentUser.role.toUpperCase();
       byId("auth-message").textContent = "Voaaro amin'ny session manokana ny fidirana. Mikatona ho azy rehefa lany daty.";
-      await loadMetadata();
-      if (currentUser.role === "admin") await loadAdminConsole();
+      loadedCategories.clear();
+      renderRoleWorkspace();
+      updateRoleVisibility();
+      showCategory("home");
     } else if (status.bootstrap_required) {
       setAuthPanels("bootstrap");
+      updateRoleVisibility();
       byId("auth-message").textContent = "Tsy mbola misy Administrator. Ny kaonty voalohany ihany no mahazo andraikitra Admin.";
     } else {
       setAuthPanels("login");
+      updateRoleVisibility();
       byId("auth-message").textContent = "Mila miditra amin'ny kaonty voa-approve ianao. Ny fisoratana anarana vaovao dia mila fankatoavan'ny Admin.";
       byId("metadata-list").replaceChildren();
       byId("metadata-total").textContent = "0";
@@ -396,6 +555,7 @@ async function loadAuth() {
   } catch (error) {
     currentUser = null;
     setAuthPanels("login");
+    updateRoleVisibility();
     byId("auth-message").textContent = error.message || "Tsy afaka nanamarina ny kaonty. Zahao ny database connection.";
   }
 }
@@ -974,6 +1134,18 @@ byId("inference-dataset").addEventListener("change", () => {
   setMessage(byId("feature-prepare-status"), "Miova ny dataset; safidio indray ny CSV mifanaraka.");
 });
 byId("malware-inference-form").addEventListener("submit", runMalwareInference);
+byId("register-open-link").addEventListener("click", openRegistrationDetails);
+byId("register-back-link").addEventListener("click", closeRegistrationDetails);
+byId("category-back-button").addEventListener("click", () => showCategory("home"));
+document.querySelectorAll("[data-category-target]").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    showCategory(link.dataset.categoryTarget);
+  });
+});
+document.querySelectorAll("[data-open-category]").forEach((button) => {
+  button.addEventListener("click", () => showCategory(button.dataset.openCategory));
+});
 
 async function initializePlatform() {
   renderCvePlaceholder();
@@ -983,7 +1155,7 @@ async function initializePlatform() {
     byId("auth-message").textContent = error.message || "Tsy azo namboarina ny CSRF session.";
   }
   await loadAuth();
-  await Promise.all([loadHealth(), loadKev(), loadTools(), loadMalwareModelStatus()]);
+  await loadAuthProviders();
 }
 
 initializePlatform();

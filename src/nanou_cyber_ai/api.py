@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -14,7 +15,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,6 +36,7 @@ from nanou_cyber_ai.models import (
     AuthPasswordChangeIn,
     AuthRegisterIn,
     DeveloperApiKeyCreateIn,
+    GoogleSignInIn,
     MalwareInferenceIn,
     MalwareInferenceResult,
     MalwareMetadata,
@@ -348,9 +350,11 @@ async def secure_request_middleware(request: Request, call_next):
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; "
-        "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
-        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; "
+        "style-src 'self'; img-src 'self' data:; font-src 'self'; "
+        "connect-src 'self' https://accounts.google.com/gsi/; "
+        "frame-src https://accounts.google.com/gsi/; object-src 'none'; "
+        "base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     )
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -385,6 +389,124 @@ async def readiness() -> dict:
             status_code=503,
             detail="Durable database is not configured or unavailable.",
         ) from None
+
+
+def _verify_google_identity(credential: str) -> dict[str, str]:
+    """Verify a Google Identity Services ID token using Google's trusted keys."""
+    client_id = settings.google_client_id
+    if not client_id:
+        raise HTTPException(status_code=503, detail="Google Sign-In is not configured.")
+    try:
+        from google.auth.transport.requests import Request as GoogleRequest
+        from google.oauth2 import id_token
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Google Sign-In verification support is unavailable.",
+        ) from exc
+
+    try:
+        claims = id_token.verify_oauth2_token(credential, GoogleRequest(), client_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Google credential is invalid or expired.",
+        ) from exc
+
+    issuer = claims.get("iss")
+    subject = claims.get("sub")
+    email = claims.get("email")
+    if (
+        issuer not in {"accounts.google.com", "https://accounts.google.com"}
+        or not isinstance(subject, str)
+        or not 1 <= len(subject) <= 255
+        or not isinstance(email, str)
+        or len(email) > 320
+        or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+        or claims.get("email_verified") is not True
+    ):
+        raise HTTPException(status_code=401, detail="Google account identity is not verified.")
+
+    display_name = claims.get("name")
+    if not isinstance(display_name, str) or not display_name.strip():
+        display_name = email.split("@", 1)[0]
+    display_name = " ".join(display_name.split())[:100]
+    if len(display_name) < 2:
+        display_name = "Google User"
+    return {"subject": subject, "email": email.strip().lower(), "display_name": display_name}
+
+
+@app.get("/api/auth/providers")
+async def auth_providers() -> dict:
+    return {
+        "google": {
+            "enabled": bool(settings.google_client_id),
+            "client_id": settings.google_client_id if settings.google_client_id else None,
+        }
+    }
+
+
+@app.post("/api/auth/google", response_model=None)
+async def google_sign_in(
+    item: GoogleSignInIn,
+    request: Request,
+    response: Response,
+) -> dict | JSONResponse:
+    identity = _verify_google_identity(item.credential)
+    store = get_auth_store()
+    if store.bootstrap_available():
+        raise HTTPException(
+            status_code=409,
+            detail="The initial administrator must be created before Google registration.",
+        )
+    _check_rate_limit(store, request, identity["email"], "auth.google")
+    user = store.get_user_by_email(identity["email"])
+
+    if user is None:
+        try:
+            pending_user = store.register(
+                email=identity["email"],
+                display_name=identity["display_name"],
+                password_hash=hash_password(secrets.token_urlsafe(48)),
+                request_id=_request_id(request),
+                ip_digest=_ip_digest(request),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return JSONResponse(
+            status_code=202,
+            content={
+                "authenticated": False,
+                "pending_approval": True,
+                "user": pending_user,
+                "message": "Google account received. An administrator must approve this Viewer account.",
+            },
+        )
+
+    if not user["is_approved"] or not user["is_active"]:
+        store.record_event(
+            actor_user_id=user["id"],
+            action="auth.google_login",
+            target_type="user",
+            target_id=user["id"],
+            outcome="pending_or_disabled",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=403, detail="This account is pending approval or disabled.")
+
+    _session_token(request, response, store, user["id"])
+    store.record_event(
+        actor_user_id=user["id"],
+        action="auth.google_login",
+        target_type="user",
+        target_id=user["id"],
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    public_user = {key: value for key, value in user.items() if key != "password_hash"}
+    return {"authenticated": True, "user": public_user}
 
 
 @app.get("/api/auth/csrf")

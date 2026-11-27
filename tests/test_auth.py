@@ -875,3 +875,119 @@ def test_admin_bridge_is_revoked_when_owner_role_or_active_state_changes(tmp_pat
     assert demoted["role"] == "viewer"
     assert store.get_admin_bridge_principal(bridge_hash) is None
     database.close()
+
+
+
+def test_google_provider_is_disabled_until_a_web_client_id_is_configured(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "google_client_id", None)
+
+    with TestClient(app) as client:
+        response = client.get("/api/auth/providers")
+
+    assert response.status_code == 200
+    assert response.json() == {"google": {"enabled": False, "client_id": None}}
+
+
+def test_google_signup_creates_pending_viewer_then_approved_user_can_sign_in(
+    monkeypatch, tmp_path
+) -> None:
+    import nanou_cyber_ai.api as api_module
+
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "auth_attempts_per_window", 50)
+    monkeypatch.setattr(
+        settings,
+        "google_client_id",
+        "test-web-client.apps.googleusercontent.com",
+    )
+    monkeypatch.setattr(
+        settings,
+        "bootstrap_token",
+        SecretStr("test-bootstrap-token-long-enough-1234567890"),
+    )
+    monkeypatch.setattr(
+        api_module,
+        "_verify_google_identity",
+        lambda credential: {
+            "subject": "google-subject-123456789",
+            "email": "google-user@example.test",
+            "display_name": "Google Example User",
+        },
+    )
+
+    with TestClient(app) as admin_client:
+        admin_csrf = _csrf(admin_client)
+        bootstrap = admin_client.post(
+            "/api/auth/bootstrap",
+            headers={"X-CSRF-Token": admin_csrf},
+            json={
+                "email": "admin@example.test",
+                "display_name": "First Admin",
+                "password": "Correct-Horse-Battery-42!",
+                "bootstrap_token": "test-bootstrap-token-long-enough-1234567890",
+            },
+        )
+        assert bootstrap.status_code == 200
+        google_user = admin_client.get("/api/auth/providers")
+        assert google_user.json()["google"]["enabled"] is True
+
+        with TestClient(app) as google_client:
+            google_csrf = _csrf(google_client)
+            registration = google_client.post(
+                "/api/auth/google",
+                headers={"X-CSRF-Token": google_csrf},
+                json={"credential": "signed-google-id-token-for-test-only"},
+            )
+            assert registration.status_code == 202
+            assert registration.json()["pending_approval"] is True
+            assert registration.json()["user"]["role"] == "viewer"
+            assert registration.json()["user"]["is_approved"] is False
+            assert google_client.get("/api/auth/me").json()["authenticated"] is False
+
+            approval = admin_client.patch(
+                f"/api/admin/users/{registration.json()['user']['id']}",
+                headers={"X-CSRF-Token": admin_csrf},
+                json={"role": "analyst", "is_active": True},
+            )
+            assert approval.status_code == 200
+
+            login = google_client.post(
+                "/api/auth/google",
+                headers={"X-CSRF-Token": google_csrf},
+                json={"credential": "signed-google-id-token-for-test-only"},
+            )
+            assert login.status_code == 200
+            assert login.json()["authenticated"] is True
+            assert login.json()["user"]["role"] == "analyst"
+            assert google_client.get("/api/auth/me").json()["authenticated"] is True
+
+
+def test_google_signin_rejects_unverified_identity(monkeypatch, tmp_path) -> None:
+    from fastapi import HTTPException
+
+    import nanou_cyber_ai.api as api_module
+
+    monkeypatch.setattr(settings, "database_url", None)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(
+        settings,
+        "google_client_id",
+        "test-web-client.apps.googleusercontent.com",
+    )
+
+    def reject_unverified(_credential: str) -> dict[str, str]:
+        raise HTTPException(status_code=401, detail="Google account identity is not verified.")
+
+    monkeypatch.setattr(api_module, "_verify_google_identity", reject_unverified)
+    with TestClient(app) as client:
+        csrf = _csrf(client)
+        response = client.post(
+            "/api/auth/google",
+            headers={"X-CSRF-Token": csrf},
+            json={"credential": "invalid-or-unverified-google-token"},
+        )
+
+    assert response.status_code == 401

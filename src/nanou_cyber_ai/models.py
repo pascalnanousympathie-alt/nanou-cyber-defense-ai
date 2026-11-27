@@ -120,6 +120,12 @@ class AuthRegisterIn(AuthAccountIn):
     pass
 
 
+class GoogleSignInIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    credential: str = Field(min_length=20, max_length=16_384)
+
+
 class AuthLoginIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
