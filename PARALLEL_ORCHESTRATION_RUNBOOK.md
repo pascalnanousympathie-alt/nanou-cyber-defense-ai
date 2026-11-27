@@ -2,6 +2,14 @@
 
 Last verified: 2026-11-27 (UTC)
 
+## Latest continuation — Google button polish — 2026-11-27
+
+- UI source commit `aa6ef7fcfb30cd2e3b653dd1084bbf6e1e450af9` changes only the PR #18 feature branch. Keep the provider-controlled Google GIS iframe and branding; do not replace it with a fake Google button.
+- GIS options: `filled_black`, `large`, `pill`, `logo_alignment: left`, width 300. The original Nanou frame uses emerald glass and champagne-gold detailing with responsive and reduced-motion support.
+- Tests on this code: premium Google UI **1 passed**; Google/Auth **5 passed, 15 deselected**; Node syntax, Python compileall and `git diff --check` PASS.
+- `NANOU_GOOGLE_CLIENT_ID` remains absent from Vercel Preview. Real provider sign-in is blocked until the owner configures the public OAuth Web Client ID and the exact Preview origin. No Google Client Secret is needed in browser code.
+- Previous READY deployment `dpl_DuFj3kBATf2MzLNBrQnJnSfWaaE4` is on prior SHA `c4733a9`; verify the new branch Preview and required checks after push. No Production deployment or merge is authorized.
+
 ## Current PR #18 OAuth Preview and security handoff — 2026-11-27
 
 - Work only in `feat/auth-google-category-home-20261127`; verified head `84437293a544496935f3fe09ed74cc6d972425aa`; PR #18 remains Draft/Open and unmerged.

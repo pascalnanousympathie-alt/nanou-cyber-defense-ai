@@ -2,6 +2,15 @@
 
 Last verified: 2026-11-27 (UTC)
 
+## Latest continuation — premium Google Sign-In presentation — 2026-11-27
+
+- UI source commit: `aa6ef7fcfb30cd2e3b653dd1084bbf6e1e450af9` on `feat/auth-google-category-home-20261127`; the existing PR #18 remains the only target branch.
+- Login and account-link panels now use a premium emerald/glass and champagne-gold frame, Nanou monogram, secure-identity label, responsive spacing and reduced-motion-safe hover treatment. The interactive control remains Google's official Identity Services button (`filled_black`, large pill, left logo, 300 px width); no imitation button was added.
+- Local checks on this exact code: `tests/test_web_platform.py::test_login_first_google_signup_link_and_category_home_are_served` — **1 passed**; `tests/test_auth.py -k google` — **5 passed, 15 deselected**; `node --check`, `python -m compileall -q src tests`, and `git diff --check` — PASS.
+- Previous READY Preview deployment `dpl_DuFj3kBATf2MzLNBrQnJnSfWaaE4` is on prior SHA `c4733a9f159370c2654eec787e6d55303468e241`; the new UI commit still needs to be pushed and its Git-linked Preview / exact-head checks verified.
+- Vercel Preview environment still lacks `NANOU_GOOGLE_CLIENT_ID`. The premium card is implemented, but real Google Sign-In remains disabled until a Google OAuth Web Client ID and the authorized Preview origin are configured. No Google credential, Production environment, user/session, or role was changed.
+- No merge to `main`, Production deployment, Production database/configuration or SSO change was made.
+
 ## Current PR #18 Preview verification — 2026-11-27
 
 This addendum supersedes older PR #18, Google Sign-In, and branch-preview notes below. Production state is unchanged.

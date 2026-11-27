@@ -55,6 +55,16 @@ An authenticated Admin may create a one-time Termux pairing code from the accoun
 
 The bridge exposes only Admin identity, user-list and audit-list reads, at 30 requests per minute. It cannot approve users, change roles, disable accounts, modify metadata, access Developer API functions, or perform arbitrary host operations. A new pairing revokes earlier bridge/pairing tokens for that Admin; password rotation and role/active changes also revoke the bridge. The local helper accepts only ping, whoami, users and audit over a 0600 Unix socket in a dedicated 0700 directory under the Termux home folder. See [Admin-to-Termux pairing](admin-session-pairing.md).
 
+## Google Sign-In and account linking
+
+The login page offers optional Google Identity Services sign-in. The official Google button is shown only when `/api/auth/providers` reports Google enabled and both the configured client ID and `google_identities` storage are ready. Its surrounding Nanou presentation is custom; Google's interactive button and brand remain provider-controlled.
+
+- `GET /api/auth/providers` reports whether the client ID and identity storage are ready.
+- `POST /api/auth/google` verifies the ID token server-side against the configured client ID, Google issuer and verified email. A new identity is an inactive, unapproved Viewer and receives no session until an Admin approves it. Existing password accounts are not linked automatically.
+- `GET /api/auth/google/status` and `POST /api/auth/google/link` require authentication. Linking requires a matching verified Google email and rejects an identity already linked elsewhere.
+
+For PR #18 Preview, add the Google OAuth Web Client's Authorized JavaScript origin `https://nanou-cyber-defense-ai-git-feat-auth-google-categ-90207d-nanou3.vercel.app` and set its public Client ID only in Vercel Preview `NANOU_GOOGLE_CLIENT_ID`. Keep Production OAuth separate until release approval. This GIS ID-token flow does not require a Google Client Secret in browser code. Never store provider secrets in Git, HTML, JavaScript, browser storage or chat.
+
 ## Local development
 
 ~~~bash
