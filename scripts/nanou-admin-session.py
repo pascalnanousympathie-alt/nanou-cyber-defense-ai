@@ -5,6 +5,7 @@ The pairing code is entered with getpass, exchanged over HTTPS, and never
 persisted or printed. The resulting bearer token stays in memory and is
 exposed only through a private 0600 Unix socket with fixed read-only actions.
 """
+
 from __future__ import annotations
 
 import getpass
