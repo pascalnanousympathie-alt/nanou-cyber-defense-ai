@@ -877,7 +877,6 @@ def test_admin_bridge_is_revoked_when_owner_role_or_active_state_changes(tmp_pat
     database.close()
 
 
-
 def test_google_provider_disabled_without_client_id(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
