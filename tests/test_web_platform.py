@@ -62,7 +62,7 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
     assert 'data-category-view="assistant"' in response.text
     assert 'data-category-view="operations"' in response.text
     assert 'data-category-view="account"' in response.text
-    assert "Tabletop simulation" in response.text
+    assert "AUTHORIZED RED TEAM · TABLETOP" in response.text
     assert "AI Chat Command Center" in response.text
     assert 'href="#vulnerabilities"' in response.text
     assert 'href="#malware-model"' in response.text
