@@ -998,7 +998,6 @@ def test_google_signin_rejects_unverified_identity(monkeypatch, tmp_path) -> Non
     assert response.status_code == 401
 
 
-
 def test_existing_password_account_requires_explicit_google_link(monkeypatch, tmp_path) -> None:
     import nanou_cyber_ai.api as api_module
 

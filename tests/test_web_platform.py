@@ -99,8 +99,7 @@ def test_role_based_workspace_and_navigation_are_scoped_by_role() -> None:
 
     assert home.status_code == 200
     assert (
-        'id="role-workspace" data-category-view="account" '
-        'data-role-visibility="authenticated"'
+        'id="role-workspace" data-category-view="account" data-role-visibility="authenticated"'
     ) in home.text
     assert 'data-role-visibility="admin,analyst"' in home.text
     assert 'data-role-visibility="admin"' in home.text

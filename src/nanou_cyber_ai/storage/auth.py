@@ -261,11 +261,15 @@ class AuthStore:
             google_identities.c.user_id == users.c.id,
         )
         with self.database.engine.connect() as connection:
-            row = connection.execute(
-                select(users)
-                .select_from(identity_join)
-                .where(google_identities.c.google_subject == subject)
-            ).mappings().first()
+            row = (
+                connection.execute(
+                    select(users)
+                    .select_from(identity_join)
+                    .where(google_identities.c.google_subject == subject)
+                )
+                .mappings()
+                .first()
+            )
         return public_user(row) if row is not None else None
 
     def has_google_identity(self, user_id: str) -> bool:
@@ -322,9 +326,11 @@ class AuthStore:
                     request_id=request_id,
                     ip_digest=ip_digest,
                 )
-                row = connection.execute(
-                    select(users).where(users.c.id == user_id)
-                ).mappings().one()
+                row = (
+                    connection.execute(select(users).where(users.c.id == user_id))
+                    .mappings()
+                    .one()
+                )
         except IntegrityError as exc:
             raise ValueError(
                 "The Google identity or email is already linked to an account."
