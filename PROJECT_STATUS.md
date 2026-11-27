@@ -274,3 +274,45 @@ Read-only verification against Production project cold-resonance-28231813, branc
 - Production default ACLs owned by `nanou_migration_owner` are present: new tables grant `nanou_runtime` DML and `nanou_backup` SELECT; new sequences grant `nanou_runtime` SELECT/USAGE and `nanou_backup` SELECT.
 - Aggregate privilege check over all 9 Production tables and 2 sequences: `nanou_runtime` has DML and sequence access but no TRUNCATE/TRIGGER/REFERENCES excess; `nanou_backup` has SELECT-only table access. `nanou_app` still owns the database and all 9 tables and retains elevated role attributes/memberships.
 - This is role/membership/default-ACL preparation evidence, not ownership-transfer evidence. No Production DDL, owner change, grant change, credential retirement or deployment was performed. The complete ownership cutover and rollback window remain outstanding.
+
+
+
+## Verified live snapshot — 2026-11-27 11:17 UTC
+
+This time-bounded snapshot supersedes earlier entries above wherever they conflict. Historical entries are retained as history, not current state.
+
+### GitHub and Production
+
+- Repository: public; authenticated GitHub account has repository admin permission. Default branch is `main`.
+- Current main commit: `6e2a71495fa4292f32f5f7cd86886ce16769a249` (merge of PR #16).
+- Merged PRs relevant to current state: #11, #12, #13, #14, #15 and #16. PR #16 changes only `.github/workflows/production-backup.yml`, pinning `actions/upload-artifact` to verified upstream v7.0.2 commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`; upstream `action.yml` declares `node24`.
+- Production Vercel deployment: `dpl_9DDJZhMbCLKbsrSPvSUHkqoEjsu1`, state READY, exact main commit above. Live Opera checks returned `/health` HTTP 200 (`status=ok`) and `/ready` HTTP 200 (`status=ready, database=postgresql`). The inspected 30-minute runtime-error query returned no errors.
+- GitHub inventory on 2026-11-27: Dependabot open alerts = 0; Code Scanning open alerts = 0. This describes open alerts only, not dismissed/fixed history.
+- PR #16 checks on its exact pre-merge head: CI PASS (tests, Ruff, dependency audit, ML smoke); Security PASS (Gitleaks, CodeQL Python and JavaScript/TypeScript); Vercel Preview READY. Its merge SHA is the current main SHA above.
+
+### Backup automation and artifacts
+
+- Workflow `Production database backup` is active on `main`; cron remains `43 2 * * * UTC`. There were no `schedule` event runs in the Actions history queried at 2026-11-27 11:17 UTC. PR #13 merged after the 2026-11-27 02:43 UTC schedule time, so the next expected scheduled run is 2026-11-28 02:43 UTC (05:43 Madagascar time). Do not mark cron PASS until that scheduled event and its encrypted artifact are observed.
+- Manual run [45988184203](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45988184203), on main commit `e412b465acae518422c90707a9747bdf9bb410fa`, completed successfully. Artifact ID `15192476618`, name `nanou-production-backup-45988184203`, size 27,794 bytes, retention through 2026-12-27. GitHub ZIP digest and encrypted payload sidecar checksum were verified. Authenticated decryption/full restore of this exact artifact was not independently re-run in this verification window.
+- Manual run [45989048704](https://github.com/pascalnanousympathie-alt/nanou-cyber-defense-ai/actions/runs/45989048704), on the current main merge commit `6e2a71495fa4292f32f5f7cd86886ce16769a249`, completed successfully with the Node.js 24 upload action. Artifact ID `15193675094`, size 28,267 bytes, digest `sha256:d0d32cf417029848dae36469e4ee4ab6b0d23098d10c55a49817eb61a6611cbb`, expires 2026-12-27 11:16 UTC. ZIP digest and encrypted payload sidecar checksum both PASS. Authenticated decryption/full restore of this exact artifact remains NOT VERIFIED.
+- The post-merge run log no longer contains the prior Node.js 20 deprecation warning for `actions/upload-artifact`. No workflow trigger, retention, backup permissions, or encryption parameters changed in PR #16.
+
+### Neon Production metadata and role evidence
+
+- Neon project `cold-resonance-28231813`; default branch `main`, ID `br-damp-fog-bi0lzjf4`, state READY.
+- Neon management metadata for database `nanou_cyber_defense` reports database owner `nanou_migration_owner`, updated 2026-11-27 05:35:11 UTC. This confirms the database owner metadata only; it does not independently prove ownership of all 9 application tables and 2 sequences.
+- Direct SQL catalog verification of table/sequence owners, role memberships and grants was unavailable in this verification window because the Neon SQL connector reported missing database authentication credentials. Do not infer object ownership or grant state from the database-owner metadata.
+- The default Neon Production branch still reports `protected=false`. A read-only-scope protection request was rejected with HTTP 422 because the current Free plan has reached its protected-branch limit. No plan upgrade, unprotection of another branch, or data change was made.
+
+### Accounts, bridge and recovery
+
+- Production account inventory currently shows one active, approved ADMIN account and no Viewer/Analyst accounts. Live Viewer/Analyst RBAC acceptance remains pending; no synthetic Production users were created.
+- The Opera-to-Termux bridge is read-only. The local Unix socket mode is `0600`; `ping`, `whoami`, `users` and `audit` checks passed. Vercel SSO remains enabled; no password, browser cookie or secret was copied into chat or GitHub.
+- The original backup private key remains locally protected with mode `0600`. A second independent offline copy on removable/offline media remains NOT VERIFIED. Ordinary Android shared storage is not an acceptable substitute.
+
+### Open PR branch health
+
+- PR #3 branch comparison against current main: 3 commits ahead / 121 behind; its remaining unique changes are limited to documentation/security-workflow files. It is stacked on an older base and is not safe to merge as-is.
+- PR #4 branch comparison: 0 commits ahead / 116 behind; no unique changes remain relative to current main. Do not merge it.
+- PR #9 branch comparison: 42 commits ahead / 203 behind; its five-file migration-runner proposal is based on an old branch. It must not be merged directly. Before a fresh-main PR, strengthen and test migration-login membership validation, transaction-control protection, and immutable migration-history checks; keep Production hard-blocked.
+- PR #2 remains an unrelated open Draft. Do not combine it with backup, authentication or database-hardening work.
