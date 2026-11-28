@@ -372,33 +372,49 @@ async function apiRequest(path, options = {}) {
       ? { "Content-Type": "application/json" }
       : {}),
   };
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    if (!csrfToken) await ensureCsrf();
-    headers["X-CSRF-Token"] = csrfToken;
-  }
   const body = options.rawBody !== undefined
     ? options.rawBody
     : options.body !== undefined
       ? JSON.stringify(options.body)
       : undefined;
-  const response = await fetch(path, {
-    method,
-    headers,
-    body,
-    credentials: "same-origin",
-    cache: "no-store",
-    redirect: "error",
-  });
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
+  const sendRequest = () => {
+    const requestHeaders = { ...headers };
+    if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+      requestHeaders["X-CSRF-Token"] = csrfToken;
+    }
+    return fetch(path, {
+      method,
+      headers: requestHeaders,
+      body,
+      credentials: "same-origin",
+      cache: "no-store",
+      redirect: "error",
+    });
+  };
+  const readPayload = async (response) => {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  };
+  if (!["GET", "HEAD", "OPTIONS"].includes(method) && !csrfToken) {
+    await ensureCsrf();
+  }
+  let response = await sendRequest();
+  let payload = await readPayload(response);
+  const csrfRejected = response.status === 403
+    && typeof payload?.detail === "string"
+    && payload.detail.startsWith("CSRF validation failed.");
+  const repeatableBody = options.rawBody === undefined || typeof options.rawBody === "string";
+  if (csrfRejected && method !== "GET" && repeatableBody) {
+    // Another same-origin tab may have rotated the shared CSRF cookie.
+    // Refresh once and retry this request once; never retry auth/permission failures.
+    await ensureCsrf();
+    response = await sendRequest();
+    payload = await readPayload(response);
   }
   if (!response.ok) {
-    if (response.status === 403 && payload?.detail?.startsWith("CSRF") && method !== "GET") {
-      await ensureCsrf();
-    }
     const detail = typeof payload?.detail === "string" ? payload.detail : `HTTP ${response.status}`;
     throw new Error(detail);
   }
