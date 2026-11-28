@@ -877,6 +877,14 @@ def test_admin_bridge_is_revoked_when_owner_role_or_active_state_changes(tmp_pat
     database.close()
 
 
+def test_google_id_token_transport_imports() -> None:
+    from google.auth.transport.requests import Request
+    from google.oauth2 import id_token
+
+    assert Request is not None
+    assert callable(id_token.verify_oauth2_token)
+
+
 def test_google_provider_disabled_without_client_id(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(settings, "database_url", None)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
