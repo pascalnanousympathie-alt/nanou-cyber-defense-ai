@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="mg" data-theme="dark">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/assets/attack-simulation.css">
   <script src="/assets/app.js" defer></script>
 </head>
-<body>
+<body data-auth-state="checking">
   <div class="app-shell">
     <aside class="sidebar" aria-label="Fikarohana">
       <a class="brand" href="/" aria-label="Nanou Cyber Defense — pejy fandraisana">
@@ -23,59 +23,31 @@
         </span>
       </a>
 
-      <div class="nav-caption">SECURE WORKSPACE</div>
+      <div class="nav-caption" data-i18n="workspace">ESPACE SÉCURISÉ</div>
       <nav class="side-nav" aria-label="Navigation principale">
-        <div class="nav-group">
-          <span class="nav-group-label">Vue générale</span>
-          <a class="nav-link active" href="#overview" aria-current="page"><span aria-hidden="true">◈</span> Topimaso</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">Accès &amp; gouvernance</span>
-          <a class="nav-link" href="#account"><span aria-hidden="true">♙</span> Kaonty sy rôles</a>
-          <a class="nav-link" href="#account" data-role-visibility="admin"><span aria-hidden="true">⚙</span> Fitantanana sy audit</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">AI WORKSPACE</span>
-          <a class="nav-link" href="#assistant-chat" data-role-visibility="authenticated"><span aria-hidden="true">✧</span> Assistant workspace</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">Threat intelligence</span>
-          <a class="nav-link" href="#vulnerabilities"><span aria-hidden="true">⌕</span> CVE · NVD</a>
-          <a class="nav-link" href="#kev"><span aria-hidden="true">◉</span> CISA KEV</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">STATIC ANALYSIS LAB</span>
-          <a class="nav-link" href="#malware-model" data-role-visibility="admin,analyst"><span aria-hidden="true">✳</span> Static feature analysis</a>
-          <a class="nav-link" href="#metadata" data-role-visibility="authenticated"><span aria-hidden="true">⬡</span> Hash &amp; threat metadata</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">DEFENSIVE SIMULATIONS</span>
-          <a class="nav-link" href="#attack-simulation" data-role-visibility="admin,analyst"><span aria-hidden="true">◉</span> Tabletop simulation</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">Intégrations</span>
-          <a class="nav-link" href="#tools"><span aria-hidden="true">⛨</span> MCP tools</a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-group-label">DEVELOPER CONSOLE</span>
-          <a class="nav-link" href="#developer" data-role-visibility="admin,analyst"><span aria-hidden="true">⌘</span> Developer Center</a>
-        </div>
+        <div class="nav-group"><a class="nav-link active" href="#overview" data-category-target="home"><span aria-hidden="true">⌂</span> <span data-i18n="home">Accueil</span></a></div>
+        <div class="nav-group"><a class="nav-link" href="#vulnerabilities" data-category-target="threat"><span aria-hidden="true">◈</span> <span data-i18n="threat">Threat Intelligence</span></a></div>
+        <div class="nav-group"><a class="nav-link" href="#malware-model" data-category-target="malware"><span aria-hidden="true">✳</span> <span data-i18n="malware">IA et malwares</span></a></div>
+        <div class="nav-group"><a class="nav-link" href="#assistant-chat" data-category-target="assistant"><span aria-hidden="true">✧</span> <span data-i18n="assistant">Assistant et outils</span></a></div>
+        <div class="nav-group"><a class="nav-link" href="#attack-simulation" data-category-target="operations" data-role-visibility="admin,analyst"><span aria-hidden="true">⛨</span> <span data-i18n="operations">Opérations et développement</span></a></div>
+        <div class="nav-group"><a class="nav-link" href="#account" data-category-target="account"><span aria-hidden="true">♙</span> <span data-i18n="account">Compte</span></a></div>
       </nav>
 
       <div class="sidebar-bottom">
         <span class="status-led"></span>
-        <div><strong>Defensive mode</strong><small>Famakafakana sy fiarovana ihany</small></div>
+        <div><strong data-i18n="defensiveMode">Defensive mode</strong><small data-i18n="defensiveModeSub">Famakafakana sy fiarovana ihany</small></div>
       </div>
     </aside>
 
     <main class="main-content" id="overview">
       <header class="topbar">
         <div>
-          <p class="eyebrow">SECURITY OPERATIONS CENTER</p>
-          <h1>Foibe fiarovana</h1>
+          <p class="eyebrow" data-i18n="soc">CENTRE DES OPÉRATIONS DE SÉCURITÉ</p>
+          <h1 data-i18n="title">Centre de cybersécurité</h1>
         </div>
-        <div class="topbar-actions">
-          <div class="theme-pill" aria-label="Affichage noir professionnel"><span aria-hidden="true">◐</span><span>Noir profond</span></div>
+        <div class="topbar-actions"><label class="locale-control" for="language-select"><span aria-hidden="true">◎</span><span class="sr-only">Langue</span><select id="language-select" aria-label="Langue"><option value="fr" selected>Français</option><option value="en">English</option><option value="mg">Malagasy</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="ar">العربية</option><option value="zh">中文</option><option value="ja">日本語</option><option value="hi">हिन्दी</option><option value="ru">Русский</option></select></label>
+
+          <div class="theme-pill" aria-label="Affichage noir professionnel"><span aria-hidden="true">◐</span><span data-i18n="theme">Noir profond</span></div>
           <div class="api-status" id="api-status" data-state="loading" role="status" aria-live="polite">
             <span class="status-dot"></span><span id="api-status-text">Manamarina ny API…</span>
           </div>
@@ -83,14 +55,14 @@
         </div>
       </header>
 
-      <section class="hero-card">
+      <section class="hero-card" data-category-view="home">
         <div class="hero-copy">
           <span class="hero-kicker">NANOÛ // CYBER DEFENSE AI</span>
-          <h2>Fantaro aloha ny loza.<br><em>Arovy ny rafitrao.</em></h2>
-          <p>Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
+          <h2><span data-i18n="heroTitle">Fantaro aloha ny loza.</span><br><em data-i18n="heroEmphasis">Arovy ny rafitrao.</em></h2>
+          <p data-i18n="heroDescription">Sehatra web iray hanaraha-maso ny faharefoana, ny threat intelligence ary ny famantarana malware amin'ny alalan'ny angona voamarina.</p>
           <div class="hero-actions">
-            <a class="primary-link" href="#vulnerabilities">Hanomboka hijery <span aria-hidden="true">→</span></a>
-            <a class="hero-secondary-link" href="#kev">Hizaha ny CISA KEV <span aria-hidden="true">↗</span></a>
+            <a class="primary-link" href="#vulnerabilities"><span data-i18n="heroStart">Hanomboka hijery</span> <span aria-hidden="true">→</span></a>
+            <a class="hero-secondary-link" href="#kev"><span data-i18n="heroKev">Hizaha ny CISA KEV</span> <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="hero-graphic" aria-hidden="true">
@@ -101,78 +73,93 @@
           <span class="graphic-node node-two"></span>
           <span class="graphic-node node-three"></span>
         </div>
-        <div class="hero-foot"><span class="hero-foot-dot"></span> Fiarovana azo arahina sy azo hamarinina <span class="hero-foot-divider">•</span> Defensive operations only</div>
+        <div class="hero-foot"><span class="hero-foot-dot"></span> <span data-i18n="heroFoot">Fiarovana azo arahina sy azo hamarinina</span> <span class="hero-foot-divider">•</span> Defensive operations only</div>
       </section>
 
 
-      <section class="panel auth-panel" id="account">
+      <section class="panel auth-panel" id="account" data-category-view="account">
+        <div class="auth-locale-row"><label class="locale-control" for="auth-language-select"><span aria-hidden="true">◎</span><span class="sr-only">Langue</span><select id="auth-language-select" aria-label="Langue de connexion"><option value="fr" selected>Français</option><option value="en">English</option><option value="mg">Malagasy</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="ar">العربية</option><option value="zh">中文</option><option value="ja">日本語</option><option value="hi">हिन्दी</option><option value="ru">Русский</option></select></label></div>
         <div class="panel-heading">
-          <div><span class="panel-icon auth-icon">♙</span><div><h3>Kaonty sy fidirana</h3><p>Kaonty manokana, session azo esorina ary andraikitra voafetra.</p></div></div>
+          <div><span class="panel-icon auth-icon">♙</span><div><h3 data-i18n="loginTitle">Connexion et compte</h3><p data-i18n="loginSub">Compte sécurisé, sessions révocables et accès par rôle.</p></div></div>
           <span id="auth-state-pill" class="count-pill">Manamarina…</span>
         </div>
-        <div id="auth-message" class="auth-message" role="status" aria-live="polite">Manamarina ny fiarovana sy ny kaonty…</div>
+        <div id="auth-message" class="auth-message" role="status" aria-live="polite">Vérification de la sécurité et du compte…</div>
 
         <div id="bootstrap-panel" class="auth-form-grid" hidden>
-          <div class="auth-intro"><strong>Fametrahana voalohany — Administrator</strong><p>Ny kaonty voalohany ihany no mahazo Admin. Ampidiro eto ny tenimiafinao manokana; tsy ho hita amin'ny tompon'andraikitra na amin'ny audit log izany.</p></div>
+          <div class="auth-intro"><strong data-i18n="initialAdmin">Configuration initiale — Administrateur</strong><p data-i18n="initialAdminHelp">Seul le premier compte peut obtenir le rôle Administrateur. Saisissez votre mot de passe ici ; il ne sera jamais affiché dans les journaux.</p></div>
           <form id="bootstrap-form" class="auth-form">
-            <div class="field"><label for="bootstrap-name">Anarana</label><input id="bootstrap-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="bootstrap-name" data-i18n="fullName">Nom complet</label><input id="bootstrap-name" minlength="2" maxlength="100" autocomplete="name" required></div>
             <div class="field"><label for="bootstrap-email">Email</label><input id="bootstrap-email" type="email" maxlength="320" autocomplete="email" required></div>
-            <div class="field"><label for="bootstrap-password">Tenimiafina Admin (12+ caractères)</label><input id="bootstrap-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><label for="bootstrap-token">Token bootstrap manokana</label><input id="bootstrap-token" type="password" minlength="32" maxlength="256" autocomplete="off" required><small class="field-hint">NANOU_BOOTSTRAP_TOKEN napetraky ny tompon'andraikitra ao amin'ny hosting secret manager. Aza zaraina na tehirizina amin'ny navigateur.</small></div>
-            <div class="field"><button class="button button-primary" type="submit">Hamorona Administrator</button></div>
+            <div class="field"><label for="bootstrap-password" data-i18n="bootstrapPassword">Mot de passe administrateur (12 caractères minimum)</label><input id="bootstrap-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><label for="bootstrap-token" data-i18n="bootstrapToken">Token bootstrap manokana</label><input id="bootstrap-token" type="password" minlength="32" maxlength="256" autocomplete="off" required><small class="field-hint" data-i18n="bootstrapTokenHint">NANOU_BOOTSTRAP_TOKEN napetraky ny tompon'andraikitra ao amin'ny hosting secret manager. Aza zaraina na tehirizina amin'ny navigateur.</small></div>
+            <div class="field"><button class="button button-primary" type="submit" data-i18n="createAdmin">Créer le compte administrateur</button></div>
           </form>
         </div>
 
         <div id="login-panel" class="auth-form-grid" hidden>
           <form id="login-form" class="auth-form">
-            <strong>Hiditra</strong>
-            <div class="field"><label for="login-email">Email</label><input id="login-email" type="email" maxlength="320" autocomplete="username" required></div>
-            <div class="field"><label for="login-password">Tenimiafina</label><input id="login-password" type="password" maxlength="128" autocomplete="current-password" required></div>
-            <div class="field"><button class="button button-primary" type="submit">Hiditra amin'ny kaonty</button></div>
+            <strong data-i18n="login">Connexion</strong>
+            <div class="field"><label for="login-email" data-i18n="email">Adresse e-mail</label><input id="login-email" type="email" maxlength="320" autocomplete="username" required></div>
+            <div class="field"><label for="login-password" data-i18n="password">Mot de passe</label><input id="login-password" type="password" maxlength="128" autocomplete="current-password" required></div>
+            <div class="field"><button class="button button-primary" type="submit" data-i18n="submit">Se connecter</button></div>
           </form>
-          <form id="register-form" class="auth-form">
-            <strong>Hangataka kaonty</strong>
-            <p>Ny kaonty vaovao dia Viewer ary miandry fankatoavan'ny Administrator.</p>
-            <div class="field"><label for="register-name">Anarana</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
+          <div id="google-auth-block" class="google-auth-block">
+            <div class="google-auth-heading">
+              <span class="google-auth-emblem" aria-hidden="true">N</span>
+              <div class="google-auth-brand"><strong>Google Sign-In</strong><span>SECURE IDENTITY</span></div>
+              <span class="google-auth-seal" aria-hidden="true">✦ VERIFIED</span>
+            </div>
+            <div id="google-button-slot" class="google-button-slot"></div>
+            <p id="google-auth-status" class="form-message" role="status" aria-live="polite">Chargement de la connexion Google…</p>
+          </div>
+          <p class="auth-switch-line"><a id="register-open-link" href="#inscription" data-i18n="registerLink">Pas encore de compte ? Créer un compte détaillé</a></p>
+          <form id="register-form" class="auth-form" hidden>
+            <strong data-i18n="registerTitle">Inscription détaillée</strong>
+            <p data-i18n="registerHelp">Les nouveaux comptes reçoivent le rôle Viewer et nécessitent l’approbation d’un administrateur.</p>
+            <div class="field"><label for="register-name" data-i18n="fullName">Nom complet</label><input id="register-name" minlength="2" maxlength="100" autocomplete="name" required></div>
             <div class="field"><label for="register-email">Email</label><input id="register-email" type="email" maxlength="320" autocomplete="email" required></div>
-            <div class="field"><label for="register-password">Tenimiafina (12+ caractères)</label><input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><button class="button button-secondary" type="submit">Handefa fangatahana</button></div>
+            <div class="field"><label for="register-password">Mot de passe (12 caractères minimum)</label><input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-secondary" type="submit" data-i18n="sendRequest">Envoyer la demande</button></div>
+            <p class="auth-switch-line"><a id="register-back-link" href="#login" data-i18n="backToLogin">Efa manana kaonty? Hiverina amin'ny fidirana</a></p>
           </form>
         </div>
 
         <div id="account-panel" class="account-panel" hidden>
+          <div class="google-account-link">
+            <div class="google-account-brand"><span class="google-auth-emblem" aria-hidden="true">N</span><div><strong>Google Sign-In</strong><span>SECURE IDENTITY</span><p id="google-link-status" class="form-message" role="status" aria-live="polite">Manamarina ny fifandraisana Google…</p></div></div>
+            <div id="google-link-button-slot" class="google-button-slot"></div>
+          </div>
           <div class="account-summary">
             <div><strong id="account-name">—</strong><span id="account-email">—</span></div>
             <span id="account-role" class="role-pill">viewer</span>
-            <button id="logout-button" class="button button-secondary" type="button">Hivoaka</button>
+            <button id="logout-button" class="button button-secondary" type="button" data-i18n="logout">Se déconnecter</button>
           </div>
           <form id="password-change-form" class="auth-form account-password-form">
-            <strong>Hanova tenimiafina</strong>
-            <p>Hamarino ny tenimiafina ankehitriny ary mamoròna tenimiafina vaovao mihoatra ny 12 tarehintsoratra. Hivoaka ho azy ny session taloha rehetra.</p>
-            <div class="field"><label for="current-password">Tenimiafina ankehitriny</label><input id="current-password" type="password" minlength="1" maxlength="128" autocomplete="current-password" required></div>
-            <div class="field"><label for="new-password">Tenimiafina vaovao</label><input id="new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><label for="confirm-password">Avereno ny tenimiafina vaovao</label><input id="confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
-            <div class="field"><button class="button button-secondary" type="submit">Tehirizo ny tenimiafina vaovao</button></div>
+            <strong data-i18n="passwordChangeTitle">Hanova tenimiafina</strong>
+            <p data-i18n="passwordChangeHelp">Confirmez le mot de passe actuel et choisissez un nouveau mot de passe d'au moins 12 caractères. Toutes les anciennes sessions seront révoquées.</p>
+            <div class="field"><label for="current-password" data-i18n="currentPassword">Mot de passe actuel</label><input id="current-password" type="password" minlength="1" maxlength="128" autocomplete="current-password" required></div>
+            <div class="field"><label for="new-password" data-i18n="newPassword">Nouveau mot de passe</label><input id="new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><label for="confirm-password" data-i18n="confirmPassword">Avereno ny tenimiafina vaovao</label><input id="confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+            <div class="field"><button class="button button-secondary" type="submit" data-i18n="savePassword">Enregistrer le nouveau mot de passe</button></div>
             <p id="password-change-status" class="form-message" aria-live="polite"></p>
           </form>
         </div>
 
         <div id="admin-panel" class="admin-panel" hidden>
           <div class="workspace-heading">
-            <div><h4>Fitantanana mpampiasa</h4><p class="admin-subtitle">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
-            <button id="refresh-admin" class="text-button" type="button">Havaozy</button>
+            <div><h4 data-i18n="userManagement">Fitantanana mpampiasa</h4><p class="admin-subtitle" data-i18n="userManagementHelp">Fankatoavana, andraikitra ary satan'ny kaonty.</p></div>
+            <button id="refresh-admin" class="text-button" type="button" data-i18n="refresh">Havaozy</button>
           </div>
           <div class="admin-bridge-panel">
             <div class="workspace-heading">
-              <div><h4>Fampifandraisana Termux</h4><p class="admin-subtitle">Read-only Admin bridge · fampiasana tokana · 90 segondra.</p></div>
+              <div><h4 data-i18n="termuxBridgeTitle">Fampifandraisana Termux</h4><p class="admin-subtitle" data-i18n="termuxBridgeHelp">Read-only Admin bridge · fampiasana tokana · 90 segondra.</p></div>
             </div>
-            <p class="admin-subtitle">Mamorona code eto amin'ny navigateur efa tafiditra. Ampidiro ao amin'ny Termux ilay code rehefa angatahina. Tsy omena tenimiafina na cookie ny Termux.</p>
-            <div class="field"><button id="admin-bridge-create" class="button button-secondary" type="button">Hamorona pairing code</button></div>
+            <div class="field"><button id="admin-bridge-create" class="button button-secondary" type="button" data-i18n="createPairing">Hamorona pairing code</button></div>
             <p id="admin-bridge-status" class="form-message" aria-live="polite"></p>
             <div id="admin-bridge-code-wrap" class="admin-bridge-code-wrap" hidden>
-              <label for="admin-bridge-code">Pairing code (miseho indray mandeha)</label>
+              <label for="admin-bridge-code" data-i18n="pairingLabel">Pairing code (miseho indray mandeha)</label>
               <code id="admin-bridge-code" class="admin-bridge-code"></code>
-              <button id="admin-bridge-copy" class="text-button" type="button">Adika ny code</button>
+              <button id="admin-bridge-copy" class="text-button" type="button" data-i18n="copyCode">Adika ny code</button>
             </div>
           </div>
           <div class="admin-summary" aria-label="Famintinana ny kaonty">
@@ -182,13 +169,13 @@
             <article class="admin-summary-card disabled"><span>Voasakana</span><strong id="admin-disabled-users">0</strong></article>
           </div>
           <div class="admin-toolbar">
-            <div class="field"><label for="admin-user-search">Karoka mpampiasa</label><input id="admin-user-search" type="search" placeholder="Anarana, email na rôle…" autocomplete="off"></div>
+            <div class="field"><label for="admin-user-search">Karoka mpampiasa</label><input id="admin-user-search" type="search" placeholder="Nom complet, email na rôle…" autocomplete="off"></div>
             <div class="field"><label for="admin-user-filter">Sivana satan'ny kaonty</label><select id="admin-user-filter"><option value="all">Kaonty rehetra</option><option value="pending">Miandry fankatoavana</option><option value="active">Mavitrika</option><option value="disabled">Voasakana</option></select></div>
           </div>
           <p id="admin-user-result-count" class="admin-result-count" aria-live="polite">Miandry ny lisitry ny kaonty…</p>
           <div id="admin-users" class="admin-users" aria-live="polite"></div>
           <div class="workspace-heading list-heading">
-            <div><h4>Audit log</h4><p class="admin-subtitle">Hetsika voarakitra sy valin'ny asa farany.</p></div>
+            <div><h4 data-i18n="auditLogTitle">Audit log</h4><p class="admin-subtitle" data-i18n="auditLogSub">Hetsika voarakitra sy valin'ny asa farany.</p></div>
           </div>
           <div class="audit-toolbar">
             <div class="field"><label for="audit-search">Karoka hetsika</label><input id="audit-search" type="search" placeholder="Action, target na request ID…" autocomplete="off"></div>
@@ -198,7 +185,7 @@
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Toe-draharaha ankapobeny">
+      <section class="metrics-grid" data-category-view="home" aria-label="Toe-draharaha ankapobeny">
         <article class="metric-card">
           <div class="metric-icon icon-blue">⌁</div>
           <div class="metric-label">API</div>
@@ -225,7 +212,19 @@
         </article>
       </section>
 
-      <section class="panel role-workspace" id="role-workspace" data-role-visibility="authenticated" hidden aria-labelledby="role-workspace-title">
+      <section id="category-home" class="category-home" hidden aria-labelledby="category-home-title">
+        <div class="category-heading"><div><p class="eyebrow" data-i18n="categoryEyebrow">SECURE WORKSPACE</p><h2 id="category-home-title" data-i18n="choose">Que souhaitez-vous ouvrir ?</h2><p data-i18n="chooseSub">Choisissez une catégorie pour accéder à ses outils et détails.</p></div></div>
+        <div class="category-grid">
+          <button class="category-card" type="button" data-open-category="threat"><span class="category-symbol">◈</span><strong data-i18n="threat">Threat Intelligence</strong><span data-i18n="categoryThreatMeta">CVE, NVD et CISA KEV</span><small data-i18n="categoryThreatDescription">Recherche et suivi des vulnérabilités</small></button>
+          <button class="category-card" type="button" data-open-category="malware"><span class="category-symbol">✳</span><strong data-i18n="malware">IA et analyse de malwares</strong><span data-i18n="categoryMalwareMeta">Modèles ML et métadonnées</span><small data-i18n="categoryMalwareDescription">Analyse de caractéristiques statiques et de hachages</small></button>
+          <button class="category-card" type="button" data-open-category="assistant"><span class="category-symbol">✧</span><strong data-i18n="assistant">Assistant et outils</strong><span data-i18n="categoryAssistantMeta">Assistant Nanou et MCP</span><small data-i18n="categoryAssistantDescription">Outils défensifs et intégrations contrôlées</small></button>
+          <button class="category-card" type="button" data-open-category="operations" data-role-visibility="admin,analyst"><span class="category-symbol">⛨</span><strong data-i18n="operations">Opérations et développement</strong><span data-i18n="categoryOperationsMeta">Simulation et centre développeur</span><small data-i18n="categoryOperationsDescription">Outils selon les autorisations du rôle</small></button>
+          <button class="category-card" type="button" data-open-category="account"><span class="category-symbol">♙</span><strong data-i18n="account">Compte et gouvernance</strong><span data-i18n="categoryAccountMeta">Profil, sécurité et rôles</span><small data-i18n="categoryAccountDescription">Mot de passe, sessions et administration</small></button>
+        </div>
+      </section>
+      <div id="category-backbar" class="category-backbar" hidden><button id="category-back-button" class="button button-secondary" type="button">← Miverina amin'ny sokajy</button><span id="category-current-title"></span></div>
+
+      <section class="panel role-workspace" id="role-workspace" data-category-view="account" data-role-visibility="authenticated" hidden aria-labelledby="role-workspace-title">
         <div class="role-workspace-heading">
           <div>
             <p class="eyebrow">ROLE-BASED WORKSPACE</p>
@@ -238,11 +237,11 @@
         <p id="role-workspace-guidance" class="role-workspace-guidance"></p>
       </section>
 
-      <section class="section-heading" id="assistant-chat" data-role-visibility="authenticated">
+      <section class="section-heading" id="assistant-chat" data-role-visibility="authenticated" data-category-view="assistant">
         <div><p class="eyebrow">DEFENSIVE AI OPERATIONS</p><h2>AI Chat Command Center</h2></div>
         <span class="section-tag">Guarded tool execution</span>
       </section>
-      <section class="panel assistant-panel" data-role-visibility="authenticated">
+      <section class="panel assistant-panel" data-role-visibility="authenticated" data-category-view="assistant">
         <div class="assistant-heading">
           <div class="assistant-avatar" aria-hidden="true">N</div>
           <div class="assistant-title">
@@ -283,11 +282,11 @@
         <p class="data-note">Tsy mitahiry ny chat history ao amin'ny navigateur na database ity pejy ity. Tsy misy saram-LLM amin'ny Local command mode. Raha voa-configurer ny AI provider, ny hafatra dia alefa aminy ary mety hisy sara araka ny modely sy ny token ampiasaina; aza mandefa secrets na angona saro-pady.</p>
       </section>
 
-      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst">
+      <section class="section-heading" id="attack-simulation" data-role-visibility="admin,analyst" data-category-view="operations">
         <div><p class="eyebrow">AUTHORIZED RED TEAM · TABLETOP</p><h2>Attack Simulation Manager</h2></div>
         <span class="section-tag">Local-only · 0 network requests</span>
       </section>
-      <section class="panel attack-manager-panel" id="attack-manager-panel" data-role-visibility="admin,analyst">
+      <section class="panel attack-manager-panel" id="attack-manager-panel" data-role-visibility="admin,analyst" data-category-view="operations">
         <div class="attack-safety-banner">
           <span class="attack-safety-mark" aria-hidden="true">✓</span>
           <div><strong>Simulation locale et non intrusive</strong><p>Produit des scénarios, contrôles à vérifier, mapping MITRE ATT&amp;CK et recommandations. Tsy manao scan, exploit, payload, credential test, malware execution na network request.</p></div>
@@ -338,12 +337,12 @@
         <p class="data-note">MITRE ATT&amp;CK IDs dia threat-reference mapping fotsiny. Ny SOC detection rules dia soso-kevitra mbola tsy deployed na enabled. Ny checklist rehetra dia <strong>requires manual validation</strong>; tsy lazaina ho vulnerability hita raha tsy misy porofo voamarina.</p>
       </section>
 
-      <section class="section-heading" id="vulnerabilities">
+      <section class="section-heading" id="vulnerabilities" data-category-view="threat">
         <div><p class="eyebrow">VULNERABILITY INTELLIGENCE</p><h2>Fikarohana CVE</h2></div>
         <span class="section-tag">NVD · Read-only</span>
       </section>
 
-      <section class="content-grid">
+      <section class="content-grid" data-category-view="threat">
         <article class="panel cve-panel">
           <div class="panel-heading">
             <div><span class="panel-icon">⌕</span><div><h3>Jereo ny CVE</h3><p>Mitadiava vulnerability amin'ny ID CVE.</p></div></div>
@@ -373,11 +372,11 @@
       </section>
 
 
-      <section class="section-heading" id="malware-model" data-role-visibility="admin,analyst">
+      <section class="section-heading" id="malware-model" data-role-visibility="admin,analyst" data-category-view="malware">
         <div><p class="eyebrow">STATIC FEATURE CLASSIFIER</p><h2>AI malware feature analysis</h2></div>
         <span class="section-tag">Model integrity check</span>
       </section>
-      <section class="panel inference-panel" id="malware-analysis-panel" data-role-visibility="admin,analyst">
+      <section class="panel inference-panel" id="malware-analysis-panel" data-role-visibility="admin,analyst" data-category-view="malware">
         <div class="metadata-intro">
           <div class="metadata-mark model-mark">✳</div>
           <div><h3>Famakafakana amin'ny modely ML</h3><p>Vector numérique efa nalaina mialoha ihany no raisina; tsy mandray APK na binary.</p></div>
@@ -416,11 +415,11 @@
         <p class="data-note">Ny valiny dia tombana avy amin'ny static features, fa tsy porofo fa voa-infecté ny fitaovana. Tsy tokony hampiasaina ho fanapahan-kevitra mandeha ho azy ny threshold 0.5 raha tsy voamarina amin'ny validation set misaraka.</p>
       </section>
 
-      <section class="section-heading" id="metadata" data-role-visibility="authenticated">
+      <section class="section-heading" id="metadata" data-role-visibility="authenticated" data-category-view="malware">
         <div><p class="eyebrow">MALWARE INTELLIGENCE</p><h2>Metadata voaaro</h2></div>
         <span class="section-tag">Multi-user RBAC</span>
       </section>
-      <section class="panel metadata-panel" data-role-visibility="authenticated">
+      <section class="panel metadata-panel" data-role-visibility="authenticated" data-category-view="malware">
         <div class="metadata-intro">
           <div class="metadata-mark">⬡</div>
           <div><h3>Rakitra famantarana malware</h3><p>SHA-256, label ary loharano ihany. Tsy misy APK, executable na payload alefa eto.</p></div>
@@ -434,7 +433,7 @@
             <div class="field field-wide"><label for="sample-hash">SHA-256</label><input id="sample-hash" name="sha256" minlength="64" maxlength="64" pattern="[a-fA-F0-9]{64}" placeholder="64 hexadecimal characters" required></div>
             <div class="field"><label for="sample-label">Label</label><select id="sample-label" name="label"><option value="unknown">Unknown</option><option value="benign">Benign</option><option value="malicious">Malicious</option></select></div>
             <div class="field"><label for="sample-source">Loharano</label><input id="sample-source" name="source" minlength="2" maxlength="200" placeholder="Ohatra: SOC report" required></div>
-            <div class="field field-wide"><label for="sample-family">Family (raha fantatra)</label><input id="sample-family" name="family" maxlength="120" placeholder="Tsy voatery"></div>
+            <div class="field field-wide"><label for="sample-family">Family (raha fantatra)</label><input id="sample-family" name="family" maxlength="120" placeholder="Facultatif"></div>
             <div class="field field-wide"><button class="button button-primary" type="submit">Tehirizo ny metadata</button></div>
           </form>
           <div class="workspace-heading list-heading"><h4>Metadata voatahiry</h4><span id="metadata-total">0</span></div>
@@ -442,17 +441,26 @@
         </div>
       </section>
 
-      <section class="section-heading" id="developer" data-role-visibility="admin,analyst">
-        <div><p class="eyebrow">DEVELOPER &amp; AI INTEGRATION</p><h2>Developer Center</h2></div>
+      <section class="section-heading" id="developer" data-role-visibility="admin,analyst" data-category-view="operations">
+        <div><p class="eyebrow">DEVELOPER &amp; AI INTEGRATION</p><h2 data-i18n="developer">Centre développeur</h2></div>
         <span class="section-tag">REST API v1 · Read-only</span>
       </section>
-      <section class="panel developer-panel" data-role-visibility="admin,analyst">
+      <section class="panel developer-panel" data-role-visibility="admin,analyst" data-category-view="operations">
         <div class="developer-intro">
           <div><div class="developer-badges"><span>Bearer auth</span><span>Scoped keys</span><span>OpenAPI / AI</span></div>
           <h3>Fampifandraisana lavitra sy AI</h3>
           <p>REST API versioned ho an'ny server hafa sy AI tools. Ny key dia mifamatotra amin'ny kaontinao ary voafetra amin'ny scopes.</p></div>
           <a class="button button-secondary" href="/api/v1/openapi.json" target="_blank" rel="noopener noreferrer">OpenAPI spec ↗</a>
         </div>
+        <section class="mcp-hub" aria-labelledby="mcp-hub-title">
+          <div class="mcp-hub-heading"><div><p class="eyebrow">MODEL CONTEXT PROTOCOL</p><h3 id="mcp-hub-title">MCP Hub — serveurs et connecteurs</h3><p>Un espace unique pour gérer les serveurs MCP personnels, les serveurs publics et les connexions externes.</p></div><span class="mcp-status-pill">Architecture en préparation</span></div>
+          <div class="mcp-mode-grid">
+            <article class="mcp-mode-card"><span class="mcp-mode-icon">⌂</span><strong>MCP personnel</strong><p>Serveur privé, accessible uniquement à votre compte ou à votre organisation, avec autorisations par outil.</p><small>Privé · OAuth · RBAC</small></article>
+            <article class="mcp-mode-card"><span class="mcp-mode-icon">◎</span><strong>MCP public</strong><p>Catalogue publiable après validation, documentation, versioning, quotas et règles de sécurité.</p><small>Publication contrôlée · Rate limit</small></article>
+            <article class="mcp-mode-card"><span class="mcp-mode-icon">⇄</span><strong>Tunnel sécurisé</strong><p>Connexion sortante chiffrée vers un service MCP privé, sans exposer directement le réseau local.</p><small>TLS · Jetons courts · Révocation</small></article>
+          </div>
+          <div class="mcp-connectors"><h4>Connecteurs prévus</h4><div class="mcp-connector-list"><span>GitHub</span><span>Vercel</span><span>Gmail</span><span>Supabase</span><span>Firebase</span><span>Google Cloud</span><span>Microsoft 365</span><span>Neon PostgreSQL</span></div><p class="data-note">Catalogue indicatif : aucun compte externe n'est connecté ici. Chaque fournisseur nécessitera son propre OAuth/consentement et des scopes minimaux. Les secrets resteront côté serveur dans un coffre chiffré.</p></div>
+        </section>
         <div class="developer-security-note"><strong>Read-only + AI chat</strong><span>CVE/NVD, CISA KEV, malware metadata ary chat command voafetra. Tsy misy admin, write, APK upload, shell, malware execution na arbitrary command execution.</span></div>
         <div class="developer-grid">
           <div class="developer-card">
@@ -489,18 +497,18 @@
         <div class="developer-ai-guide">
           <h4>Fampifandraisana amin'ny AI</h4>
           <ol><li>Ampidiro ao amin'ny AI tool manohana OpenAPI/Actions ny URL <code>/api/v1/openapi.json</code>.</li><li>Safidio ny HTTP Bearer authentication.</li><li>Ampidiro ao amin'ny secret manager ilay token ary omeo scope ilaina ihany.</li></ol>
-          <p class="data-note">Tsy mbola mifandray ho azy amin'ny ChatGPT na AI hafa ny application. Atao ao amin'ny AI platform-nao ny fametrahana OpenAPI sy token.</p>
+          <p class="data-note">L'application n'est pas encore connectée automatiquement à ChatGPT ou à un autre fournisseur d'IA. Configurez OpenAPI et le jeton dans la plateforme IA de votre choix.</p>
         </div>
         <p class="data-note">Aza apetraka amin'ny JavaScript public, APK, URL, logs na repository ny token. Ampiasao amin'ny backend/server-side na secret vault an'ny AI ihany.</p>
       </section>
 
-      <section class="section-heading" id="tools">
+      <section class="section-heading" id="tools" data-category-view="assistant">
         <div><p class="eyebrow">CONTROLLED INTEGRATIONS</p><h2>Fitaovana MCP</h2></div>
         <span class="section-tag">Scoped access</span>
       </section>
-      <section class="panel tools-panel">
+      <section class="panel tools-panel" data-category-view="assistant">
         <div class="panel-heading">
-          <div><span class="panel-icon green-icon">⛨</span><div><h3>Fitaovana azo ampiasaina</h3><p>Fitaovana voasoratra anarana sy voafetra amin'ny alalana.</p></div></div>
+          <div><span class="panel-icon green-icon">⛨</span><div><h3 data-i18n="mcpTools">Outils MCP disponibles</h3><p data-i18n="mcpSub">Outils enregistrés et limités par autorisation.</p></div></div>
           <span id="tools-count" class="count-pill">—</span>
         </div>
         <div id="tools-list" class="tools-list"><div class="loading-line">Manamarina ny lisitra…</div></div>

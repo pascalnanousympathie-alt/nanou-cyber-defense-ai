@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 from nanou_cyber_ai.api import app
@@ -24,9 +26,13 @@ def test_web_platform_uses_restrictive_security_headers() -> None:
 
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
-    assert response.headers["referrer-policy"] == "no-referrer"
-    assert "script-src 'self'" in response.headers["content-security-policy"]
-    assert "style-src 'self'" in response.headers["content-security-policy"]
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+    assert response.headers["cross-origin-opener-policy"] == "same-origin-allow-popups"
+    policy = response.headers["content-security-policy"]
+    assert "script-src 'self' https://accounts.google.com/gsi/client" in policy
+    assert "frame-src https://accounts.google.com/gsi/" in policy
+    assert "connect-src 'self' https://accounts.google.com/gsi/" in policy
+    assert "style-src 'self' https://accounts.google.com/gsi/style" in policy
     assert "object-src 'none'" in response.headers["content-security-policy"]
     assert response.headers["cache-control"] == "no-store"
 
@@ -45,19 +51,25 @@ def test_home_groups_navigation_and_defaults_to_dark_soc_theme() -> None:
         response = client.get("/")
 
     assert response.status_code == 200
-    assert '<html lang="mg" data-theme="dark">' in response.text
+    assert '<html lang="fr" data-theme="dark">' in response.text
     assert 'aria-label="Navigation principale"' in response.text
-    assert 'class="nav-group-label">Threat intelligence</span>' in response.text
-    assert 'class="nav-group-label">STATIC ANALYSIS LAB</span>' in response.text
-    assert 'class="nav-group-label">Accès &amp; gouvernance</span>' in response.text
-    assert 'class="nav-group-label">DEFENSIVE SIMULATIONS</span>' in response.text
-    assert "Tabletop simulation" in response.text
-    assert "Assistant workspace" in response.text
+    assert 'data-category-target="home">' in response.text
+    assert 'data-category-target="threat">' in response.text
+    assert 'data-category-target="malware">' in response.text
+    assert 'data-category-target="assistant">' in response.text
+    assert 'data-category-target="operations" data-role-visibility="admin,analyst"' in response.text
+    assert 'data-category-target="account">' in response.text
+    assert 'data-category-view="threat"' in response.text
+    assert 'data-category-view="malware"' in response.text
+    assert 'data-category-view="assistant"' in response.text
+    assert 'data-category-view="operations"' in response.text
+    assert 'data-category-view="account"' in response.text
+    assert "AUTHORIZED RED TEAM · TABLETOP" in response.text
+    assert "AI Chat Command Center" in response.text
     assert 'href="#vulnerabilities"' in response.text
-    assert 'href="#kev"' in response.text
     assert 'href="#malware-model"' in response.text
-    assert 'href="#metadata"' in response.text
-    assert 'href="#tools"' in response.text
+    assert 'id="metadata"' in response.text
+    assert 'id="tools"' in response.text
     assert 'class="theme-pill"' in response.text
     assert '<meta name="theme-color" content="#03070b">' in response.text
 
@@ -88,7 +100,9 @@ def test_role_based_workspace_and_navigation_are_scoped_by_role() -> None:
         script = client.get("/assets/app.js")
 
     assert home.status_code == 200
-    assert 'id="role-workspace" data-role-visibility="authenticated"' in home.text
+    assert (
+        'id="role-workspace" data-category-view="account" data-role-visibility="authenticated"'
+    ) in home.text
     assert 'data-role-visibility="admin,analyst"' in home.text
     assert 'data-role-visibility="admin"' in home.text
     assert 'data-role-visibility="authenticated"' in home.text
@@ -101,6 +115,7 @@ def test_role_based_workspace_and_navigation_are_scoped_by_role() -> None:
     assert "analyst: {" in script.text
     assert "viewer: {" in script.text
     assert "function updateRoleVisibility()" in script.text
+    assert 'new CustomEvent("nanou:category-changed"' in script.text
     assert "function renderRoleWorkspace()" in script.text
     assert 'byId("metadata-create-form").hidden = !canWriteMetadata;' in script.text
 
@@ -197,7 +212,10 @@ def test_attack_simulation_manager_assets_and_local_only_contract() -> None:
         stylesheet = client.get("/assets/attack-simulation.css")
 
     assert home.status_code == 200
-    assert 'href="#attack-simulation" data-role-visibility="admin,analyst"' in home.text
+    assert (
+        'href="#attack-simulation" data-category-target="operations" '
+        'data-role-visibility="admin,analyst"'
+    ) in home.text
     assert 'id="attack-manager-panel"' in home.text
     assert 'id="attack-scope-form"' in home.text
     assert 'id="attack-run-form"' in home.text
@@ -304,3 +322,134 @@ def test_request_body_limit_rejects_chunked_body_without_content_length() -> Non
         )
 
     assert response.status_code == 413, response.text
+
+
+def test_login_first_google_signup_link_and_category_home_are_served() -> None:
+    with TestClient(app) as client:
+        response = client.get("/")
+        app_script = client.get("/assets/app.js")
+        stylesheet = client.get("/assets/app.css")
+
+    assert response.status_code == 200
+    assert '<body data-auth-state="checking">' in response.text
+    assert 'id="login-form"' in response.text
+    assert 'id="google-button-slot"' in response.text
+    assert 'class="google-auth-heading"' in response.text
+    assert 'class="google-auth-seal"' in response.text
+    assert 'id="google-link-button-slot"' in response.text
+    assert app_script.status_code == 200
+    assert 'shape: "pill"' in app_script.text
+    assert 'logo_alignment: "left"' in app_script.text
+    assert "width: 300" in app_script.text
+    assert stylesheet.status_code == 200
+    assert ".google-auth-block::before" in stylesheet.text
+    assert ".google-auth-seal" in stylesheet.text
+    assert 'id="google-link-status"' in response.text
+    assert 'id="register-open-link"' in response.text
+    assert 'id="register-form" class="auth-form" hidden' in response.text
+    assert 'id="category-home" class="category-home" hidden' in response.text
+    assert 'id="language-select"' in response.text
+    assert 'id="auth-language-select"' in response.text
+    assert 'id="auth-language-select"' in response.text
+    assert 'data-i18n="registerLink"' in response.text
+    assert 'id="mcp-hub-title"' in response.text
+    assert "Architecture en préparation" in response.text
+    assert 'data-open-category="threat"' in response.text
+    assert 'data-open-category="malware"' in response.text
+    assert 'data-open-category="assistant"' in response.text
+    assert 'data-category-view="operations"' in response.text
+
+
+def test_operations_data_loads_only_when_its_category_is_opened() -> None:
+    with TestClient(app) as client:
+        developer = client.get("/assets/developer.js")
+        attack = client.get("/assets/attack-simulation.js")
+
+    assert developer.status_code == 200
+    assert attack.status_code == 200
+    assert 'event.detail?.category === "operations"' in developer.text
+    assert 'event.detail?.category === "operations"' in attack.text
+    assert "await loadAuth();" not in developer.text
+    assert "loadDeveloperKeys();" in developer.text
+    assert "loadAttackWorkspace();" in attack.text
+
+
+def test_global_locale_catalog_and_premium_mcp_hub_styles() -> None:
+    with TestClient(app) as client:
+        script = client.get("/assets/app.js")
+        stylesheet = client.get("/assets/app.css")
+        home = client.get("/")
+
+    assert script.status_code == stylesheet.status_code == home.status_code == 200
+    locales = (
+        "fr",
+        "en",
+        "mg",
+        "es",
+        "pt",
+        "de",
+        "it",
+        "ar",
+        "zh",
+        "ja",
+        "hi",
+        "ru",
+    )
+    for locale in locales:
+        assert f"{locale}:[" in script.text
+
+    base_match = re.search(r"const I18N_KEYS = \[(.*?)\];", script.text, re.S)
+    extra_match = re.search(r"const I18N_EXTRA = \{(.*?)\n\};", script.text, re.S)
+    assert base_match is not None and extra_match is not None
+    base_keys = set(re.findall(r'"([A-Za-z][A-Za-z0-9]*)"', base_match.group(1)))
+    base_catalog_match = re.search(r"const I18N = \{(.*?)\n\};", script.text, re.S)
+    assert base_catalog_match is not None
+    base_catalogs = {}
+    for line in base_catalog_match.group(1).splitlines():
+        locale_match = re.match(r"\s*([a-z]{2}):\[(.*)\],?\s*$", line)
+        if locale_match:
+            base_catalogs[locale_match.group(1)] = re.findall(
+                r'"(?:\\.|[^"\\])*"', locale_match.group(2)
+            )
+    assert set(base_catalogs) == set(locales)
+    assert all(len(values) == len(base_keys) == 21 for values in base_catalogs.values())
+
+    extra_catalogs = {}
+    for line in extra_match.group(1).splitlines():
+        locale_match = re.match(r"\s*([a-z]{2}): \{(.*)\},?\s*$", line)
+        if locale_match:
+            extra_catalogs[locale_match.group(1)] = set(
+                re.findall(r"([A-Za-z][A-Za-z0-9]*):\"", locale_match.group(2))
+            )
+    assert set(extra_catalogs) == set(locales)
+    expected_extra_keys = extra_catalogs["fr"]
+    assert len(expected_extra_keys) == 48
+    assert all(keys == expected_extra_keys for keys in extra_catalogs.values())
+
+    html_keys = set(re.findall(r'data-i18n="([A-Za-z][A-Za-z0-9]*)"', home.text))
+    assert html_keys <= base_keys | expected_extra_keys
+    required_html_keys = {
+        "heroTitle",
+        "heroDescription",
+        "registerTitle",
+        "passwordChangeTitle",
+        "userManagement",
+        "categoryThreatDescription",
+        "categoryMalwareDescription",
+        "categoryAssistantDescription",
+        "categoryOperationsDescription",
+        "categoryAccountDescription",
+    }
+    assert required_html_keys <= html_keys
+    assert 'applyLocale("fr")' in script.text
+    assert '"#language-select,#auth-language-select"' in script.text
+    assert "localStorage" not in script.text
+    assert 'lang="fr"' in home.text
+    assert 'id="language-select"' in home.text
+    assert 'id="auth-language-select"' in home.text
+    assert ".locale-control" in stylesheet.text
+    assert ".category-card:hover" in stylesheet.text
+    assert "perspective:1200px" in stylesheet.text
+    assert "transform-style:preserve-3d" in stylesheet.text
+    assert ".mcp-mode-grid" in stylesheet.text
+    assert "prefers-reduced-motion:reduce" in stylesheet.text

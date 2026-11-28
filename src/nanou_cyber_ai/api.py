@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -14,7 +15,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,6 +36,7 @@ from nanou_cyber_ai.models import (
     AuthPasswordChangeIn,
     AuthRegisterIn,
     DeveloperApiKeyCreateIn,
+    GoogleSignInIn,
     MalwareInferenceIn,
     MalwareInferenceResult,
     MalwareMetadata,
@@ -113,6 +115,10 @@ def _audit_hmac_key() -> bytes:
 
 def _hmac_fingerprint(purpose: str, value: str) -> str:
     message = f"{purpose}:{value}".encode()
+    # This keyed digest fingerprints email/IP identifiers only; account passwords
+    # use Argon2id in security/passwords.py, so this is not password storage.
+
+    # codeql[py/weak-sensitive-data-hashing]
     return hmac.new(_audit_hmac_key(), message, hashlib.sha256).hexdigest()
 
 
@@ -345,13 +351,20 @@ async def secure_request_middleware(request: Request, call_next):
     response = rejection if rejection is not None else await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Referrer-Policy"] = (
+        "strict-origin-when-cross-origin" if request.url.path == "/" else "no-referrer"
+    )
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; "
-        "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
-        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; "
+        "style-src 'self' https://accounts.google.com/gsi/style; "
+        "img-src 'self' data:; font-src 'self'; "
+        "connect-src 'self' https://accounts.google.com/gsi/; "
+        "frame-src https://accounts.google.com/gsi/; object-src 'none'; "
+        "base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     )
+    if request.url.path == "/":
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     if request.url.path == "/" or request.url.path.startswith("/api/"):
@@ -385,6 +398,203 @@ async def readiness() -> dict:
             status_code=503,
             detail="Durable database is not configured or unavailable.",
         ) from None
+
+
+def _verify_google_identity(credential: str) -> dict[str, str]:
+    """Verify a Google Identity Services ID token using Google's trusted keys."""
+    client_id = settings.google_client_id
+    if not client_id:
+        raise HTTPException(status_code=503, detail="Google Sign-In is not configured.")
+    try:
+        from google.auth.transport.requests import Request as GoogleRequest
+        from google.oauth2 import id_token
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Google Sign-In verification support is unavailable.",
+        ) from exc
+
+    try:
+        claims = id_token.verify_oauth2_token(credential, GoogleRequest(), client_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Google credential is invalid or expired.",
+        ) from exc
+
+    issuer = claims.get("iss")
+    subject = claims.get("sub")
+    email = claims.get("email")
+    if (
+        issuer not in {"accounts.google.com", "https://accounts.google.com"}
+        or not isinstance(subject, str)
+        or not 1 <= len(subject) <= 255
+        or not isinstance(email, str)
+        or len(email) > 320
+        or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+        or claims.get("email_verified") is not True
+    ):
+        raise HTTPException(status_code=401, detail="Google account identity is not verified.")
+
+    display_name = claims.get("name")
+    if not isinstance(display_name, str) or not display_name.strip():
+        display_name = email.split("@", 1)[0]
+    display_name = " ".join(display_name.split())[:100]
+    if len(display_name) < 2:
+        display_name = "Google User"
+    return {"subject": subject, "email": email.strip().lower(), "display_name": display_name}
+
+
+@app.get("/api/auth/providers")
+async def auth_providers() -> dict:
+    store = get_auth_store()
+    schema_ready = store.google_identity_storage_available()
+    enabled = bool(settings.google_client_id and schema_ready)
+    reason = None
+    if not settings.google_client_id:
+        reason = "client_id_missing"
+    elif not schema_ready:
+        reason = "identity_storage_migration_required"
+    return {
+        "google": {
+            "enabled": enabled,
+            "client_id": settings.google_client_id if settings.google_client_id else None,
+            "reason": reason,
+        }
+    }
+
+
+@app.post("/api/auth/google", response_model=None)
+async def google_sign_in(
+    item: GoogleSignInIn,
+    request: Request,
+    response: Response,
+) -> dict | JSONResponse:
+    store = get_auth_store()
+    if not store.google_identity_storage_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Google identity storage migration is required before enabling Google Sign-In.",
+        )
+    identity = _verify_google_identity(item.credential)
+    if store.bootstrap_available():
+        raise HTTPException(
+            status_code=409,
+            detail="The initial administrator must be created before Google registration.",
+        )
+    _check_rate_limit(store, request, identity["email"], "auth.google")
+    user = store.get_user_by_google_subject(identity["subject"])
+
+    if user is None:
+        if store.get_user_by_email(identity["email"]) is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "An account with this email already exists. Sign in with your password "
+                    "and link Google from account settings."
+                ),
+            )
+        try:
+            pending_user = store.register_google(
+                subject=identity["subject"],
+                email=identity["email"],
+                display_name=identity["display_name"],
+                password_hash=hash_password(secrets.token_urlsafe(48)),
+                request_id=_request_id(request),
+                ip_digest=_ip_digest(request),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return JSONResponse(
+            status_code=202,
+            content={
+                "authenticated": False,
+                "pending_approval": True,
+                "user": pending_user,
+                "message": (
+                    "Google account received. An administrator must approve this Viewer account."
+                ),
+            },
+        )
+
+    if not user["is_approved"] or not user["is_active"]:
+        store.record_event(
+            actor_user_id=user["id"],
+            action="auth.google_login",
+            target_type="user",
+            target_id=user["id"],
+            outcome="pending_or_disabled",
+            request_id=_request_id(request),
+            ip_digest=_ip_digest(request),
+        )
+        raise HTTPException(status_code=403, detail="This account is pending approval or disabled.")
+
+    _session_token(request, response, store, user["id"])
+    store.record_event(
+        actor_user_id=user["id"],
+        action="auth.google_login",
+        target_type="user",
+        target_id=user["id"],
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    public_user = {key: value for key, value in user.items() if key != "password_hash"}
+    return {"authenticated": True, "user": public_user}
+
+
+@app.get("/api/auth/google/status")
+async def google_link_status(request: Request) -> dict[str, bool]:
+    user = _current_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    store = get_auth_store()
+    available = store.google_identity_storage_available()
+    return {
+        "available": available,
+        "linked": store.has_google_identity(user["id"]) if available else False,
+    }
+
+
+@app.post("/api/auth/google/link")
+async def link_google_account(
+    item: GoogleSignInIn,
+    request: Request,
+) -> dict[str, bool]:
+    user = _current_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    store = get_auth_store()
+    if not store.google_identity_storage_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Google identity storage migration is required before linking Google.",
+        )
+    identity = _verify_google_identity(item.credential)
+    if identity["email"] != user["email"].strip().lower():
+        raise HTTPException(
+            status_code=403,
+            detail="The verified Google email must match the signed-in account email.",
+        )
+    _check_rate_limit(store, request, user["email"], "auth.google.link")
+    try:
+        store.link_google_identity(
+            user_id=user["id"],
+            subject=identity["subject"],
+            email=identity["email"],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    store.record_event(
+        actor_user_id=user["id"],
+        action="auth.google_link",
+        target_type="user",
+        target_id=user["id"],
+        outcome="success",
+        request_id=_request_id(request),
+        ip_digest=_ip_digest(request),
+    )
+    return {"linked": True}
 
 
 @app.get("/api/auth/csrf")

@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import case, delete, func, insert, or_, select, update
+from sqlalchemy import case, delete, func, insert, inspect, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from nanou_cyber_ai.storage.database import (
@@ -15,6 +15,7 @@ from nanou_cyber_ai.storage.database import (
     api_keys,
     audit_events,
     auth_attempts,
+    google_identities,
     platform_state,
     sessions,
     users,
@@ -249,6 +250,119 @@ class AuthStore:
         result = public_user(row)
         result["password_hash"] = row["password_hash"]
         return result
+
+    def google_identity_storage_available(self) -> bool:
+        schema = "public" if self.database.mode == "postgresql" else None
+        return inspect(self.database.engine).has_table("google_identities", schema=schema)
+
+    def get_user_by_google_subject(self, subject: str) -> dict[str, Any] | None:
+        identity_join = google_identities.join(
+            users,
+            google_identities.c.user_id == users.c.id,
+        )
+        with self.database.engine.connect() as connection:
+            row = (
+                connection.execute(
+                    select(users)
+                    .select_from(identity_join)
+                    .where(google_identities.c.google_subject == subject)
+                )
+                .mappings()
+                .first()
+            )
+        return public_user(row) if row is not None else None
+
+    def has_google_identity(self, user_id: str) -> bool:
+        with self.database.engine.connect() as connection:
+            subject = connection.execute(
+                select(google_identities.c.google_subject).where(
+                    google_identities.c.user_id == user_id
+                )
+            ).first()
+        return subject is not None
+
+    def register_google(
+        self,
+        *,
+        subject: str,
+        email: str,
+        display_name: str,
+        password_hash: str,
+        request_id: str | None,
+        ip_digest: str | None,
+    ) -> dict[str, Any]:
+        user_id = uuid.uuid4().hex
+        now = datetime.now(UTC)
+        try:
+            with self.database.engine.begin() as connection:
+                connection.execute(
+                    insert(users).values(
+                        id=user_id,
+                        email=email,
+                        display_name=display_name,
+                        password_hash=password_hash,
+                        role="viewer",
+                        is_approved=False,
+                        is_active=False,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+                connection.execute(
+                    insert(google_identities).values(
+                        google_subject=subject,
+                        user_id=user_id,
+                        email_at_link=email,
+                        created_at=now,
+                    )
+                )
+                self._audit(
+                    connection,
+                    actor_user_id=user_id,
+                    action="auth.google_register",
+                    target_type="user",
+                    target_id=user_id,
+                    outcome="pending",
+                    request_id=request_id,
+                    ip_digest=ip_digest,
+                )
+                row = (
+                    connection.execute(select(users).where(users.c.id == user_id)).mappings().one()
+                )
+        except IntegrityError as exc:
+            raise ValueError(
+                "The Google identity or email is already linked to an account."
+            ) from exc
+        return public_user(row)
+
+    def link_google_identity(self, *, user_id: str, subject: str, email: str) -> None:
+        try:
+            with self.database.engine.begin() as connection:
+                existing = connection.execute(
+                    select(google_identities.c.user_id).where(
+                        google_identities.c.google_subject == subject
+                    )
+                ).scalar_one_or_none()
+                if existing is not None and existing != user_id:
+                    raise ValueError("This Google account is already linked to another account.")
+                linked = connection.execute(
+                    select(google_identities.c.google_subject).where(
+                        google_identities.c.user_id == user_id
+                    )
+                ).scalar_one_or_none()
+                if linked is not None and linked != subject:
+                    raise ValueError("A different Google account is already linked.")
+                if existing == subject and linked == subject:
+                    return
+                connection.execute(
+                    insert(google_identities).values(
+                        google_subject=subject,
+                        user_id=user_id,
+                        email_at_link=email,
+                    )
+                )
+        except IntegrityError as exc:
+            raise ValueError("This Google identity is already linked.") from exc
 
     def create_session(
         self,

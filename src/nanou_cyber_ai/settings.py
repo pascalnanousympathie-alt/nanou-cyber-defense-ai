@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     runtime_database_url: SecretStr | None = None
     audit_hmac_key: SecretStr | None = Field(default=None, min_length=64, max_length=128)
     bootstrap_token: SecretStr | None = None
+    google_client_id: str | None = Field(default=None, min_length=10, max_length=512)
     session_cookie_name: str = Field(default="nanou_session", min_length=8, max_length=40)
     session_ttl_hours: int = Field(default=12, ge=1, le=168)
     auth_attempts_per_window: int = Field(default=10, ge=3, le=50)

@@ -55,6 +55,16 @@ An authenticated Admin may create a one-time Termux pairing code from the accoun
 
 The bridge exposes only Admin identity, user-list and audit-list reads, at 30 requests per minute. It cannot approve users, change roles, disable accounts, modify metadata, access Developer API functions, or perform arbitrary host operations. A new pairing revokes earlier bridge/pairing tokens for that Admin; password rotation and role/active changes also revoke the bridge. The local helper accepts only ping, whoami, users and audit over a 0600 Unix socket in a dedicated 0700 directory under the Termux home folder. See [Admin-to-Termux pairing](admin-session-pairing.md).
 
+## Google Sign-In and account linking
+
+The login page offers optional Google Identity Services sign-in. The official Google button is shown only when `/api/auth/providers` reports Google enabled and both the configured client ID and `google_identities` storage are ready. Its surrounding Nanou presentation is custom; Google's interactive button and brand remain provider-controlled.
+
+- `GET /api/auth/providers` reports whether the client ID and identity storage are ready.
+- `POST /api/auth/google` verifies the ID token server-side against the configured client ID, Google issuer and verified email. A new identity is an inactive, unapproved Viewer and receives no session until an Admin approves it. Existing password accounts are not linked automatically.
+- `GET /api/auth/google/status` and `POST /api/auth/google/link` require authentication. Linking requires a matching verified Google email and rejects an identity already linked elsewhere.
+
+For PR #18 Preview, add the Google OAuth Web Client's Authorized JavaScript origin `https://nanou-cyber-defense-ai-git-feat-auth-google-categ-90207d-nanou3.vercel.app` and set its public Client ID only in Vercel Preview `NANOU_GOOGLE_CLIENT_ID`. Keep Production OAuth separate until release approval. This GIS ID-token flow does not require a Google Client Secret in browser code. Never store provider secrets in Git, HTML, JavaScript, browser storage or chat.
+
 ## Local development
 
 ~~~bash
@@ -125,3 +135,16 @@ The follow-up `fix/admin-password-rotation` branch adds `POST /api/auth/password
 The candidate also uses purpose-separated HMAC-SHA-256 values for audit IP and email/IP rate-limit fingerprints. A dedicated `NANOU_AUDIT_HMAC_KEY` can be configured as a 64–128 character hosting secret; until configured, hosted environments derive a separate key from their environment-specific PostgreSQL secret, while local development uses a process-local random key. Key rotation changes the fingerprints and restarts rate-limit windows.
 
 The candidate enforces a 2 MiB request-body ceiling at the ASGI receive stream so both declared and chunked request bodies are bounded without pre-consuming the body. PR #3 remains Draft/Open until post-sync CI and security checks pass.
+
+
+## Google Sign-In and registration
+
+Google Identity Services is enabled only when `NANOU_GOOGLE_CLIENT_ID` contains the Web application OAuth client ID created in Google Cloud. For the PR #18 Preview, add the exact branch origin `https://nanou-cyber-defense-ai-git-feat-auth-google-categ-90207d-nanou3.vercel.app` to Authorized JavaScript origins and set the public client ID as a Vercel **Preview-only** environment variable. Do not set the Production value until the Production release is explicitly approved. Use separate OAuth Web clients for Preview and Production where practical; the Production origin is `https://nanou-cyber-defense-ai.vercel.app`. The client ID is public; this Google Identity Services ID-token flow does not require putting a Google Client Secret in browser code. The backend verifies ID tokens using Google's signing keys and the configured audience.
+
+For the current PR #18 Preview only, `public.google_identities` has been created in the isolated Neon Preview database `nanou_preview`. It is owned by `nanou_preview_app`; the restricted `nanou_preview_runtime` role has DML access only and no `TRUNCATE`. Production schema and roles were not changed. Production migration must continue to use its dedicated reviewed migration login/owner, never `nanou_preview_app`.
+
+A first Google sign-in creates an inactive, unapproved Viewer request. Google identities are keyed by Google's immutable OIDC `sub` claim, not by email alone. An email already belonging to a password account cannot be claimed by Google automatically: the owner must first sign in with the existing password and explicitly link the same verified email from account settings. A linked Google identity can establish a session only when the local account is approved and active. Google identity never creates an Admin or bypasses the existing RBAC approval process.
+
+Before enabling Google on PostgreSQL, apply `scripts/migrations/20261127_google_identities.sql` through `NANOU_MIGRATION_DATABASE_URL`; the script sets `nanou_migration_owner` and relies on its default ACL for the restricted `nanou_runtime` role. Verify `SELECT`/`INSERT` access before enabling the feature. Do not run DDL from the serverless runtime account. The Google identity table is an optional schema component: a missing table does not block startup or password login, and `/api/auth/providers` keeps Google disabled until the migration is present. SQLite creates the optional table for tests and local development. If the client ID is absent, the login page explains that Google OAuth setup is still required and password login remains available.
+
+The public entry page shows login first. Detailed password registration is available through its explicit link. After authentication, the dashboard shows broad categories; each category loads its detail panels on demand. `GET /api/auth/providers` exposes only whether the provider is enabled, a reason when disabled, and the public OAuth client ID; `POST /api/auth/google` requires the same-origin CSRF token and never stores the raw Google credential. The login page CSP explicitly allows the documented Google GIS script, frame, connect and stylesheet origins; its Referrer-Policy and COOP headers are scoped to the sign-in page to support the popup flow without relaxing unrelated API responses.
